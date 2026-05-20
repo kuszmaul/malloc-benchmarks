@@ -11,13 +11,13 @@
 #    	faq, bugs, etc:   type "help FAQ"
 #    	immediate help:   type "help"  (plot window: hit 'h')
 set terminal pdfcairo  transparent enhanced fontscale 0.5 size 5.00in, 3.00in 
-set output 'boom-dfs-1e8.pdf'
+set output 'boom-ffworst-libc-1e8.pdf'
 unset clip points
 set clip one
 unset clip two
 unset clip radial
 set errorbars front 1.000000 
-set border 31 front lt black linewidth 1.000 dashtype solid
+unset border
 set zdata 
 set ydata 
 set xdata 
@@ -173,6 +173,6 @@ set fit brief errorvariables nocovariancevariables errorscaling prescale nowrap 
 GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
-## Last datafile plotted: "boom-glibc.data"
-plot "boom-glibc.data" using (log($1)/log(2)):($2) with lines
+## Last datafile plotted: "boom-ffworst-glibc.data"
+plot "boom-ffworst-glibc.data" using (log($1)/log(2)):($2) with lines
 #    EOF
