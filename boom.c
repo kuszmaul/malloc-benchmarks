@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,6 @@ void print_rss() {
 
 void first_fit_boom_class(size_t block_size, size_t space) {
   size_t n_to_allocate = space / block_size;
-  size_t n_to_free = n_to_allocate / 2;
 
   size_t free_us_count = 0;
   fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
@@ -53,17 +53,91 @@ void first_fit_boom(size_t space) {
   }
 }
 
+void superblock_boom_class(size_t block_size, size_t space, size_t superblock_size) {
+  size_t n_to_allocate = space / block_size;
+
+  size_t free_us_count = 0;
+  fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
+  for (size_t i = 0; i < n_to_allocate; i++) {
+    void* ptr = malloc(block_size);
+    assert(ptr != NULL);
+    free_us[free_us_count++] = ptr;
+  }
+  size_t print_count = 0;
+  for (size_t i = 0; i < n_to_allocate; i++) {
+    if (random() % superblock_size > block_size) {
+      free(free_us[i]);
+    } else {
+      if (print_count < 100) {
+        //printf("Keeping %p\n", free_us[i]);
+        ++print_count;
+      }
+    }
+  }
+  printf("%lu ", block_size);
+  print_rss();
+}
+
+void superblock_boom(size_t space, size_t superblock_size) {
+  size_t block_size = 8;
+  while (block_size <= space) {
+    superblock_boom_class(block_size, space, superblock_size);
+    block_size *= 2;
+  }
+}
+
+enum Workload { FIRST_FIT, SUPER_BLOCK } workload = FIRST_FIT;
+size_t superblock_size;
+
 int main(int argc, const char* argv[]) {
+
+  int argnum = 1;
+
+  fprintf(stderr, "argc=%d argnum=%d\n", argc, argnum);
+  while (argnum < argc) {
+    fprintf(stderr, "Looking at arg %s\n", argv[argnum]);
+    if (strcmp(argv[argnum], "--first-fit")==0) {
+      workload = FIRST_FIT;
+    } else if (strcmp(argv[argnum], "--superblock")==0) {
+      fprintf(stderr, "Superblocking\n");
+      ++argnum;
+      if (argnum < argc) {
+        char *end;
+        unsigned long v = strtoull(argv[argnum], &end, 10);
+        if (v == ULLONG_MAX || *end != '\0') {
+          fprintf(stderr, "Cannot parse superblock size: %s\n", argv[argnum]);
+          exit(1);
+        }
+        superblock_size = v;
+        workload = SUPER_BLOCK;
+      }
+    }
+    ++argnum;
+  }
+
   size_t space = 100000000;
 
-  size_t n_to_free = (space/8)/2;
-  free_us = malloc(n_to_free * sizeof(void*));
-  assert(free_us != NULL);
-  memset(free_us, 0, n_to_free * sizeof(void*));
-  free_us_length = n_to_free;
+  switch (workload) {
+    case FIRST_FIT:
+      size_t max_n_to_free = (space/8);
+      free_us = malloc(max_n_to_free * sizeof(void*));
+      assert(free_us != NULL);
+      memset(free_us, 0, max_n_to_free * sizeof(void*));
+      free_us_length = max_n_to_free;
 
-  base_rss = get_rss();
-  fprintf(stderr, "base_rss=%lu\n", base_rss);
-  first_fit_boom(space);
+      base_rss = get_rss();
+      fprintf(stderr, "base_rss=%lu\n", base_rss);
+      first_fit_boom(space);
+      break;
+    case SUPER_BLOCK:
+      free_us_length = (space/8);
+      free_us = malloc(free_us_length * sizeof(void*));
+      assert(free_us != NULL);
+      memset(free_us, 0, free_us_length * sizeof(void*));
+      base_rss = get_rss();
+
+      superblock_boom(space, superblock_size);
+      break;
+  }
   return 0;
 }
