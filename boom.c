@@ -1,14 +1,13 @@
 #include <assert.h>
 #include <limits.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
 
 size_t base_rss;
-size_t free_us_length;
-void** free_us;
 
 size_t live_data_size = 0;
 
@@ -28,38 +27,51 @@ void print_rss() {
   printf("%lu %4.2f %lu\n", rss, (1.0*rss)/live_data_size, live_data_size);
 }
 
-void* my_malloc(size_t size) {
+struct block {
+  size_t size;
+  struct block *next;
+};
+
+struct block *blocks = NULL;
+
+void my_malloc(size_t size) {
   live_data_size += size;
-  assert(size >= sizeof(size_t));
-  void *r = malloc(size);
-  memcpy(r, &size, sizeof(size_t));
-  return r;
+  assert(size >= sizeof(struct block));
+  struct block *b = malloc(size);
+  memset(b+1, 1, size-sizeof(struct block));
+  b->size = size;
+  b->next = blocks;
+  blocks = b;
 }
 
-void my_free(void* address) {
-  size_t size;
-  memcpy(&size, address, sizeof(size_t));
-  assert(size <= live_data_size);
-  live_data_size -= size;
-  free(address);
+void my_free(struct block** blockp) {
+  assert(*blockp != NULL);
+  struct block *block = *blockp;
+  struct block b = *block;
+  free(block);
+  assert(b.size <= live_data_size);
+  live_data_size -= b.size;
+  *blockp = b.next;
+}
+
+void free_every_other() {
+  struct block **p = &blocks;
+  while (true) {
+    if (*p == NULL) break;
+    my_free(p);
+    if (*p == NULL) break;
+    p = &(*p)->next;
+  }
 }
 
 void first_fit_boom_class(size_t block_size, size_t space) {
   size_t n_to_allocate = space / block_size;
 
-  size_t free_us_count = 0;
   fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
   for (size_t i = 0; i < n_to_allocate; i++) {
-    void* ptr = my_malloc(block_size);
-    assert(ptr != NULL);
-    if (i % 2 == 1) {
-      assert(free_us_count < free_us_length);
-      free_us[free_us_count++] = ptr;
-    }
+    my_malloc(block_size);
   }
-  for (size_t i = 0 ; i < free_us_count; i++) {
-    free(free_us[i]);
-  }
+  free_every_other();
   printf("%lu ", block_size);
   print_rss();
 }
@@ -76,29 +88,14 @@ void first_fit_boom(size_t space) {
   }
 }
 
-void superblock_boom_class(size_t block_size, size_t space, size_t superblock_size) {
+void superblock_boom_class(size_t block_size, size_t space, size_t superblock_size __attribute__((unused))) {
   size_t n_to_allocate = space / block_size;
 
-  size_t free_us_count = 0;
   fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
   for (size_t i = 0; i < n_to_allocate; i++) {
-    void* ptr = my_malloc(block_size);
-    assert(ptr != NULL);
-    free_us[free_us_count++] = ptr;
+    my_malloc(block_size);
   }
-  size_t print_count = 0;
-  for (size_t i = 0; i < n_to_allocate; i++) {
-    if (random() % superblock_size > block_size) {
-      free(free_us[i]);
-    } else {
-      if (print_count < 100) {
-        //printf("Keeping %p\n", free_us[i]);
-        ++print_count;
-      }
-    }
-  }
-  printf("%lu ", block_size);
-  print_rss();
+  assert(0);
 }
 
 void superblock_boom(size_t space, size_t superblock_size) {
@@ -142,21 +139,11 @@ int main(int argc, const char* argv[]) {
 
   switch (workload) {
     case FIRST_FIT:
-      size_t max_n_to_free = (space/8);
-      free_us = malloc(max_n_to_free * sizeof(void*));
-      assert(free_us != NULL);
-      memset(free_us, 0, max_n_to_free * sizeof(void*));
-      free_us_length = max_n_to_free;
-
       base_rss = get_rss();
       fprintf(stderr, "base_rss=%lu\n", base_rss);
       first_fit_boom(space);
       break;
     case SUPER_BLOCK:
-      free_us_length = (space/8);
-      free_us = malloc(free_us_length * sizeof(void*));
-      assert(free_us != NULL);
-      memset(free_us, 0, free_us_length * sizeof(void*));
       base_rss = get_rss();
 
       superblock_boom(space, superblock_size);
