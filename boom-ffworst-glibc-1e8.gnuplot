@@ -119,7 +119,7 @@ set cbtics  norangelimit autofreq
 set rtics axis in scale 1,0.5 nomirror norotate  autojustify
 set rtics  norangelimit autofreq 
 unset ttics
-set title "MaxRSS for worst-case first-fit workload 10^8 bytes per class" 
+set title "Blowup for worst-case first-fit workload 10^8 bytes per class" 
 set title  font "" textcolor lt -1 norotate
 set timestamp bottom 
 set timestamp "" 
@@ -131,9 +131,9 @@ set xlabel "log_2(max object size)"
 set xlabel  font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  font "" textcolor lt -1 norotate
-set xrange [ * : * ] noreverse writeback
+set xrange [ 4 : 26 ] noreverse writeback
 set x2range [ * : * ] noreverse writeback
-set ylabel "maxRSS" 
+set ylabel "Blowup" 
 set ylabel  font "" textcolor lt -1 rotate
 set y2label "" 
 set y2label  font "" textcolor lt -1 rotate
@@ -174,5 +174,5 @@ GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
 ## Last datafile plotted: "boom-ffworst-glibc.data"
-plot "boom-ffworst-glibc.data" using (log($1)/log(2)):($2) with lines
+plot "boom-ffworst-glibc-1e8.data" using (log($1)/log(2)):($3) with lines
 #    EOF
