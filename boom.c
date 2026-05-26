@@ -25,7 +25,7 @@ size_t get_adjusted_rss() {
 
 void print_rss() {
   size_t rss = get_adjusted_rss();
-  printf("%lu %4.2f\n", rss, (1.0*rss)/live_data_size);
+  printf("%lu %4.2f %lu\n", rss, (1.0*rss)/live_data_size, live_data_size);
 }
 
 void* my_malloc(size_t size) {
