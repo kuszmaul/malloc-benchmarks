@@ -7,3 +7,4 @@ struct malloc_interface {
 };
 
 struct malloc_interface sff_malloc_setup();
+struct malloc_interface glibc_malloc_setup();

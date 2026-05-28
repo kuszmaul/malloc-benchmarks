@@ -10,5 +10,5 @@ boom-ffworst-glibc-1e8.data: boom
 
 # boom-superblock-4k-libc-1e3.data: boom
 # 	./boom --superblock 4096 > $@
-boom: boom.o sffmalloc.o
-sffmalloc.o boom.o: malloc-interface.h
+boom: boom.o sffmalloc.o libcmalloc.o
+libcmalloc.o sffmalloc.o boom.o: malloc-interface.h

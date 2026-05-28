@@ -94,7 +94,7 @@ void first_fit_boom(size_t space) {
       count += 1;
       bs *= 2;
     }
-    struct malloc_interface sffi = sff_malloc_setup();
+    struct malloc_interface sffi = glibc_malloc_setup();
     sffi.init(count * space);
   }
   while (block_size <= space) {
