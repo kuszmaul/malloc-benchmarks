@@ -7,6 +7,8 @@
 #include <string.h>
 #include <sys/resource.h>
 
+#include "sffmalloc.h"
+
 size_t base_rss;
 
 size_t live_data_size = 0;
@@ -71,7 +73,10 @@ void first_fit_boom_class(size_t block_size, size_t space) {
   for (size_t i = 0; i < n_to_allocate; i++) {
     my_malloc(block_size);
   }
+  size_t rss_before_free = get_adjusted_rss();
+  fprintf(stderr, "before free: %lu %4.2f\n", rss_before_free, (1.0*rss_before_free)/live_data_size);
   free_every_other();
+  fprintf(stderr, "printing %lu\n", block_size);
   printf("%lu ", block_size);
   print_rss();
 }
@@ -81,7 +86,13 @@ void first_fit_boom_class(size_t block_size, size_t space) {
  * block, and allocate blocks of size 16 of total size `space` and free every
  * other block, then blocks of size 32 and so forth. */
 void first_fit_boom(size_t space) {
-  size_t block_size = 16; // For glibc, the smallest effective object size is 16 bytes.
+  size_t block_size = 32; // For glibc, the smallest effective object size is 16 bytes.  Also we need 16 bytes for bookkeeping.
+  size_t count = 0;
+  while (block_size <= space) {
+    count += 1;
+    block_size *= 2;
+  }
+  sff_malloc_init(count * space);
   while (block_size <= space) {
     first_fit_boom_class(block_size, space);
     block_size *= 2;
@@ -141,6 +152,7 @@ int main(int argc, const char* argv[]) {
     case FIRST_FIT:
       base_rss = get_rss();
       fprintf(stderr, "base_rss=%lu\n", base_rss);
+      printf("# BlockSize maxrss blowup livedatasize\n");
       first_fit_boom(space);
       break;
     case SUPER_BLOCK:
