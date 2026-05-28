@@ -1,3 +1,4 @@
+#include <argtable2.h>
 #include <assert.h>
 #include <limits.h>
 #include <stddef.h>
@@ -85,9 +86,8 @@ void first_fit_boom_class(size_t block_size, size_t space, const struct malloc_i
  * Allocate blocks of size 8 of total size `space`.  Then free every other
  * block, and allocate blocks of size 16 of total size `space` and free every
  * other block, then blocks of size 32 and so forth. */
-void first_fit_boom(size_t space) {
+void first_fit_boom(size_t space, struct malloc_interface *mi) {
   size_t block_size = 32; // For glibc, the smallest effective object size is 16 bytes.  Also we need 16 bytes for bookkeeping.
-  struct malloc_interface sffi;
   {
     size_t count = 0;
     size_t bs = block_size;
@@ -95,11 +95,10 @@ void first_fit_boom(size_t space) {
       count += 1;
       bs *= 2;
     }
-    sffi = glibc_malloc_setup();
-    sffi.init(count * space);
+    mi->init(count * space);
   }
   while (block_size <= space) {
-    first_fit_boom_class(block_size, space, &sffi);
+    first_fit_boom_class(block_size, space, mi);
     block_size *= 2;
   }
 }
@@ -114,7 +113,7 @@ void superblock_boom_class(size_t block_size, size_t space, size_t superblock_si
   assert(0);
 }
 
-void superblock_boom(size_t space, size_t superblock_size) {
+void superblock_boom(size_t space, size_t superblock_size, struct malloc_interface *mi __attribute__((unused))) {
   size_t block_size = 8;
   while (block_size <= space) {
     superblock_boom_class(block_size, space, superblock_size, NULL);
@@ -125,8 +124,33 @@ void superblock_boom(size_t space, size_t superblock_size) {
 enum Workload { FIRST_FIT, SUPER_BLOCK } workload = FIRST_FIT;
 size_t superblock_size;
 
-int main(int argc, const char* argv[]) {
+int main(int argc, char** argv) {
 
+  struct arg_rex *malloclib = arg_rex1(
+      NULL,
+      "malloclib",
+      "^\\(DEFAULT\\|SFF\\)$",
+      "<LIB>",
+      0, "set library (DEFAULT, SFF)");
+  struct arg_end *end = arg_end(10);
+  void *argtable[] = {malloclib, end};
+  int nerrors = arg_parse(argc, argv, argtable);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, end, argv[0]);
+    exit(1);
+  }
+
+  struct malloc_interface mi;
+
+  if (strcmp(malloclib->sval[0], "DEFAULT") == 0) {
+    mi = glibc_malloc_setup();
+  } else if (strcmp(malloclib->sval[0], "SFF") == 0) {
+    mi = sff_malloc_setup();
+  } else {
+    assert(0);
+  }
+
+  /*
   int argnum = 1;
 
   fprintf(stderr, "argc=%d argnum=%d\n", argc, argnum);
@@ -150,6 +174,7 @@ int main(int argc, const char* argv[]) {
     }
     ++argnum;
   }
+  */
 
   size_t space = 100000000;
 
@@ -158,12 +183,12 @@ int main(int argc, const char* argv[]) {
       base_rss = get_rss();
       fprintf(stderr, "base_rss=%lu\n", base_rss);
       printf("# BlockSize maxrss blowup livedatasize\n");
-      first_fit_boom(space);
+      first_fit_boom(space, &mi);
       break;
     case SUPER_BLOCK:
       base_rss = get_rss();
 
-      superblock_boom(space, superblock_size);
+      superblock_boom(space, superblock_size, &mi);
       break;
   }
   return 0;
