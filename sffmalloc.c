@@ -22,6 +22,10 @@ static void sff_init(size_t total_space) {
   total_mapped = total_space;
 }
 
+static void* sff_malloc(size_t total_space __attribute__((unused))) {
+  assert(0);
+}
+
 struct malloc_interface sff_malloc_setup() {
-  return (struct malloc_interface){sff_init};
+  return (struct malloc_interface){sff_init, sff_malloc};
 }

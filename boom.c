@@ -36,17 +36,17 @@ struct block {
 
 struct block *blocks = NULL;
 
-void my_malloc(size_t size) {
+void my_malloc(size_t size, const struct malloc_interface *mi) {
   live_data_size += size;
   assert(size >= sizeof(struct block));
-  struct block *b = malloc(size);
+  struct block *b = mi->alloc(size);
   memset(b+1, 1, size-sizeof(struct block));
   b->size = size;
   b->next = blocks;
   blocks = b;
 }
 
-void my_free(struct block** blockp) {
+void my_free(struct block** blockp, const struct malloc_interface *mi __attribute__((unused))) {
   assert(*blockp != NULL);
   struct block *block = *blockp;
   struct block b = *block;
@@ -56,26 +56,26 @@ void my_free(struct block** blockp) {
   *blockp = b.next;
 }
 
-void free_every_other() {
+void free_every_other(const struct malloc_interface *mi) {
   struct block **p = &blocks;
   while (true) {
     if (*p == NULL) break;
-    my_free(p);
+    my_free(p, mi);
     if (*p == NULL) break;
     p = &(*p)->next;
   }
 }
 
-void first_fit_boom_class(size_t block_size, size_t space) {
+void first_fit_boom_class(size_t block_size, size_t space, const struct malloc_interface *mi) {
   size_t n_to_allocate = space / block_size;
 
   fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
   for (size_t i = 0; i < n_to_allocate; i++) {
-    my_malloc(block_size);
+    my_malloc(block_size, mi);
   }
   size_t rss_before_free = get_adjusted_rss();
   fprintf(stderr, "before free: %lu %4.2f\n", rss_before_free, (1.0*rss_before_free)/live_data_size);
-  free_every_other();
+  free_every_other(mi);
   fprintf(stderr, "printing %lu\n", block_size);
   printf("%lu ", block_size);
   print_rss();
@@ -87,6 +87,7 @@ void first_fit_boom_class(size_t block_size, size_t space) {
  * other block, then blocks of size 32 and so forth. */
 void first_fit_boom(size_t space) {
   size_t block_size = 32; // For glibc, the smallest effective object size is 16 bytes.  Also we need 16 bytes for bookkeeping.
+  struct malloc_interface sffi;
   {
     size_t count = 0;
     size_t bs = block_size;
@@ -94,21 +95,21 @@ void first_fit_boom(size_t space) {
       count += 1;
       bs *= 2;
     }
-    struct malloc_interface sffi = glibc_malloc_setup();
+    sffi = glibc_malloc_setup();
     sffi.init(count * space);
   }
   while (block_size <= space) {
-    first_fit_boom_class(block_size, space);
+    first_fit_boom_class(block_size, space, &sffi);
     block_size *= 2;
   }
 }
 
-void superblock_boom_class(size_t block_size, size_t space, size_t superblock_size __attribute__((unused))) {
+void superblock_boom_class(size_t block_size, size_t space, size_t superblock_size __attribute__((unused)), const struct malloc_interface *mi) {
   size_t n_to_allocate = space / block_size;
 
   fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
   for (size_t i = 0; i < n_to_allocate; i++) {
-    my_malloc(block_size);
+    my_malloc(block_size, mi);
   }
   assert(0);
 }
@@ -116,7 +117,7 @@ void superblock_boom_class(size_t block_size, size_t space, size_t superblock_si
 void superblock_boom(size_t space, size_t superblock_size) {
   size_t block_size = 8;
   while (block_size <= space) {
-    superblock_boom_class(block_size, space, superblock_size);
+    superblock_boom_class(block_size, space, superblock_size, NULL);
     block_size *= 2;
   }
 }
