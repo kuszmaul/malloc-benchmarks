@@ -11,15 +11,20 @@ static void glibc_init(size_t total_space) {
   alloced = 0;
 }
 
-void* glibc_malloc(size_t space) {
+static void* glibc_malloc(size_t space) {
   alloced += space;
   assert(alloced <= total);
   return malloc(space);
+}
+
+static void glibc_free(void *p) {
+  free(p);
 }
 
 struct malloc_interface glibc_malloc_setup() {
   return (struct malloc_interface){
     glibc_init,
     glibc_malloc,
+    glibc_free,
   };
 }

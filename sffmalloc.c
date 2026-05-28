@@ -26,6 +26,10 @@ static void* sff_malloc(size_t total_space __attribute__((unused))) {
   assert(0);
 }
 
+static void sff_free(void *p __attribute__((unused))) {
+  assert(0);
+}
+
 struct malloc_interface sff_malloc_setup() {
-  return (struct malloc_interface){sff_init, sff_malloc};
+  return (struct malloc_interface){sff_init, sff_malloc, sff_free};
 }

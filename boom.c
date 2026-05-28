@@ -46,11 +46,11 @@ void my_malloc(size_t size, const struct malloc_interface *mi) {
   blocks = b;
 }
 
-void my_free(struct block** blockp, const struct malloc_interface *mi __attribute__((unused))) {
+void my_free(struct block** blockp, const struct malloc_interface *mi) {
   assert(*blockp != NULL);
   struct block *block = *blockp;
   struct block b = *block;
-  free(block);
+  mi->free(block);
   assert(b.size <= live_data_size);
   live_data_size -= b.size;
   *blockp = b.next;
