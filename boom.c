@@ -7,7 +7,7 @@
 #include <string.h>
 #include <sys/resource.h>
 
-#include "sffmalloc.h"
+#include "malloc-interface.h"
 
 size_t base_rss;
 
@@ -87,12 +87,16 @@ void first_fit_boom_class(size_t block_size, size_t space) {
  * other block, then blocks of size 32 and so forth. */
 void first_fit_boom(size_t space) {
   size_t block_size = 32; // For glibc, the smallest effective object size is 16 bytes.  Also we need 16 bytes for bookkeeping.
-  size_t count = 0;
-  while (block_size <= space) {
-    count += 1;
-    block_size *= 2;
+  {
+    size_t count = 0;
+    size_t bs = block_size;
+    while (bs <= space) {
+      count += 1;
+      bs *= 2;
+    }
+    struct malloc_interface sffi = sff_malloc_setup();
+    sffi.init(count * space);
   }
-  sff_malloc_init(count * space);
   while (block_size <= space) {
     first_fit_boom_class(block_size, space);
     block_size *= 2;

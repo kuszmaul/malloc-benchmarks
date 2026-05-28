@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
-#include "sffmalloc.h"
+#include "malloc-interface.h"
 
 static size_t total_mapped;
 static void*  mapped;
 static size_t page_size = 4096;
 
-void sff_malloc_init(size_t total_space) {
+static void sff_init(size_t total_space) {
   total_space += page_size - 1;
   total_space &= ~(page_size - 1);
   assert(total_space % page_size == 0);
@@ -20,4 +20,8 @@ void sff_malloc_init(size_t total_space) {
   }
   assert(mapped != MAP_FAILED);
   total_mapped = total_space;
+}
+
+struct malloc_interface sff_malloc_setup() {
+  return (struct malloc_interface){sff_init};
 }
