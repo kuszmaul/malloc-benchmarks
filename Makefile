@@ -1,8 +1,10 @@
 CFLAGS = -g -O1 -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough
 LDLIBS = -largtable2
-graphs: boom-ffworst-glibc-1e8.pdf boom-ffworst-glibc-1e9.pdf boom-ffworst-bump-1e8.pdf
+graphs: boom-ffworst-1e8.pdf boom-ffworst-glibc-1e8.pdf boom-ffworst-glibc-1e9.pdf boom-ffworst-bump-1e8.pdf
 
 %.pdf: %.gnuplot %.data
+	gnuplot $<
+boom-ffworst-1e8.pdf: boom-ffworst-1e8.gnuplot boom-ffworst-glibc-1e8.data boom-ffworst-bump-1e8.data
 	gnuplot $<
 
 # Don't make a rule for boom-ffworst-glibc-1e8.data since it will crash my laptop -Bradley

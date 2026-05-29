@@ -31,39 +31,67 @@ void print_rss() {
 }
 
 struct block {
-  size_t size;
   struct block *next;
 };
 
-struct block *blocks = NULL;
+struct block_class {
+  size_t size;
+  struct block *blocks;
+  struct block_class *next;
+};
+
+struct block_class *block_classes = NULL;
+
+struct block_class *find_or_make_block_class(size_t size) {
+  struct block_class *class = block_classes;
+  while (class != NULL) {
+    if (class->size == size) {
+      return class;
+    }
+    class = class->next;
+  }
+  class = malloc(sizeof(struct block_class));
+  *class = (struct block_class){size, NULL, block_classes};
+  block_classes = class;
+  return class;
+}
 
 void my_malloc(size_t size, const struct malloc_interface *mi) {
   live_data_size += size;
   assert(size >= sizeof(struct block));
   struct block *b = mi->alloc(size);
   memset(b+1, 1, size-sizeof(struct block));
-  b->size = size;
-  b->next = blocks;
-  blocks = b;
+  struct block_class *class = find_or_make_block_class(size);
+  b->next = class->blocks;
+  class->blocks = b;
 }
 
-void my_free(struct block** blockp, const struct malloc_interface *mi) {
+void my_free(struct block** blockp, size_t size, const struct malloc_interface *mi) {
   assert(*blockp != NULL);
   struct block *block = *blockp;
   struct block b = *block;
   mi->free(block);
-  assert(b.size <= live_data_size);
-  live_data_size -= b.size;
+  assert(size <= live_data_size);
+  live_data_size -= size;
   *blockp = b.next;
 }
 
-void free_every_other(const struct malloc_interface *mi) {
-  struct block **p = &blocks;
+void free_every_other_in_class(struct block_class *class, const struct malloc_interface *mi) {
+  struct block **p = &class->blocks;
   while (true) {
     if (*p == NULL) break;
-    my_free(p, mi);
-    if (*p == NULL) break;
     p = &(*p)->next;
+    if (*p == NULL) break;
+    my_free(p, class->size, mi);
+    // Don't need to bump `p` since `my_free` already updated it.
+  }
+}
+
+void free_every_other(const struct malloc_interface *mi) {
+  struct block_class *class = block_classes;
+  while (class != NULL) {
+    free_every_other_in_class(class, mi);
+    class = class->next;
   }
 }
 

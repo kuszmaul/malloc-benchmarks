@@ -119,7 +119,7 @@ set cbtics  norangelimit autofreq
 set rtics axis in scale 1,0.5 nomirror norotate  autojustify
 set rtics  norangelimit autofreq 
 unset ttics
-set title "Blowup for worst-case first-fit workload 10^8 bytes per class" 
+set title "LIBC allocator blowup for worst-case first-fit workload 10^8 bytes per class" 
 set title  font "" textcolor lt -1 norotate
 set timestamp bottom 
 set timestamp "" 

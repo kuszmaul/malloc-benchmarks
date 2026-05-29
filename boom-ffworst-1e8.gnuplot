@@ -11,7 +11,7 @@
 #    	faq, bugs, etc:   type "help FAQ"
 #    	immediate help:   type "help"  (plot window: hit 'h')
 set terminal pdfcairo  transparent enhanced fontscale 0.5 size 5.00in, 3.00in 
-set output 'boom-ffworst-bump-1e8.pdf'
+set output 'boom-ffworst-1e8.pdf'
 unset clip points
 set clip one
 unset clip two
@@ -45,12 +45,11 @@ unset grid
 unset raxis
 set theta counterclockwise right
 set style parallel front  lt black linewidth 2.000 dashtype solid
-set key notitle
-set key fixed right top vertical Right noreverse enhanced autotitle nobox
+set key on
+set key fixed left top vertical Right noreverse enhanced autotitle nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
 set key maxcolumns 0 maxrows 0
 set key noopaque
-unset key
 unset label
 unset arrow
 unset style line
@@ -119,7 +118,7 @@ set cbtics  norangelimit autofreq
 set rtics axis in scale 1,0.5 nomirror norotate  autojustify
 set rtics  norangelimit autofreq 
 unset ttics
-set title "Bump allocator blowup for worst-case first-fit workload 10^8 bytes per class" 
+set title "Blowup for worst-case first-fit workload 10^8 bytes per class" 
 set title  font "" textcolor lt -1 norotate
 set timestamp bottom 
 set timestamp "" 
@@ -173,5 +172,8 @@ set fit brief errorvariables nocovariancevariables errorscaling prescale nowrap 
 GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
-plot "boom-ffworst-bump-1e8.data" using (log($1)/log(2)):($3) with lines
+plot \
+ "boom-ffworst-bump-1e8.data" using (log($1)/log(2)):($3) with lines title "bump", \
+ "boom-ffworst-glibc-1e8.data" using (log($1)/log(2)):($3) with lines title "libc" \
+
 #    EOF
