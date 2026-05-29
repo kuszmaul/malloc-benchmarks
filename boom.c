@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <argtable2.h>
 #include <assert.h>
 #include <limits.h>
@@ -151,18 +152,30 @@ void superblock_boom(size_t space, size_t superblock_size, struct malloc_interfa
 enum Workload { FIRST_FIT, SUPER_BLOCK } workload = FIRST_FIT;
 size_t superblock_size;
 
-int main(int argc, char** argv) {
+const int default_space_per_class = 100000000;
+size_t space_per_class = default_space_per_class;
+
+enum MallocLib { LIB_DEFAULT, LIB_FF, LIB_BUMP } lib = LIB_DEFAULT;
+
+void argparse(int argc, char**argv) {
+  int exitcode;
+
+  char *space_per_string_glossary_string = NULL;
+  int r = asprintf(&space_per_string_glossary_string,
+                   "space to allocate per size class, default=%d", default_space_per_class);
+  assert(r > 0);
 
   const char *progname = argv[0];
-  struct arg_rex *malloclib = arg_rex1(
+  struct arg_rex *malloclib = arg_rex0(
       NULL,
       "malloclib",
       "^\\(DEFAULT\\|FF\\|BUMP\\)$",
       "<LIB>",
-      0, "set library (DEFAULT=libc malloc, FF=first fit, BUMP=bump allocator)");
-  struct arg_end *end = arg_end(10);
+      0, "set library (DEFAULT=default (libc) malloc, FF=first fit, BUMP=bump allocator)");
+  struct arg_int *arg_space_per_class = arg_intn(NULL, "space-per-class", "<int>", 0, INT_MAX, space_per_string_glossary_string);
   struct arg_lit *help = arg_lit0(NULL, "help", "print this help and exit");
-  void *argtable[] = {malloclib, help, end};
+  struct arg_end *end = arg_end(10);
+  void *argtable[] = {malloclib, arg_space_per_class, help, end};
   if (arg_nullcheck(argtable) != 0) {
     printf("%s: insufficient memory\n", progname);
   }
@@ -172,28 +185,55 @@ int main(int argc, char** argv) {
     printf("Usage: %s", progname);
     arg_print_syntaxv(stdout, argtable, "\n");
     arg_print_glossary(stdout, argtable, "%-25s %s\n");
-    arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
-    exit(0);
+    exitcode = 0;
+    goto do_exit;
   }
   if (nerrors != 0) {
     arg_print_errors(stderr, end, progname);
     arg_print_syntax(stderr, argtable, "\n");
-    exit(1);
+    exitcode = 1;
+    goto do_exit;
   }
+
+
+  if (malloclib->count == 0 || strcmp(malloclib->sval[0], "DEFAULT") == 0) {
+    lib = LIB_DEFAULT;
+  } else if (strcmp(malloclib->sval[0], "FF") == 0) {
+    lib = LIB_FF;
+  } else if (strcmp(malloclib->sval[0], "BUMP") == 0) {
+    lib = LIB_BUMP;
+  } else {
+    arg_print_syntax(stderr, argtable, "\n");
+    exitcode = 1;
+    goto do_exit;
+  }
+  if (arg_space_per_class->count > 0) {
+    space_per_class = arg_space_per_class->ival[0];
+  }
+  return;
+do_exit:
+  arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
+  free(space_per_string_glossary_string);
+  exit(exitcode);
+}
+
+
+int main(int argc, char** argv) {
+  argparse(argc, argv);
 
   struct malloc_interface mi;
 
-  if (strcmp(malloclib->sval[0], "DEFAULT") == 0) {
-    mi = glibc_malloc_setup();
-  } else if (strcmp(malloclib->sval[0], "FF") == 0) {
-    mi = ff_malloc_setup();
-  } else if (strcmp(malloclib->sval[0], "BUMP") == 0) {
-    mi = bump_malloc_setup();
-  } else {
-    arg_print_syntax(stderr, argtable, "\n");
-    assert(0);
+  switch (lib) {
+    case LIB_DEFAULT:
+      mi = glibc_malloc_setup();
+      break;
+    case LIB_FF:
+      mi = ff_malloc_setup();
+      break;
+    case LIB_BUMP:
+      mi = bump_malloc_setup();
+      break;
   }
-
   /*
   int argnum = 1;
 
@@ -220,19 +260,17 @@ int main(int argc, char** argv) {
   }
   */
 
-  size_t space = 100000000;
-
   switch (workload) {
     case FIRST_FIT:
       base_rss = get_rss();
       fprintf(stderr, "base_rss=%lu\n", base_rss);
       printf("# BlockSize maxrss blowup livedatasize\n");
-      first_fit_boom(space, &mi);
+      first_fit_boom(space_per_class, &mi);
       break;
     case SUPER_BLOCK:
       base_rss = get_rss();
 
-      superblock_boom(space, superblock_size, &mi);
+      superblock_boom(space_per_class, superblock_size, &mi);
       break;
   }
   return 0;
