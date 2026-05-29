@@ -77,7 +77,6 @@ void first_fit_boom_class(size_t block_size, size_t space, const struct malloc_i
   size_t rss_before_free = get_adjusted_rss();
   fprintf(stderr, "before free: %lu %4.2f\n", rss_before_free, (1.0*rss_before_free)/live_data_size);
   free_every_other(mi);
-  fprintf(stderr, "printing %lu\n", block_size);
   printf("%lu ", block_size);
   print_rss();
 }
@@ -126,17 +125,31 @@ size_t superblock_size;
 
 int main(int argc, char** argv) {
 
+  const char *progname = argv[0];
   struct arg_rex *malloclib = arg_rex1(
       NULL,
       "malloclib",
-      "^\\(DEFAULT\\|SFF\\)$",
+      "^\\(DEFAULT\\|FF\\|BUMP\\)$",
       "<LIB>",
-      0, "set library (DEFAULT, SFF)");
+      0, "set library (DEFAULT=libc malloc, FF=first fit, BUMP=bump allocator)");
   struct arg_end *end = arg_end(10);
-  void *argtable[] = {malloclib, end};
+  struct arg_lit *help = arg_lit0(NULL, "help", "print this help and exit");
+  void *argtable[] = {malloclib, help, end};
+  if (arg_nullcheck(argtable) != 0) {
+    printf("%s: insufficient memory\n", progname);
+  }
   int nerrors = arg_parse(argc, argv, argtable);
+  /* special case: `--help` takes precendence over error reporting. */
+  if (help->count > 0) {
+    printf("Usage: %s", progname);
+    arg_print_syntaxv(stdout, argtable, "\n");
+    arg_print_glossary(stdout, argtable, "%-25s %s\n");
+    arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
+    exit(0);
+  }
   if (nerrors != 0) {
-    arg_print_errors(stderr, end, argv[0]);
+    arg_print_errors(stderr, end, progname);
+    arg_print_syntax(stderr, argtable, "\n");
     exit(1);
   }
 
@@ -144,9 +157,12 @@ int main(int argc, char** argv) {
 
   if (strcmp(malloclib->sval[0], "DEFAULT") == 0) {
     mi = glibc_malloc_setup();
-  } else if (strcmp(malloclib->sval[0], "SFF") == 0) {
-    mi = sff_malloc_setup();
+  } else if (strcmp(malloclib->sval[0], "FF") == 0) {
+    mi = ff_malloc_setup();
+  } else if (strcmp(malloclib->sval[0], "BUMP") == 0) {
+    mi = bump_malloc_setup();
   } else {
+    arg_print_syntax(stderr, argtable, "\n");
     assert(0);
   }
 

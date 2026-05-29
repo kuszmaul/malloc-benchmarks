@@ -10,7 +10,7 @@ static size_t total_mapped;
 static void*  mapped;
 static size_t page_size = 4096;
 
-static void sff_init(size_t total_space) {
+static void ff_init(size_t total_space) {
   total_space += page_size - 1;
   total_space &= ~(page_size - 1);
   assert(total_space % page_size == 0);
@@ -22,14 +22,14 @@ static void sff_init(size_t total_space) {
   total_mapped = total_space;
 }
 
-static void* sff_malloc(size_t total_space __attribute__((unused))) {
+static void* ff_malloc(size_t total_space __attribute__((unused))) {
   assert(0);
 }
 
-static void sff_free(void *p __attribute__((unused))) {
+static void ff_free(void *p __attribute__((unused))) {
   assert(0);
 }
 
-struct malloc_interface sff_malloc_setup() {
-  return (struct malloc_interface){sff_init, sff_malloc, sff_free};
+struct malloc_interface ff_malloc_setup() {
+  return (struct malloc_interface){ff_init, ff_malloc, ff_free};
 }

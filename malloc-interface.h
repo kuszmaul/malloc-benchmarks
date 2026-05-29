@@ -8,5 +8,6 @@ struct malloc_interface {
   void (*free)(void* p);
 };
 
-struct malloc_interface sff_malloc_setup();
+struct malloc_interface bump_malloc_setup();
+struct malloc_interface ff_malloc_setup();
 struct malloc_interface glibc_malloc_setup();

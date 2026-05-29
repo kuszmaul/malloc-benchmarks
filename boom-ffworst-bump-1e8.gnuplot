@@ -11,7 +11,7 @@
 #    	faq, bugs, etc:   type "help FAQ"
 #    	immediate help:   type "help"  (plot window: hit 'h')
 set terminal pdfcairo  transparent enhanced fontscale 0.5 size 5.00in, 3.00in 
-set output 'boom-ffworst-libc-1e8.pdf'
+set output 'boom-ffworst-bump-1e8.pdf'
 unset clip points
 set clip one
 unset clip two
@@ -173,5 +173,5 @@ set fit brief errorvariables nocovariancevariables errorscaling prescale nowrap 
 GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
-plot "boom-ffworst-glibc-1e8.data" using (log($1)/log(2)):($3) with lines
+plot "boom-ffworst-bump-1e8.data" using (log($1)/log(2)):($3) with lines
 #    EOF
