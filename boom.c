@@ -14,11 +14,20 @@
 size_t base_rss;
 
 size_t live_data_size = 0;
+size_t max_live_data_size = 0;
+
+size_t max(size_t a, size_t b) {
+  return a < b ? b : a;
+}
+void maxf(size_t *a, size_t b) {
+  *a = max(*a, b);
+}
 
 size_t get_rss() {
   struct rusage ru;
   int r = getrusage(RUSAGE_SELF, &ru);
   assert(r == 0);
+  fprintf(stderr, "raw rss=%lu\n", ru.ru_maxrss*1024ul);
   return ru.ru_maxrss*1024ul;
 }
 
@@ -28,7 +37,7 @@ size_t get_adjusted_rss() {
 
 void print_rss() {
   size_t rss = get_adjusted_rss();
-  printf("%lu %4.2f %lu\n", rss, (1.0*rss)/live_data_size, live_data_size);
+  printf("%lu %4.2f %lu\n", rss, (1.0*rss)/max_live_data_size, max_live_data_size);
 }
 
 struct block {
@@ -57,14 +66,30 @@ struct block_class *find_or_make_block_class(size_t size) {
   return class;
 }
 
+size_t last_size = 0;
+size_t count_of_last_size = 0;
+void  *last_alloc = 0;
+
 void my_malloc(size_t size, const struct malloc_interface *mi) {
+  if (size == last_size) {
+    count_of_last_size += 1;
+  } else {
+    last_size = size;
+    count_of_last_size = 1;
+  }
   live_data_size += size;
+  maxf(&max_live_data_size, live_data_size);
   assert(size >= sizeof(struct block));
   struct block *b = mi->alloc(size);
   memset(b+1, 1, size-sizeof(struct block));
   struct block_class *class = find_or_make_block_class(size);
   b->next = class->blocks;
   class->blocks = b;
+
+  if (count_of_last_size < 10) {
+    fprintf(stderr, " malloc(%lu)=%p (dist=%ld)\n", size, b, (char*)b-(char*)last_alloc);
+  }
+  last_alloc = b;
 }
 
 void my_free(struct block** blockp, size_t size, const struct malloc_interface *mi) {
@@ -77,8 +102,20 @@ void my_free(struct block** blockp, size_t size, const struct malloc_interface *
   *blockp = b.next;
 }
 
+size_t length(struct block *p) {
+  size_t result = 0;
+  while (p != NULL) {
+    result += 1;
+    p = p->next;
+  }
+  return result;
+}
+
+// Free every other block in the class. If there are n blocks in the class, free
+// floor(n/2) of them.
 void free_every_other_in_class(struct block_class *class, const struct malloc_interface *mi) {
   struct block **p = &class->blocks;
+  assert(*p != NULL); // The class should always be nonempty.
   while (true) {
     if (*p == NULL) break;
     p = &(*p)->next;
@@ -86,6 +123,8 @@ void free_every_other_in_class(struct block_class *class, const struct malloc_in
     my_free(p, class->size, mi);
     // Don't need to bump `p` since `my_free` already updated it.
   }
+  assert(class->blocks != NULL); // The class should always be nonempty.
+  fprintf(stderr, "size %lu has %lu blocks\n", class->size, length(class->blocks));
 }
 
 void free_every_other(const struct malloc_interface *mi) {
@@ -105,9 +144,9 @@ void first_fit_boom_class(size_t block_size, size_t space, const struct malloc_i
   }
   size_t rss_before_free = get_adjusted_rss();
   fprintf(stderr, "before free: %lu %4.2f\n", rss_before_free, (1.0*rss_before_free)/live_data_size);
-  free_every_other(mi);
   printf("%lu ", block_size);
   print_rss();
+  free_every_other(mi);
 }
 
 /* Effect: blow up memory using the worst-known workload for first fit.
@@ -234,37 +273,12 @@ int main(int argc, char** argv) {
       mi = bump_malloc_setup();
       break;
   }
-  /*
-  int argnum = 1;
-
-  fprintf(stderr, "argc=%d argnum=%d\n", argc, argnum);
-  while (argnum < argc) {
-    fprintf(stderr, "Looking at arg %s\n", argv[argnum]);
-    if (strcmp(argv[argnum], "--first-fit")==0) {
-      workload = FIRST_FIT;
-    } else if (strcmp(argv[argnum], "--superblock")==0) {
-      fprintf(stderr, "Superblocking\n");
-      ++argnum;
-      if (argnum < argc) {
-        char *end;
-        unsigned long v = strtoull(argv[argnum], &end, 10);
-        if (v == ULLONG_MAX || *end != '\0') {
-          fprintf(stderr, "Cannot parse superblock size: %s\n", argv[argnum]);
-          exit(1);
-        }
-        superblock_size = v;
-        workload = SUPER_BLOCK;
-      }
-    }
-    ++argnum;
-  }
-  */
 
   switch (workload) {
     case FIRST_FIT:
       base_rss = get_rss();
       fprintf(stderr, "base_rss=%lu\n", base_rss);
-      printf("# BlockSize maxrss blowup livedatasize\n");
+      printf("# BlockSize maxrss blowup maxlivedatasize\n");
       first_fit_boom(space_per_class, &mi);
       break;
     case SUPER_BLOCK:
