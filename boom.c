@@ -23,7 +23,7 @@ void maxf(size_t *a, size_t b) {
   *a = max(*a, b);
 }
 
-size_t get_rss() {
+size_t get_rss(void) {
   struct rusage ru;
   int r = getrusage(RUSAGE_SELF, &ru);
   assert(r == 0);
@@ -31,11 +31,11 @@ size_t get_rss() {
   return ru.ru_maxrss*1024ul;
 }
 
-size_t get_adjusted_rss() {
+size_t get_adjusted_rss(void) {
   return get_rss() - base_rss;
 }
 
-void print_rss() {
+void print_rss(void) {
   size_t rss = get_adjusted_rss();
   printf("%lu %4.2f %lu\n", rss, (1.0*rss)/max_live_data_size, max_live_data_size);
 }
@@ -194,7 +194,7 @@ size_t superblock_size;
 const int default_space_per_class = 100000000;
 size_t space_per_class = default_space_per_class;
 
-enum MallocLib { LIB_DEFAULT, LIB_FF, LIB_BUMP } lib = LIB_DEFAULT;
+enum MallocLib { LIB_DEFAULT, LIB_FF, LIB_BUMP, LIB_BUMP_UNMAP } lib = LIB_DEFAULT;
 
 void argparse(int argc, char**argv) {
   int exitcode;
@@ -208,9 +208,9 @@ void argparse(int argc, char**argv) {
   struct arg_rex *malloclib = arg_rex0(
       NULL,
       "malloclib",
-      "^\\(DEFAULT\\|FF\\|BUMP\\)$",
+      "^\\(DEFAULT\\|FF\\|BUMP\\|BUMP_UNMAP\\)$",
       "<LIB>",
-      0, "set library (DEFAULT=default (libc) malloc, FF=first fit, BUMP=bump allocator)");
+      0, "set library (DEFAULT=default (libc) malloc, FF=first fit, BUMP=bump allocator, BUMP_UNMAP=bump allocator that unmaps when freeing large blocks)");
   struct arg_int *arg_space_per_class = arg_intn(NULL, "space-per-class", "<int>", 0, INT_MAX, space_per_string_glossary_string);
   struct arg_lit *help = arg_lit0(NULL, "help", "print this help and exit");
   struct arg_end *end = arg_end(10);
@@ -241,6 +241,8 @@ void argparse(int argc, char**argv) {
     lib = LIB_FF;
   } else if (strcmp(malloclib->sval[0], "BUMP") == 0) {
     lib = LIB_BUMP;
+  } else if (strcmp(malloclib->sval[0], "BUMP_UNMAP") == 0) {
+    lib = LIB_BUMP_UNMAP;
   } else {
     arg_print_syntax(stderr, argtable, "\n");
     exitcode = 1;
@@ -270,8 +272,10 @@ int main(int argc, char** argv) {
       mi = ff_malloc_setup();
       break;
     case LIB_BUMP:
-      mi = bump_malloc_setup();
+      mi = bump_malloc_setup(false);
       break;
+    case LIB_BUMP_UNMAP:
+      mi = bump_malloc_setup(true);
   }
 
   switch (workload) {

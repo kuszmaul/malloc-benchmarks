@@ -174,6 +174,8 @@ I = {0.0, 1.0}
 VoxelDistance = 0.0
 plot \
  "boom-ffworst-bump-1e8.data" using (log($1)/log(2)):($3) with lines title "bump", \
- "boom-ffworst-glibc-1e8.data" using (log($1)/log(2)):($3) with lines title "libc" \
+ "boom-ffworst-bump-unmap-1e8.data" using (log($1)/log(2)):($3) with lines title "bump-unmap", \
+ "boom-ffworst-hoard-1e8.data" using (log($1)/log(2)):($3) with lines title "hoard", \
+ "boom-ffworst-glibc-1e8.data" using (log($1)/log(2)):($3) with lines title "libc"
 
 #    EOF
