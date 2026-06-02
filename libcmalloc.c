@@ -13,7 +13,7 @@ static void glibc_init(size_t total_space) {
 
 static void* glibc_malloc(size_t space) {
   alloced += space;
-  assert(alloced <= total);
+  assert(alloced < total + space);
   return malloc(space);
 }
 

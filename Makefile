@@ -14,7 +14,7 @@ boom-ffworst-bump-1e8.data: boom
 	./boom --malloclib=BUMP > $@
 boom-ffworst-bump-unmap-1e8.data: boom
 	./boom --malloclib=BUMP_UNMAP > $@
-boom-ffworst-hoard-1e8.data: boomhoard
+boom-ffworst-hoard-1e8.data: boom
 	LD_PRELOAD=../Hoard/build/libhoard.so ./boom --malloclib=DEFAULT > $@
 #boom-ffworst-hoard-1e8.data: boomhoard
 #	./boomhoard --malloclib=DEFAULT > $@

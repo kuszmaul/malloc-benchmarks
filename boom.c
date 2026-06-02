@@ -136,7 +136,7 @@ void free_every_other(const struct malloc_interface *mi) {
 }
 
 void first_fit_boom_class(size_t block_size, size_t space, const struct malloc_interface *mi) {
-  size_t n_to_allocate = space / block_size;
+  size_t n_to_allocate = (space + block_size - 1)/ block_size;
 
   fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
   for (size_t i = 0; i < n_to_allocate; i++) {
@@ -170,25 +170,27 @@ void first_fit_boom(size_t space, struct malloc_interface *mi) {
   }
 }
 
-void superblock_boom_class(size_t block_size, size_t space, size_t superblock_size __attribute__((unused)), const struct malloc_interface *mi) {
-  size_t n_to_allocate = space / block_size;
+// These sizes gotten out of hoard by instrumenting hoard and printing what it
+// does.  From reading the code and examining these numbers, it looks like it
+// starts with size class 16, then the next size is gotten by multiplying by 1.2
+// and rounding up to the next multiple of 16.
+size_t hoard_sizes[] = {
+  16, 32, 48, 64, 80, 96, 128, 160, 192, 240, 288, 352, 432, 528, 640, 768, 928, 1120, 1344, 1616, 1952, 2352, 2832, 3408, 4096, 4928, 5920, 7104, 8528, 10240, 12288, 14752, 17712, 21264, 25520, 30624, 36752, 44112, 52944, 63536, 76256, 91520, 109824, 131792, 158160, 189792, 227760, 273312, 327984, 393584, 472304, 566768, 680128, 816160, 979392, 1175280, 1410336, 1692416, 2030912, 2437104, 2924528, 3509440, 4211328, 5053600, 6064320, 7277184, 8732624, 10479152};
+size_t hoard_superblock_size = 1ul << 18;
 
-  fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
-  for (size_t i = 0; i < n_to_allocate; i++) {
-    my_malloc(block_size, mi);
-  }
-  assert(0);
+void hoard_boom_class(size_t block_size, size_t space, struct malloc_interface *mi __attribute__((unused))) {
+  size_t n_to_allocate = (space + block_size - 1)/ block_size;
+  assert(n_to_allocate > 0);
 }
 
-void superblock_boom(size_t space, size_t superblock_size, struct malloc_interface *mi __attribute__((unused))) {
-  size_t block_size = 8;
-  while (block_size <= space) {
-    superblock_boom_class(block_size, space, superblock_size, NULL);
-    block_size *= 2;
+void hoard_boom(size_t space, struct malloc_interface *mi __attribute__((unused))) {
+  for (size_t i=0; i < sizeof(hoard_sizes)/sizeof(hoard_sizes[1]); i++) {
+    size_t block_size = hoard_sizes[i];
+    hoard_boom_class(block_size, space, mi);
   }
 }
 
-enum Workload { FIRST_FIT, SUPER_BLOCK } workload = FIRST_FIT;
+enum Workload { FIRST_FIT, HOARD } workload = FIRST_FIT;
 size_t superblock_size;
 
 const int default_space_per_class = 100000000;
@@ -211,10 +213,17 @@ void argparse(int argc, char**argv) {
       "^\\(DEFAULT\\|FF\\|BUMP\\|BUMP_UNMAP\\)$",
       "<LIB>",
       0, "set library (DEFAULT=default (libc) malloc, FF=first fit, BUMP=bump allocator, BUMP_UNMAP=bump allocator that unmaps when freeing large blocks)");
+  struct arg_rex *arg_workload = arg_rex0(
+      NULL,
+      "workload",
+      "^\\(FIRST_FIT\\|HOARD\\)$",
+      "<WORKLOAD>",
+      0,
+      "set workload (FIRST_FIT is the worst-known workload for first fit, HOARD is the worst-known workload for Hoard)");
   struct arg_int *arg_space_per_class = arg_intn(NULL, "space-per-class", "<int>", 0, INT_MAX, space_per_string_glossary_string);
   struct arg_lit *help = arg_lit0(NULL, "help", "print this help and exit");
   struct arg_end *end = arg_end(10);
-  void *argtable[] = {malloclib, arg_space_per_class, help, end};
+  void *argtable[] = {malloclib, arg_space_per_class, arg_workload, help, end};
   if (arg_nullcheck(argtable) != 0) {
     printf("%s: insufficient memory\n", progname);
   }
@@ -244,9 +253,18 @@ void argparse(int argc, char**argv) {
   } else if (strcmp(malloclib->sval[0], "BUMP_UNMAP") == 0) {
     lib = LIB_BUMP_UNMAP;
   } else {
+    fprintf(stderr, "Bad library: %s\n", malloclib->sval[0]);
     arg_print_syntax(stderr, argtable, "\n");
     exitcode = 1;
     goto do_exit;
+  }
+  if (arg_workload->count == 0 || strcmp(arg_workload->sval[0], "FIRST_FIT") == 0) {
+    workload = FIRST_FIT;
+  } else if (strcmp(arg_workload->sval[0], "HOARD") == 0) {
+    workload = HOARD;
+  } else {
+    fprintf(stderr, "Bad workload: %s\n", arg_workload->sval[0]);
+    arg_print_syntax(stderr, argtable, "\n");
   }
   if (arg_space_per_class->count > 0) {
     space_per_class = arg_space_per_class->ival[0];
@@ -278,17 +296,15 @@ int main(int argc, char** argv) {
       mi = bump_malloc_setup(true);
   }
 
+  base_rss = get_rss();
+  fprintf(stderr, "base_rss=%lu\n", base_rss);
+  printf("# BlockSize maxrss blowup maxlivedatasize\n");
   switch (workload) {
     case FIRST_FIT:
-      base_rss = get_rss();
-      fprintf(stderr, "base_rss=%lu\n", base_rss);
-      printf("# BlockSize maxrss blowup maxlivedatasize\n");
       first_fit_boom(space_per_class, &mi);
       break;
-    case SUPER_BLOCK:
-      base_rss = get_rss();
-
-      superblock_boom(space_per_class, superblock_size, &mi);
+    case HOARD:
+      hoard_boom(space_per_class, &mi);
       break;
   }
   return 0;
