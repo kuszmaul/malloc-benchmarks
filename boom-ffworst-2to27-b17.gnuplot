@@ -11,7 +11,7 @@
 #    	faq, bugs, etc:   type "help FAQ"
 #    	immediate help:   type "help"  (plot window: hit 'h')
 set terminal pdfcairo  transparent enhanced fontscale 0.5 size 5.00in, 3.00in 
-set output 'boom-ffworst-1e8.pdf'
+set output 'boom-ffworst-2to27-b17.pdf'
 unset clip points
 set clip one
 unset clip two
@@ -118,7 +118,7 @@ set cbtics  norangelimit autofreq
 set rtics axis in scale 1,0.5 nomirror norotate  autojustify
 set rtics  norangelimit autofreq 
 unset ttics
-set title "Blowup for worst-case first-fit workload 10^8 bytes per class" 
+set title "Blowup for worst-case first-fit workload 2^27 bytes per class (min block size=17)" 
 set title  font "" textcolor lt -1 norotate
 set timestamp bottom 
 set timestamp "" 
@@ -173,9 +173,9 @@ GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
 plot \
- "boom-ffworst-bump-1e8.data" using (log($1)/log(2)):($3) with lines title "bump", \
- "boom-ffworst-bump-unmap-1e8.data" using (log($1)/log(2)):($3) with lines title "bump-unmap", \
- "boom-ffworst-hoard-1e8.data" using (log($1)/log(2)):($3) with lines title "hoard", \
- "boom-ffworst-glibc-1e8.data" using (log($1)/log(2)):($3) with lines title "libc"
+ "boom-ffworst-bump-2to27-b17.data" using (log($1)/log(2)):($3) with lines title "bump", \
+ "boom-ffworst-bump-unmap-2to27-b17.data" using (log($1)/log(2)):($3) with lines title "bump-unmap", \
+ "boom-ffworst-hoard-2to27-b17.data" using (log($1)/log(2)):($3) with lines title "hoard", \
+ "boom-ffworst-glibc-2to27-b17.data" using (log($1)/log(2)):($3) with lines title "libc"
 
 #    EOF

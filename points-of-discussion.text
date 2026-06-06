@@ -1,0 +1,73 @@
+1) dlmalloc (the historical linux allocator, and may still be used in many distributions, e.g. ubuntu 222.04)
+ See https://gee.cs.oswego.edu/dl/html/malloc.html
+
+ Confusion by Doug Lea:
+
+ quote:
+    This approach leads to fixed bookkeeping overhead per chunk. Because both
+    size information and bin links must be held in each available chunk, the
+    smallest allocatable chunk is 16 bytes in systems with 32-bit pointers and
+    24 bytes in systems with 64-bit pointers. These minimum sizes are larger
+    than most people would like to see -- they can lead to significant wastage
+    for example in applications allocating many tiny linked-list nodes. However,
+    the 16 bytes minimum at least is characteristic of any system requiring
+    8-byte alignment in which there is any malloc bookkeeping overhead.
+
+ discussion: this analysis is wrong, since many modern allocators get 1 bit of
+    overhead for eachs small allocation.
+
+ discussion: also he doesn't do the boundary tagging properly: there should be
+    only 8 bytes of overhead (since we don't need the boundary tag at the end of
+    block that's in use: instead use one of the bit s in the 8-byte overhead to
+    remember that the previous block is in use.
+
+ quote: As shown by Wilson et al, best-fit schemes (of various kinds and
+    approximations) tend to produce the least fragmentation on real loads
+    compared to other general approaches such as first-fit.
+
+ discussion: Does Wilson really show that?  (There are problems with Wilson too)
+
+ discussion: Since dlamlloc is doing best-fit, can we make it exhibit the O(n^2)
+    behavior that best fit can be subject to?  This allocator can do best-fit on
+    all multiple-of-8 sizes from 16 to 512 (does the current ubuntu allocator
+    still do that?).  That's a factor of 32 from the smallest to the largest.
+    So can we make it have a 32-fold blowup allocating objects of size 512 or
+    smaller, using Robson's technique?
+
+2) As of commit 5b92fc3bbf69 we haev two pdf files.
+
+ discussion of boom-ffworst-2to27.pdf
+    this is the worst-known workload for first fit allocating 2^27 bytes per class.
+
+    We start with blocks of size 32 (smaller blocks make libc too happy, since the minimum block size allocated by libc is more than 16: probably 24)
+    We allocate 2^27 bytes of that size.
+    Then we free every other block.
+    Then allocate 2^27 bytes of blocks of size 64.
+    Then we delete every other block (half of the 32-byte blocks and half of the 64-byte blocks0)
+    Then 128 then 256 and so forth until we allocate one big block of size 2^27.
+
+    This workload should see a logn blowup for first fit, best fit, and for bump allocator.
+
+    What we see:
+
+       * The bump allocator and hoard have almost exactly the same blowup.
+         (hoard is a little smaller, maybe we can start with smallest block size
+         of 16 for hoard?)
+
+       * libc does better (is it using best fit, but there is some randomization
+         or something?)  It also flattens out for large blocks because it gives
+         the memory back to the operating system.  Hoard never seems to give
+         memory back to the operating system.
+
+       * bump-ummap (really bump-madvise-dont-need) does very well for large
+         blocks.  When it frees a large block, it frees all the pages that are
+         entirely enclosed within a block, so the blowup flattens out at just
+         under 6.
+       
+  discussion of boom-ffworst-2to27-b17.pdf
+     Here we allocate blocks of size 17, then 34, then 68, then 136 and so forth.
+
+     Hoard really doesn't like that: the bloup jumps up to over 14.
+     The bump allocator tops at at just under 12 as for the size-32 blocks.
+     bump-unmap is happy.
+     libc is quite happy (probably because the first round of allocations are so small)
