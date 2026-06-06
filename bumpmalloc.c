@@ -52,23 +52,32 @@ static void* bump_malloc(size_t size __attribute__((unused))) {
 static void bump_free(void *p __attribute__((unused))) {
 }
 
+static size_t align_up_pow2(size_t v, size_t alignment) {
+  assert((alignment & (alignment -1)) == 0); // alignment is a power of 2.
+  return (v + alignment - 1) & ~(alignment-1);
+}
+static size_t align_down_pow2(size_t v, size_t alignment) {
+  assert((alignment & (alignment -1)) == 0); // alignment is a power of 2.
+  return v & ~(alignment-1);
+}
+
+/* It's not really unmap, it's really madvise DONT_NEED */
 static void bump_free_unmap(void *p __attribute__((unused))) {
   char *pc = p;
   pc -= sizeof(size_t);
   size_t size;
   memcpy(&size, pc, sizeof(size_t));
+
   size_t pc_i = (size_t)(pc);
-  size_t first_aligned_i = (pc_i + 4095) & ~4095;
-  assert((first_aligned_i & 4095) == 0);
-  assert(first_aligned_i >= (size_t)(pc));
-  if (pc_i + size <= first_aligned_i) return;
-  // We know that part of the block is an aligned page.
-  size_t length_from_start_of_next_page = size - (first_aligned_i - pc_i);
-  assert(length_from_start_of_next_page <= size);
-  if (length_from_start_of_next_page < 4096) return;
-  // And we know that the length is at least a page
-  int e = munmap((void*)(first_aligned_i), length_from_start_of_next_page & ~4095);
-  assert(e == 0);
+  size_t start = align_up_pow2(pc_i, page_size);
+  size_t end   = align_down_pow2(pc_i + size, page_size);
+  if (start < end) {
+    int e = madvise((void*)(start), end-start, MADV_DONTNEED);
+    if (e != 0) {
+      fprintf(stderr, "start=%lu len=%lu", start, end-start);
+    }
+    assert(e == 0);
+  }
 }
 
 struct malloc_interface bump_malloc_setup(bool do_munmap) {
