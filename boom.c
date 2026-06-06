@@ -193,7 +193,7 @@ void hoard_boom(size_t space, struct malloc_interface *mi __attribute__((unused)
 enum Workload { FIRST_FIT, HOARD } workload = FIRST_FIT;
 size_t superblock_size;
 
-const int default_space_per_class = 100000000;
+const int default_space_per_class = 1<<27;
 size_t space_per_class = default_space_per_class;
 
 enum MallocLib { LIB_DEFAULT, LIB_FF, LIB_BUMP, LIB_BUMP_UNMAP } lib = LIB_DEFAULT;
