@@ -18,8 +18,7 @@
 
  discussion: also he doesn't do the boundary tagging properly: there should be
     only 8 bytes of overhead (since we don't need the boundary tag at the end of
-    block that's in use: instead use one of the bit s in the 8-byte overhead to
-    remember that the previous block is in use.
+    block that's in use, described in Wilson page 28 last paragraph of column 1)
 
  quote: As shown by Wilson et al, best-fit schemes (of various kinds and
     approximations) tend to produce the least fragmentation on real loads
@@ -34,7 +33,7 @@
     So can we make it have a 32-fold blowup allocating objects of size 512 or
     smaller, using Robson's technique?
 
-2) As of commit 5b92fc3bbf69 we haev two pdf files.
+2) As of commit 5b92fc3bbf69 we have two pdf files.
 
  discussion of boom-ffworst-2to27.pdf
     this is the worst-known workload for first fit allocating 2^27 bytes per class.
@@ -71,3 +70,32 @@
      The bump allocator tops at at just under 12 as for the size-32 blocks.
      bump-unmap is happy.
      libc is quite happy (probably because the first round of allocations are so small)
+
+3) Discusson of Wilson et all https://jyywiki.cn/OS/manuals/malloc-survey.pdf
+
+   Page 6: It has been proven that for any possible allocation algorithm, there
+    will always be the possibility that some application program will allocate and
+    deallocate blocks in some fashion that defeats the allocator’s strategy, and
+    forces it into severe fragmentation [Rob71, GGU72, Rob74, Rob77].
+
+   This is misleading.  It's been proven that there is a logn overhead, but some
+   allocators do much worse.  Furthermore, the logn blowup is easy to induce.
+   We should accept that logn isn't "severe".
+
+   Wilson on page 30 (top of col 2) mentions that section 3.6 talks about trees.
+
+ Wilson: page 31: A problem with sequential first fit is that the larger blocks
+    near the beginning of the list tend to be split first, and the remaining
+    fragments result in having a lot of small blocks near the beginning of the
+    list
+
+    discussion: that's not actually a problem, they seem to grudingly admit that
+    maybe it's not, we'll see in section 3.8)
+
+ Wilson 3.6 is "segregated free lists", that's what dlalloc uses for it's best
+    fit.  One problem dlalloc is that you cannot have enough lists, so the
+    best-fit is only apporximate.  Wilson points out that you could have an
+    exact set of segerated free lists with a sparse array.
+
+ Wilson 3.8: they apparently didn't know how to do first-fit in log time.
+ 
