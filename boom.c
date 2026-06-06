@@ -153,8 +153,8 @@ void first_fit_boom_class(size_t block_size, size_t space, const struct malloc_i
  * Allocate blocks of size 8 of total size `space`.  Then free every other
  * block, and allocate blocks of size 16 of total size `space` and free every
  * other block, then blocks of size 32 and so forth. */
-void first_fit_boom(size_t space, struct malloc_interface *mi) {
-  size_t block_size = 32; // For glibc, the smallest effective object size is 16 bytes.  Also we need 16 bytes for bookkeeping.
+void first_fit_boom(size_t space, size_t block_size, struct malloc_interface *mi) {
+  // For glibc, the smallest effective object size is 16 bytes.  Also we need 16 bytes for bookkeeping.
   {
     size_t count = 0;
     size_t bs = block_size;
@@ -196,15 +196,26 @@ size_t superblock_size;
 const int default_space_per_class = 1<<27;
 size_t space_per_class = default_space_per_class;
 
+const int default_smallest_block_size = 32; /* smaller, and glibc does constant memory since the amount actually allocated is at least 16. */
+size_t smallest_block_size = default_smallest_block_size;
+
 enum MallocLib { LIB_DEFAULT, LIB_FF, LIB_BUMP, LIB_BUMP_UNMAP } lib = LIB_DEFAULT;
 
 void argparse(int argc, char**argv) {
   int exitcode;
 
   char *space_per_string_glossary_string = NULL;
-  int r = asprintf(&space_per_string_glossary_string,
-                   "space to allocate per size class, default=%d", default_space_per_class);
-  assert(r > 0);
+  {
+    int r = asprintf(&space_per_string_glossary_string,
+                     "space to allocate per size class, default=%d", default_space_per_class);
+    assert(r > 0);
+  }
+  char *smallest_block_size_glossary_string = NULL;
+  {
+    int r = asprintf(&smallest_block_size_glossary_string,
+                     "size of smallest block for first-fit worst-case workload, default=%d", default_smallest_block_size);
+    assert(r > 0);
+  }
 
   const char *progname = argv[0];
   struct arg_rex *malloclib = arg_rex0(
@@ -220,10 +231,11 @@ void argparse(int argc, char**argv) {
       "<WORKLOAD>",
       0,
       "set workload (FIRST_FIT is the worst-known workload for first fit, HOARD is the worst-known workload for Hoard)");
-  struct arg_int *arg_space_per_class = arg_intn(NULL, "space-per-class", "<int>", 0, INT_MAX, space_per_string_glossary_string);
+  struct arg_int *arg_smallest_block_size = arg_int0(NULL, "smallest-block-size", "<int>", smallest_block_size_glossary_string);
+  struct arg_int *arg_space_per_class = arg_int0(NULL, "space-per-class", "<int>", space_per_string_glossary_string);
   struct arg_lit *help = arg_lit0(NULL, "help", "print this help and exit");
   struct arg_end *end = arg_end(10);
-  void *argtable[] = {malloclib, arg_space_per_class, arg_workload, help, end};
+  void *argtable[] = {malloclib, arg_space_per_class, arg_workload, arg_smallest_block_size, help, end};
   if (arg_nullcheck(argtable) != 0) {
     printf("%s: insufficient memory\n", progname);
   }
@@ -269,6 +281,9 @@ void argparse(int argc, char**argv) {
   if (arg_space_per_class->count > 0) {
     space_per_class = arg_space_per_class->ival[0];
   }
+  if (arg_smallest_block_size-> count > 0) {
+    smallest_block_size = arg_smallest_block_size->ival[0];
+  }
   return;
 do_exit:
   arg_freetable(argtable, sizeof(argtable)/sizeof(argtable[0]));
@@ -301,7 +316,7 @@ int main(int argc, char** argv) {
   printf("# BlockSize maxrss blowup maxlivedatasize\n");
   switch (workload) {
     case FIRST_FIT:
-      first_fit_boom(space_per_class, &mi);
+      first_fit_boom(space_per_class, smallest_block_size, &mi);
       break;
     case HOARD:
       hoard_boom(space_per_class, &mi);
