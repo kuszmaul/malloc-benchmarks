@@ -118,7 +118,7 @@ set cbtics  norangelimit autofreq
 set rtics axis in scale 1,0.5 nomirror norotate  autojustify
 set rtics  norangelimit autofreq 
 unset ttics
-set title "Blowup for worst-case first-fit workload 2^27 bytes per class (min block size=17)" 
+set title "Blowup for worst-case first-fit workload 2^{27} bytes per class (min block size=17)" 
 set title  font "" textcolor lt -1 norotate
 set timestamp bottom 
 set timestamp "" 
