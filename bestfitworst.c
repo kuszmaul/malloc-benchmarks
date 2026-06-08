@@ -189,7 +189,7 @@ static void pmfree(void *p) {
   assert(0);
 }
 
-static const size_t n = 17;
+static const size_t n = 4097; // The largest number that this program seems to work for.
 
 static char* printptrs_buf(struct strbuf *buf) {
   init_buf(buf);
