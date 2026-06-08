@@ -1,4 +1,4 @@
-CFLAGS = -g -O1 -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes
+CFLAGS = -g -O0 -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes
 LDLIBS = -largtable2
 graphs: boom-ffworst-2to27.pdf boom-ffworst-2to27-b17.pdf
 
@@ -41,3 +41,6 @@ boom: $(OFILES)
 # boomhoard: $(OFILES)
 # 	$(CC) $(OFILES) $(LDLIBS) -L../Hoard/src -lhoard -o $@
 bumpmalloc.o libcmalloc.o ffmalloc.o boom.o: malloc-interface.h
+
+test_do_set_tcache_count: does-libc-coalesce
+	GLIBC_TUNABLES=glibc.malloc.tcache_count=0 ./does-libc-coalesce
