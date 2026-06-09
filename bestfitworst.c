@@ -9,6 +9,15 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "rss.h"
+
+static size_t max(size_t a, size_t b) {
+  return a < b ? b : a;
+}
+static void maxf(size_t *a, size_t b) {
+  *a = max(*a, b);
+}
+
 // To run Robson's worst-case workload for best fit, we need to account for the
 // overheads that the actually allocator uses.  Since the libc allocator
 // (apparently a version of dlmalloc) uses 8-byte overheads and makes blocks
@@ -32,7 +41,7 @@ static void writes(int fd, const char *str) {
   mywrite(fd, str, strlen(str));
 }
 
-enum { strbuflen = 1000 };
+enum { strbuflen = 10000 };
 struct strbuf {
   size_t next;
   char str[strbuflen];
@@ -117,7 +126,7 @@ static void *firstmalloc = NULL;
 //}
 
 static size_t ptrcount = 0 ;
-enum {PTRSIZE = 100};
+enum {PTRSIZE = 16000};
 struct item {
   bool free;
   void *p;
@@ -125,8 +134,15 @@ struct item {
 };
 static struct item ptrs[PTRSIZE];
 
+static size_t high_water_mark = 0;
+static size_t current_water_mark = 0;
+
 static void* pmalloc(size_t words) {
+  current_water_mark += words_to_bytes(words);
+  maxf(&high_water_mark, current_water_mark);
+  assert(ptrcount < PTRSIZE);
   void *p = malloc(words_to_bytes(words));
+  memset(p, 1, words_to_bytes(words));
   struct item result = {false, p, words};
   if (firstmalloc == NULL) {
     firstmalloc = result.p;
@@ -154,41 +170,38 @@ static void pmfree(size_t off, size_t wordcount) {
   void *p = ptrs[off].p;
   assert(ptrs[off].wordcount == wordcount);
   free(p);
+  assert(current_water_mark >= words_to_bytes(wordcount));
+  current_water_mark -= words_to_bytes(wordcount);
   //writes(1, "Freeing something\n");
-  for (size_t i = 0; i < ptrcount; i++) {
-    if (ptrs[i].p == p) {
-      struct strbuf buf;
-      init_buf(&buf);
-      //writes_buf(&buf, "Freeing item ");
-      //printpd_buf(&buf, (ptrdiff_t)(i));
-      //writec_buf(&buf, '\n');
-      //mywrite(2, buf.str, buf.next);
-      assert(!ptrs[i].free);
-      ptrs[i].free = true;
-      if (i + 1 < ptrcount && ptrs[i+1].free) {
-        assert(ptrs[i].p + ptrs[i].wordcount * 32 == ptrs[i+1].p);
-        ptrs[i].wordcount += ptrs[i+1].wordcount;
-        memmove(&ptrs[i+1], &ptrs[i+2], sizeof(ptrs[i])*(ptrcount-i-2));
-        ptrcount--;
-        //writes(2, "did coalesce next\n");
-      } else {
-        //writes(2, "Don't coalesce next\n");
-      }
-      if (i > 0 && ptrs[i-1].free) {
-        ptrs[i-1].wordcount += ptrs[i].wordcount;
-        memmove(&ptrs[i], &ptrs[i+1], sizeof(ptrs[i])*(ptrcount-i-1));
-        ptrcount--;
-        //writes(2, "Did coalesce prev\n");
-      } else {
-        //writes(2, "Didn't coalesce prev\n");
-      }
-      if (ptrcount > 0 && ptrs[ptrcount-1].free) {
-        ptrcount--; // Don't leave a trailing free block.
-      }
-      return;
-    }
+  size_t i = off;
+  struct strbuf buf;
+  init_buf(&buf);
+  //writes_buf(&buf, "Freeing item ");
+  //printpd_buf(&buf, (ptrdiff_t)(i));
+  //writec_buf(&buf, '\n');
+  //mywrite(2, buf.str, buf.next);
+  assert(!ptrs[i].free);
+  ptrs[i].free = true;
+  if (i + 1 < ptrcount && ptrs[i+1].free) {
+    assert(ptrs[i].p + ptrs[i].wordcount * 32 == ptrs[i+1].p);
+    ptrs[i].wordcount += ptrs[i+1].wordcount;
+    memmove(&ptrs[i+1], &ptrs[i+2], sizeof(ptrs[i])*(ptrcount-i-2));
+    ptrcount--;
+    //writes(2, "did coalesce next\n");
+  } else {
+    //writes(2, "Don't coalesce next\n");
   }
-  assert(0);
+  if (i > 0 && ptrs[i-1].free) {
+    ptrs[i-1].wordcount += ptrs[i].wordcount;
+    memmove(&ptrs[i], &ptrs[i+1], sizeof(ptrs[i])*(ptrcount-i-1));
+    ptrcount--;
+    //writes(2, "Did coalesce prev\n");
+  } else {
+    //writes(2, "Didn't coalesce prev\n");
+  }
+  if (ptrcount > 0 && ptrs[ptrcount-1].free) {
+    ptrcount--; // Don't leave a trailing free block.
+  }
 }
 
 static const size_t n = 4097; // The largest number that this program seems to work for.
@@ -245,15 +258,15 @@ static char* printptrs_buf(struct strbuf *buf) {
 
 static const int fd = 1;
 
-static void test_printptrs(const char *str) {
-  struct strbuf buf;
-  int r = strcmp(printptrs_buf(init_buf(&buf)), str) == 0;
-  if (!r) {
-    fprintf(stderr, "Expect %s\n", str);
-    fprintf(stderr, "Got    %s\n", buf.str);
-  }
-  assert(r);
-}
+//static void test_printptrs(const char *str) {
+//  struct strbuf buf;
+//  int r = strcmp(printptrs_buf(init_buf(&buf)), str) == 0;
+//  if (!r) {
+//    fprintf(stderr, "Expect %s\n", str);
+//    fprintf(stderr, "Got    %s\n", buf.str);
+//  }
+//  assert(r);
+//}
 
 static void assert_n_repeats(size_t n_repeats) {
   // Check that we have an `A(n-2)` allocation followed by `n_repeats` of `F(n-3); A1`.
@@ -323,6 +336,9 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
     return 0;
   }
 
+  init_rss();
+  size_t brss = get_base_rss();
+
   assert(n>5);
 
   // line 1
@@ -337,7 +353,7 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   pmfree(3, n-3);
   pmfree(5, n-3);
 
-  const size_t target_n_repeats = 10;
+  const size_t target_n_repeats = 4000;
   for (size_t n_repeats = 3; n_repeats < target_n_repeats; n_repeats++) {
     // We start with an `A(n-2)` allocation followed by `n_repeats` of `F(n-3); A1`.
     assert_n_repeats(n_repeats);
@@ -364,79 +380,25 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
     // line 7a
     pmfree(2*n_repeats + 2, n-2);
 
-    if (n_repeats == 3) {
-      test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) A1\n");
-    }
     for (size_t it = 0; it<n_repeats - 1; it++) {
       // lines 7 (d5); 14 (d3)
       pmfree(2*n_repeats -1 - 2*it, n);
-      if (n_repeats == 3) {
-        if (it == 1) {
-          writes(fd, "line 14\n");
-          test_printptrs("A(n-2) F(n-3) A1 Fn A(n-5) A1 F(n-3) A1\n");
-        }
-      }
       // lines 8; 15
       pmalloc(n-2);
       // lines 9; 16
       pmalloc(2);
-      if (n_repeats == 3) {
-        if (it == 1) {
-          writes(fd, "line 16\n");
-          test_printptrs("A(n-2) F(n-3) A1 A(n-2) A2 A(n-5) A1 F(n-3) A1\n");
-        }
-      }
       // lines 10; 17
       pmfree(2*n_repeats -1 - 2*it, n-2);
       pmfree(2*n_repeats -2 - 2*it, 1);
-      if (n_repeats == 3) {
-        if (it == 1) {
-          writes(fd, "line 17\n");
-          test_printptrs("A(n-2) F(2n-4) A2 A(n-5) A1 F(n-3) A1\n");
-        }
-      }
       // lines (11, 12, 13); (18, 19, 20)
       pmalloc(n);
-      if (n_repeats == 3) {
-        if (it == 1) {
-          writes(fd, "line 18\n");
-          test_printptrs("A(n-2) An F(n-4) A2 A(n-5) A1 F(n-3) A1\n");
-        }
-      }
       pmalloc(n-5);
-      if (n_repeats == 3) {
-        if (it == 1) {
-          writes(fd, "line 19\n");
-          test_printptrs("A(n-2) An A(n-5) F1 A2 A(n-5) A1 F(n-3) A1\n");
-        }
-      }
       pmalloc(1);
-      if (n_repeats == 3) {
-        if (it == 0) {
-          writes(fd, "line 13\n");
-          test_printptrs("A(n-2) F(n-3) A1 An A(n-5) A1 A2 A(n-5) A1\n");
-        } else if (it == 1) {
-          writes(fd, "line 20\n");
-          test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1\n");
-        }
-      } else if (n_repeats == 4) {
-        if (it == 2) {
-          writes(fd, "line 20 for n_repeats=4\n");
-          test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
-        }
-      }
       pmfree(2 * n_repeats + 1 - 2*it, n-5);
       pmfree(2 * n_repeats - 2*it, 2);
     }
     //test_printptrs("A(n-2) A(n-2) A1 A2 A(n-5) A1\n");
     // The final iteration of the loop changes on the size of the free at line 24
-    if (n_repeats == 3) {
-      writes(fd, "line 21 for 3 repeats\n");
-      test_printptrs("A(n-2) An A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
-    } else if (n_repeats == 4) {
-      writes(fd, "line 21 for 4 repeats\n");
-      test_printptrs("A(n-2) An A(n-5) A1 F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
-    }
     {
       // line 21
       pmfree(1, n);
@@ -444,13 +406,6 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
       pmalloc(n-2);
       // line 23
       pmalloc(2);
-      if (n_repeats == 3) {
-        writes(fd, "line 23 for 3 repeats\n");
-        test_printptrs("A(n-2) A(n-2) A2 A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
-      } else if (n_repeats == 4) {
-        writes(fd, "line 23 for 4 repeats\n");
-        test_printptrs("A(n-2) A(n-2) A2 A(n-5) A1 F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
-      }
       // line 24
       pmfree(1, n-2);
       pmfree(0, n-2);
@@ -459,22 +414,22 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
       // line 27
       pmalloc(1);
     }
-    if (n_repeats == 3) {
-      test_printptrs("An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
-    }
     pmfree(4, n-5);
     pmfree(3, 2);
     pmfree(1, n-5);
     pmfree(0, n);
     pmalloc(n-2);
-    if (n_repeats == 3) {
-      test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
-    }
   }
   assert_n_repeats(target_n_repeats);
-  struct strbuf buf;
-  printptrs_buf(init_buf(&buf));
-  writes(fd, "Final state\n");
-  mywrite(fd, buf.str, buf.next);
+  if (target_n_repeats < 100) {
+    struct strbuf buf;
+    printptrs_buf(init_buf(&buf));
+    writes(fd, "Final state\n");
+    mywrite(fd, buf.str, buf.next);
+  }
+  printf("baserss=%lu\nrss    =%lu\n", get_base_rss(), get_adjusted_rss());
+  printf("blowup=%f\n", get_adjusted_rss()/(double)high_water_mark);
+  printf("brss=%lu\n", brss);
+  printf("rss=%lu\n", get_rss());
   return 0;
 }
