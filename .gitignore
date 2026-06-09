@@ -1,6 +1,7 @@
 *~
 bestfitworst
 boom
+hoardworst
 sbrk-test
 *.o
 malloc
