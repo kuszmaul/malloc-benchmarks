@@ -28,9 +28,9 @@ static void mywrite(int fd, const void *p, size_t n) {
   assert(r > 0 && (size_t)r == n);
 }
 
-//static void writes(int fd, const char *str) {
-//  mywrite(fd, str, strlen(str));
-//}
+static void writes(int fd, const char *str) {
+  mywrite(fd, str, strlen(str));
+}
 
 enum { strbuflen = 1000 };
 struct strbuf {
@@ -243,7 +243,7 @@ static char* printptrs_buf(struct strbuf *buf) {
   return buf->str;
 }
 
-//static const int fd = 1;
+static const int fd = 1;
 
 static void test_printptrs(const char *str) {
   struct strbuf buf;
@@ -253,6 +253,20 @@ static void test_printptrs(const char *str) {
     fprintf(stderr, "Got    %s\n", buf.str);
   }
   assert(r);
+}
+
+static void assert_n_repeats(size_t n_repeats) {
+  // Check that we have an `A(n-2)` allocation followed by `n_repeats` of `F(n-3); A1`.
+  assert(ptrcount == 2 * n_repeats + 1);
+  assert(!ptrs[0].free);
+  assert(ptrs[0].wordcount == n - 2);
+  for (size_t i = 0; i < n_repeats; i++) {
+    assert(ptrs[1+2*i].free);
+    assert(ptrs[1+2*i].wordcount == n - 3);
+    assert(!ptrs[2+2*i].free);
+    assert(ptrs[2+2*i].wordcount == 1);
+  }
+
 }
 
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
@@ -323,65 +337,106 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   pmfree(3, n-3);
   pmfree(5, n-3);
 
-  // Robson:
-  // > First two n-2 word blocks are allocated (of which the second merely acts a buffer)
+  for (size_t n_repeats = 3; n_repeats < 4; n_repeats++) {
+    // We start with an `A(n-2)` allocation followed by `n_repeats` of `F(n-3); A1`.
+    assert_n_repeats(n_repeats);
 
-  // line 2
-  pmalloc(n-2);
-  pmalloc(n-2);
-  // Quoting Robson:
-  // > then a sequence of freeings and allocations transforms the first of them
-  // > into an n-3 word gap followed by a single word block
-  assert(!ptrs[6].free && ptrs[6].wordcount == 1);
-  // line 3
-  pmfree(7, n-2);
-  pmfree(6, 1);
-  // line 4
-  pmalloc(n);
-  // line 5
-  pmalloc(n-5);
-  // line 6
-  pmalloc(1);
-  // line 7a
-  pmfree(8, n-2);
+    // Robson:
+    // > First two n-2 word blocks are allocated (of which the second merely acts a buffer)
 
-  for (size_t it = 0; it<2; it++) {
-    // lines 7; 14
-    pmfree(5 - 2*it, n);
-    // lines 8; 15
+    // line 2
     pmalloc(n-2);
-    // lines 9; 16
-    pmalloc(2);
-    // lines 10; 17
-    pmfree(5 - 2*it, n-2);
-    pmfree(4 - 2*it, 1);
-    // lines (11, 12, 13); (18, 19, 20)
-    pmalloc(n);
-    pmalloc(n-5);
-    pmalloc(1);
-  }
-  // The final iteration of the lop changes on the size of the free at line 24
-  {
-    size_t it = 2;
-    // line 21
-    pmfree(5 - 2*it, n);
-    // line 22
     pmalloc(n-2);
-    // line 23
-    pmalloc(2);
-    // line 24
-    pmfree(5 - 2*it, n-2);
-    pmfree(4 - 2*it, n-2);
+    // Quoting Robson:
+    // > then a sequence of freeings and allocations transforms the first of them
+    // > into an n-3 word gap followed by a single word block
+    assert(!ptrs[6].free && ptrs[6].wordcount == 1);
+    // line 3
+    pmfree(2*n_repeats +1, n-2);
+    pmfree(2*n_repeats, 1);
+    // line 4
     pmalloc(n);
+    // line 5
     pmalloc(n-5);
-    // line 27
+    // line 6
     pmalloc(1);
+    // line 7a
+    pmfree(2*n_repeats + 2, n-2);
+
+    test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) A1\n");
+    for (size_t it = 0; it<2; it++) {
+      // lines 7 (d5); 14 (d3)
+      pmfree(2*n_repeats -1 - 2*it, n);
+      if (it == 1) {
+        writes(fd, "line 14\n");
+        test_printptrs("A(n-2) F(n-3) A1 Fn A(n-5) A1 F(n-3) A1\n");
+      }
+      // lines 8; 15
+      pmalloc(n-2);
+      // lines 9; 16
+      pmalloc(2);
+      if (it == 1) {
+        writes(fd, "line 16\n");
+        test_printptrs("A(n-2) F(n-3) A1 A(n-2) A2 A(n-5) A1 F(n-3) A1\n");
+      }
+      // lines 10; 17
+      pmfree(2*n_repeats -1 - 2*it, n-2);
+      pmfree(2*n_repeats -2 - 2*it, 1);
+      if (it == 1) {
+        writes(fd, "line 17\n");
+        test_printptrs("A(n-2) F(2n-4) A2 A(n-5) A1 F(n-3) A1\n");
+      }
+      // lines (11, 12, 13); (18, 19, 20)
+      pmalloc(n);
+      if (it == 1) {
+        writes(fd, "line 18\n");
+        test_printptrs("A(n-2) An F(n-4) A2 A(n-5) A1 F(n-3) A1\n");
+      }
+      pmalloc(n-5);
+      if (it == 1) {
+        writes(fd, "line 19\n");
+        test_printptrs("A(n-2) An A(n-5) F1 A2 A(n-5) A1 F(n-3) A1\n");
+      }
+      pmalloc(1);
+      if (it == 1) {
+        writes(fd, "line 20\n");
+        test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1\n");
+      }
+      if (it == 0) {
+        writes(fd, "line 13\n");
+        test_printptrs("A(n-2) F(n-3) A1 An A(n-5) A1 A2 A(n-5) A1\n");
+      } else if (it == 1) {
+        writes(fd, "line 20\n");
+        test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1\n");
+      }
+      pmfree(2 * n_repeats + 1 - 2*it, n-5);
+      pmfree(2 * n_repeats - 2*it, 2);
+    }
+    //test_printptrs("A(n-2) A(n-2) A1 A2 A(n-5) A1\n");
+    // The final iteration of the lop changes on the size of the free at line 24
+    {
+      size_t it = 2;
+      // line 21
+      pmfree(2 * n_repeats - 1 - 2*it, n);
+      // line 22
+      pmalloc(n-2);
+      // line 23
+      pmalloc(2);
+      // line 24
+      pmfree(2 * n_repeats - 1 - 2*it, n-2);
+      pmfree(2 * n_repeats - 2 - 2*it, n-2);
+      pmalloc(n);
+      pmalloc(n-5);
+      // line 27
+      pmalloc(1);
+    }
+    test_printptrs("An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
+    pmfree(4, n-5);
+    pmfree(3, 2);
+    pmfree(1, n-5);
+    pmfree(0, n);
+    pmalloc(n-2);
+    test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
   }
-  pmfree(4, n-5);
-  pmfree(3, 2);
-  pmfree(1, n-5);
-  pmfree(0, n);
-  pmalloc(n-2);
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
   return 0;
 }
