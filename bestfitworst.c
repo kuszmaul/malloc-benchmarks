@@ -150,8 +150,9 @@ static void* pmalloc(size_t words) {
   return p;
 }
 
-static void pmfree(size_t off) {
+static void pmfree(size_t off, size_t wordcount) {
   void *p = ptrs[off].p;
+  assert(ptrs[off].wordcount == wordcount);
   free(p);
   //writes(1, "Freeing something\n");
   for (size_t i = 0; i < ptrcount; i++) {
@@ -317,9 +318,9 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   pmalloc(1);
   pmalloc(n-3);
   pmalloc(1);
-  pmfree(1);
-  pmfree(3);
-  pmfree(5);
+  pmfree(1, n-3);
+  pmfree(3, n-3);
+  pmfree(5, n-3);
   writes(fd, "Robson line 1\n");
   test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
 
@@ -332,10 +333,10 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   writes(fd, "then a sequence of freeings and allocations transforms the first of them\n");
   writes(fd, "into an n-3 word gap followed by a single word block\n");
   assert(!ptrs[6].free && ptrs[6].wordcount == 1);
-  pmfree(7);
+  pmfree(7, n-2);
   writes(fd, "Robson line 3a\n");
   test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1 F(n-2) A(n-2)\n");
-  pmfree(6);
+  pmfree(6, 1);
   writes(fd, "Robson line 3");
   test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(2n-4) A(n-2)\n");
   writes(fd, "robson line 4\n");
@@ -348,10 +349,10 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   writes(fd, "robson line 6\n");
   test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) A1 A(n-2)\n");
   writes(fd, "robson line 7a\n");
-  pmfree(8);
+  pmfree(8, n-2);
   test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) A1\n");
   writes(fd, "robson line 7\n");
-  pmfree(5);
+  pmfree(5, n);
   test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 Fn A(n-5) A1\n");
   pmalloc(n-2);
   writes(fd, "robson line 8\n");
@@ -361,21 +362,21 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 A(n-2) A2 A(n-5) A1\n");
 
   writes(fd, "robson line 10\n");
-  pmfree(5);
-  pmfree(4);
+  pmfree(5, n-2);
+  pmfree(4, 1);
   test_printptrs("A(n-2) F(n-3) A1 F(2n-4) A2 A(n-5) A1\n");
   pmalloc(n);
   pmalloc(n-5);
   pmalloc(1);
   writes(fd, "robson line 13\n");
   test_printptrs("A(n-2) F(n-3) A1 An A(n-5) A1 A2 A(n-5) A1\n");
-  pmfree(3);
+  pmfree(3, n);
   pmalloc(n-2);
   pmalloc(2);
   writes(fd, "robson line 16\n");
   test_printptrs("A(n-2) F(n-3) A1 A(n-2) A2 A(n-5) A1 A2 A(n-5) A1\n");
-  pmfree(3);
-  pmfree(2);
+  pmfree(3, n-2);
+  pmfree(2, 1);
   writes(fd, "robson line 17\n");
   test_printptrs("A(n-2) F(2n-4) A2 A(n-5) A1 A2 A(n-5) A1\n");
   pmalloc(n);
@@ -384,7 +385,7 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   writes(fd, "robson line 20\n");
   test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
   writes(fd, "robson line 21\n");
-  pmfree(1);
+  pmfree(1, n);
   test_printptrs("A(n-2) Fn A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
   writes(fd, "robson line 22\n");
   pmalloc(n-2);
@@ -393,18 +394,18 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   pmalloc(2);
   test_printptrs("A(n-2) A(n-2) A2 A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
   writes(fd, "robson line 24");
-  pmfree(1);
-  pmfree(0);
+  pmfree(1, n-2);
+  pmfree(0, n-2);
   test_printptrs("F(2n-4) A2 A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
   pmalloc(n);
   pmalloc(n-5);
   writes(fd, "robson line 27");
   pmalloc(1);
   test_printptrs("An A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
-  pmfree(4);
-  pmfree(3);
-  pmfree(1);
-  pmfree(0);
+  pmfree(4, n-5);
+  pmfree(3, 2);
+  pmfree(1, n-5);
+  pmfree(0, n);
   pmalloc(n-2);
   test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
   return 0;
