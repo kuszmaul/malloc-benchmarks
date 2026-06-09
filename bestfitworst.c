@@ -344,47 +344,38 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   pmalloc(1);
   // line 7a
   pmfree(8, n-2);
-  // line 7
-  pmfree(5, n);
-  // line 8
-  pmalloc(n-2);
-  // line 9
-  pmalloc(2);
-  // line 10
-  pmfree(5, n-2);
-  pmfree(4, 1);
-  // line 11, 12, 13
-  pmalloc(n);
-  pmalloc(n-5);
-  pmalloc(1);
-  // line 14
-  pmfree(3, n);
-  // line 15
-  pmalloc(n-2);
-  // line 16
-  pmalloc(2);
-  // line 17
-  pmfree(3, n-2);
-  pmfree(2, 1);
-  // line 18
-  pmalloc(n);
-  // line 19
-  pmalloc(n-5);
-  // line 20
-  pmalloc(1);
-  // line 21
-  pmfree(1, n);
-  // line 22
-  pmalloc(n-2);
-  // line 23
-  pmalloc(2);
-  // line 24
-  pmfree(1, n-2);
-  pmfree(0, n-2);
-  pmalloc(n);
-  pmalloc(n-5);
-  // line 27
-  pmalloc(1);
+
+  for (size_t it = 0; it<2; it++) {
+    // lines 7; 14
+    pmfree(5 - 2*it, n);
+    // lines 8; 15
+    pmalloc(n-2);
+    // lines 9; 16
+    pmalloc(2);
+    // lines 10; 17
+    pmfree(5 - 2*it, n-2);
+    pmfree(4 - 2*it, 1);
+    // lines (11, 12, 13); (18, 19, 20)
+    pmalloc(n);
+    pmalloc(n-5);
+    pmalloc(1);
+  }
+  {
+    size_t it = 2;
+    // line 21
+    pmfree(5 - 2*it, n);
+    // line 22
+    pmalloc(n-2);
+    // line 23
+    pmalloc(2);
+    // line 24
+    pmfree(5 - 2*it, n-2);
+    pmfree(4 - 2*it, n-2);
+    pmalloc(n);
+    pmalloc(n-5);
+    // line 27
+    pmalloc(1);
+  }
   pmfree(4, n-5);
   pmfree(3, 2);
   pmfree(1, n-5);
