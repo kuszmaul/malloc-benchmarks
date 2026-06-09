@@ -353,7 +353,7 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   pmfree(3, n-3);
   pmfree(5, n-3);
 
-  const size_t target_n_repeats = 8000;
+  const size_t target_n_repeats = 16000;
   for (size_t n_repeats = 3; n_repeats < target_n_repeats; n_repeats++) {
     // We start with an `A(n-2)` allocation followed by `n_repeats` of `F(n-3); A1`.
     assert_n_repeats(n_repeats);
