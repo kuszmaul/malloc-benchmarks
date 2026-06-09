@@ -23,12 +23,12 @@ static size_t words_to_bytes(size_t w) {
 //  return (b + 8) / 32;
 //}
 
-static void mywrite(int fd, void *p, size_t n) {
+static void mywrite(int fd, const void *p, size_t n) {
   int r = write(fd, p, n);
   assert(r > 0 && (size_t)r == n);
 }
 
-static void writes(int fd, char *str) {
+static void writes(int fd, const char *str) {
   mywrite(fd, str, strlen(str));
 }
 
