@@ -337,7 +337,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   pmfree(3, n-3);
   pmfree(5, n-3);
 
-  for (size_t n_repeats = 3; n_repeats < 4; n_repeats++) {
+  const size_t target_n_repeats = 5;
+  for (size_t n_repeats = 3; n_repeats < target_n_repeats; n_repeats++) {
     // We start with an `A(n-2)` allocation followed by `n_repeats` of `F(n-3); A1`.
     assert_n_repeats(n_repeats);
 
@@ -363,80 +364,113 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
     // line 7a
     pmfree(2*n_repeats + 2, n-2);
 
-    test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) A1\n");
-    for (size_t it = 0; it<2; it++) {
+    if (n_repeats == 3) {
+      test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) A1\n");
+    }
+    for (size_t it = 0; it<n_repeats - 1; it++) {
       // lines 7 (d5); 14 (d3)
       pmfree(2*n_repeats -1 - 2*it, n);
-      if (it == 1) {
-        writes(fd, "line 14\n");
-        test_printptrs("A(n-2) F(n-3) A1 Fn A(n-5) A1 F(n-3) A1\n");
+      if (n_repeats == 3) {
+        if (it == 1) {
+          writes(fd, "line 14\n");
+          test_printptrs("A(n-2) F(n-3) A1 Fn A(n-5) A1 F(n-3) A1\n");
+        }
       }
       // lines 8; 15
       pmalloc(n-2);
       // lines 9; 16
       pmalloc(2);
-      if (it == 1) {
-        writes(fd, "line 16\n");
-        test_printptrs("A(n-2) F(n-3) A1 A(n-2) A2 A(n-5) A1 F(n-3) A1\n");
+      if (n_repeats == 3) {
+        if (it == 1) {
+          writes(fd, "line 16\n");
+          test_printptrs("A(n-2) F(n-3) A1 A(n-2) A2 A(n-5) A1 F(n-3) A1\n");
+        }
       }
       // lines 10; 17
       pmfree(2*n_repeats -1 - 2*it, n-2);
       pmfree(2*n_repeats -2 - 2*it, 1);
-      if (it == 1) {
-        writes(fd, "line 17\n");
-        test_printptrs("A(n-2) F(2n-4) A2 A(n-5) A1 F(n-3) A1\n");
+      if (n_repeats == 3) {
+        if (it == 1) {
+          writes(fd, "line 17\n");
+          test_printptrs("A(n-2) F(2n-4) A2 A(n-5) A1 F(n-3) A1\n");
+        }
       }
       // lines (11, 12, 13); (18, 19, 20)
       pmalloc(n);
-      if (it == 1) {
-        writes(fd, "line 18\n");
-        test_printptrs("A(n-2) An F(n-4) A2 A(n-5) A1 F(n-3) A1\n");
+      if (n_repeats == 3) {
+        if (it == 1) {
+          writes(fd, "line 18\n");
+          test_printptrs("A(n-2) An F(n-4) A2 A(n-5) A1 F(n-3) A1\n");
+        }
       }
       pmalloc(n-5);
-      if (it == 1) {
-        writes(fd, "line 19\n");
-        test_printptrs("A(n-2) An A(n-5) F1 A2 A(n-5) A1 F(n-3) A1\n");
+      if (n_repeats == 3) {
+        if (it == 1) {
+          writes(fd, "line 19\n");
+          test_printptrs("A(n-2) An A(n-5) F1 A2 A(n-5) A1 F(n-3) A1\n");
+        }
       }
       pmalloc(1);
-      if (it == 1) {
-        writes(fd, "line 20\n");
-        test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1\n");
-      }
-      if (it == 0) {
-        writes(fd, "line 13\n");
-        test_printptrs("A(n-2) F(n-3) A1 An A(n-5) A1 A2 A(n-5) A1\n");
-      } else if (it == 1) {
-        writes(fd, "line 20\n");
-        test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1\n");
+      if (n_repeats == 3) {
+        if (it == 0) {
+          writes(fd, "line 13\n");
+          test_printptrs("A(n-2) F(n-3) A1 An A(n-5) A1 A2 A(n-5) A1\n");
+        } else if (it == 1) {
+          writes(fd, "line 20\n");
+          test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1\n");
+        }
+      } else if (n_repeats == 4) {
+        if (it == 2) {
+          writes(fd, "line 20 for n_repeats=4\n");
+          test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
+        }
       }
       pmfree(2 * n_repeats + 1 - 2*it, n-5);
       pmfree(2 * n_repeats - 2*it, 2);
     }
     //test_printptrs("A(n-2) A(n-2) A1 A2 A(n-5) A1\n");
-    // The final iteration of the lop changes on the size of the free at line 24
+    // The final iteration of the loop changes on the size of the free at line 24
+    if (n_repeats == 3) {
+      writes(fd, "line 21 for 3 repeats\n");
+      test_printptrs("A(n-2) An A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
+    } else if (n_repeats == 4) {
+      writes(fd, "line 21 for 4 repeats\n");
+      test_printptrs("A(n-2) An A(n-5) A1 F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
+    }
     {
-      size_t it = 2;
       // line 21
-      pmfree(2 * n_repeats - 1 - 2*it, n);
+      pmfree(1, n);
       // line 22
       pmalloc(n-2);
       // line 23
       pmalloc(2);
+      if (n_repeats == 3) {
+        writes(fd, "line 23 for 3 repeats\n");
+        test_printptrs("A(n-2) A(n-2) A2 A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
+      } else if (n_repeats == 4) {
+        writes(fd, "line 23 for 4 repeats\n");
+        test_printptrs("A(n-2) A(n-2) A2 A(n-5) A1 F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
+      }
       // line 24
-      pmfree(2 * n_repeats - 1 - 2*it, n-2);
-      pmfree(2 * n_repeats - 2 - 2*it, n-2);
+      pmfree(1, n-2);
+      pmfree(0, n-2);
       pmalloc(n);
       pmalloc(n-5);
       // line 27
       pmalloc(1);
     }
-    test_printptrs("An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
+    if (n_repeats == 3) {
+      test_printptrs("An A(n-5) A1 A2 A(n-5) A1 F(n-3) A1 F(n-3) A1\n");
+    }
     pmfree(4, n-5);
     pmfree(3, 2);
     pmfree(1, n-5);
     pmfree(0, n);
     pmalloc(n-2);
-    test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
+    if (n_repeats == 3) {
+      test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
+    }
   }
+  assert_n_repeats(target_n_repeats);
   return 0;
 }
