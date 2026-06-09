@@ -28,9 +28,9 @@ static void mywrite(int fd, const void *p, size_t n) {
   assert(r > 0 && (size_t)r == n);
 }
 
-static void writes(int fd, const char *str) {
-  mywrite(fd, str, strlen(str));
-}
+//static void writes(int fd, const char *str) {
+//  mywrite(fd, str, strlen(str));
+//}
 
 enum { strbuflen = 1000 };
 struct strbuf {
@@ -243,7 +243,7 @@ static char* printptrs_buf(struct strbuf *buf) {
   return buf->str;
 }
 
-static const int fd = 1;
+//static const int fd = 1;
 
 static void test_printptrs(const char *str) {
   struct strbuf buf;
@@ -311,6 +311,7 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
 
   assert(n>5);
 
+  // line 1
   pmalloc(n-2);
   pmalloc(n-3);
   pmalloc(1);
@@ -321,87 +322,69 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   pmfree(1, n-3);
   pmfree(3, n-3);
   pmfree(5, n-3);
-  writes(fd, "Robson line 1\n");
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1\n");
 
-  writes(fd, "First two n-2 word blocks are allocated (of which the second merely acts a buffer\n");
+  // Robson:
+  // > First two n-2 word blocks are allocated (of which the second merely acts a buffer)
+
+  // line 2
   pmalloc(n-2);
   pmalloc(n-2);
-  writes(fd, "Robson line 2\n");
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1 A(n-2) A(n-2)\n");
-
-  writes(fd, "then a sequence of freeings and allocations transforms the first of them\n");
-  writes(fd, "into an n-3 word gap followed by a single word block\n");
+  // Quoting Robson:
+  // > then a sequence of freeings and allocations transforms the first of them
+  // > into an n-3 word gap followed by a single word block
   assert(!ptrs[6].free && ptrs[6].wordcount == 1);
+  // line 3
   pmfree(7, n-2);
-  writes(fd, "Robson line 3a\n");
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(n-3) A1 F(n-2) A(n-2)\n");
   pmfree(6, 1);
-  writes(fd, "Robson line 3");
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 F(2n-4) A(n-2)\n");
-  writes(fd, "robson line 4\n");
+  // line 4
   pmalloc(n);
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An F(n-4) A(n-2)\n");
-  writes(fd, "robson line 5\n");
+  // line 5
   pmalloc(n-5);
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) F1 A(n-2)\n");
+  // line 6
   pmalloc(1);
-  writes(fd, "robson line 6\n");
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) A1 A(n-2)\n");
-  writes(fd, "robson line 7a\n");
+  // line 7a
   pmfree(8, n-2);
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 An A(n-5) A1\n");
-  writes(fd, "robson line 7\n");
+  // line 7
   pmfree(5, n);
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 Fn A(n-5) A1\n");
+  // line 8
   pmalloc(n-2);
-  writes(fd, "robson line 8\n");
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 A(n-2) F2 A(n-5) A1\n");
+  // line 9
   pmalloc(2);
-  writes(fd, "robson line 9\n");
-  test_printptrs("A(n-2) F(n-3) A1 F(n-3) A1 A(n-2) A2 A(n-5) A1\n");
-
-  writes(fd, "robson line 10\n");
+  // line 10
   pmfree(5, n-2);
   pmfree(4, 1);
-  test_printptrs("A(n-2) F(n-3) A1 F(2n-4) A2 A(n-5) A1\n");
+  // line 11, 12, 13
   pmalloc(n);
   pmalloc(n-5);
   pmalloc(1);
-  writes(fd, "robson line 13\n");
-  test_printptrs("A(n-2) F(n-3) A1 An A(n-5) A1 A2 A(n-5) A1\n");
+  // line 14
   pmfree(3, n);
+  // line 15
   pmalloc(n-2);
+  // line 16
   pmalloc(2);
-  writes(fd, "robson line 16\n");
-  test_printptrs("A(n-2) F(n-3) A1 A(n-2) A2 A(n-5) A1 A2 A(n-5) A1\n");
+  // line 17
   pmfree(3, n-2);
   pmfree(2, 1);
-  writes(fd, "robson line 17\n");
-  test_printptrs("A(n-2) F(2n-4) A2 A(n-5) A1 A2 A(n-5) A1\n");
+  // line 18
   pmalloc(n);
+  // line 19
   pmalloc(n-5);
+  // line 20
   pmalloc(1);
-  writes(fd, "robson line 20\n");
-  test_printptrs("A(n-2) An A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
-  writes(fd, "robson line 21\n");
+  // line 21
   pmfree(1, n);
-  test_printptrs("A(n-2) Fn A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
-  writes(fd, "robson line 22\n");
+  // line 22
   pmalloc(n-2);
-  test_printptrs("A(n-2) A(n-2) F2 A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
-  writes(fd, "robson line 23\n");
+  // line 23
   pmalloc(2);
-  test_printptrs("A(n-2) A(n-2) A2 A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
-  writes(fd, "robson line 24");
+  // line 24
   pmfree(1, n-2);
   pmfree(0, n-2);
-  test_printptrs("F(2n-4) A2 A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
   pmalloc(n);
   pmalloc(n-5);
-  writes(fd, "robson line 27");
+  // line 27
   pmalloc(1);
-  test_printptrs("An A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1 A2 A(n-5) A1\n");
   pmfree(4, n-5);
   pmfree(3, 2);
   pmfree(1, n-5);
