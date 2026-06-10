@@ -29,6 +29,13 @@ static size_t last_sbrk_size = 1;
 typedef struct boundary_tag {
   size_t is_mmapped : 1;
   size_t size : 63; // including the boundary tag and any unused space at the end
+
+  // For munaligned mmapped blocks, the pointer we give the user points at a
+  // page + 8, and the boundary tag is page aligned.
+
+  // For aligned mmapped blocks, the pointer is page aligned and we boundary tag
+  // is in the last word of the previous page.
+
 } BOUNDARY_TAG;
 
 // For debugging
