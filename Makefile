@@ -52,3 +52,9 @@ bestfitworst.o: OPTFLAGS = -O3
 bestfitworst.o: rss.h
 bestfitworst: LDLIBS=
 bestfitworst: rss.o
+
+hoardworst: rss.h rss.o
+hoardworst.data: hoardworst
+	LD_PRELOAD=../Hoard/build/libhoard.so ./hoardworst > hoardworst.data
+hoardworst.pdf: hoardworst.gnuplot hoardworst.data 
+	gnuplot $<
