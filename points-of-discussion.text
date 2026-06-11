@@ -71,7 +71,7 @@
      bump-unmap is happy.
      libc is quite happy (probably because the first round of allocations are so small)
 
-3) Discusson of Wilson et all https://jyywiki.cn/OS/manuals/malloc-survey.pdf
+3) Discusson of \cite{WilsonJoNe95}.
 
    Page 6: It has been proven that for any possible allocation algorithm, there
     will always be the possibility that some application program will allocate and
@@ -99,3 +99,5 @@
 
  Wilson 3.8: they apparently didn't know how to do first-fit in log time.
  
+
+Wilson's "solved" paper is claimed to be able to use lifetime prediction.   Need to look at that.
