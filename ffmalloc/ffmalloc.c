@@ -84,6 +84,18 @@ typedef struct boundary_tag {
 
 } BOUNDARY_TAG;
 
+static BOUNDARY_TAG* get_boundary_tag_pointer(void *p) {
+  return ((BOUNDARY_TAG*)(p)) - 1;
+}
+
+static void** get_overallocated_original_stored_at(void *p) {
+  return ((void**)(get_boundary_tag_pointer(p))) - 1;
+}
+
+static BOUNDARY_TAG get_boundary_tag(void *p) {
+  return *(get_boundary_tag_pointer(p));
+}
+
 // For debugging
 static void fftree_print(FFTREE *tree, int indent);
 
@@ -290,46 +302,48 @@ static int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   void *p;
   int r = ff_malloc_e(&p, amount_to_malloc);
   if (r != 0) return r;
-  fprintf(stderr, "ff_malloc got %p\n", p);
+  //fprintf(stderr, "ff_malloc got %p\n", p);
   // We now have
   //   p[-8] the original boundary tag (which we won't use)
   //   p[0] space for the new boundary tag
   //   p[8 .. 8 + size + alignment -1]    space for an aligned block.
-  BOUNDARY_TAG original_boundary_tag = ((BOUNDARY_TAG*)(p))[-1];
+  BOUNDARY_TAG original_boundary_tag = get_boundary_tag(p);
   void *p_to_return = alignup_pointer((char*)p + sizeof(BOUNDARY_TAG), alignment);
-  BOUNDARY_TAG *new_boundary_tag_p = (BOUNDARY_TAG*)(p_to_return) - 1;
-  *new_boundary_tag_p = (BOUNDARY_TAG){1, original_boundary_tag.size};
-  fprintf(stderr, "new_boundary_tag={%d %lu}\n", new_boundary_tag_p->is_overallocated, (size_t)(new_boundary_tag_p->size));
-  void ** place_to_store_start = ((void*)new_boundary_tag_p) - 1;
-  *place_to_store_start = ((char*)p) - sizeof(BOUNDARY_TAG);
+  //fprintf(stderr, "Got %p aligning to 0x%lx yields %p\n", p, alignment, p_to_return);
+  BOUNDARY_TAG *new_tag_p = get_boundary_tag_pointer(p_to_return);
+  *new_tag_p = (BOUNDARY_TAG){1, original_boundary_tag.size};
+  //fprintf(stderr, "new_tag_p=%p\n", new_tag_p);
+  //fprintf(stderr, "new_tag={%d %lu}\n", new_tag_p->is_overallocated, (size_t)(new_tag_p->size));
+  void ** store_start_at = get_overallocated_original_stored_at(p_to_return);
+  //  fprintf(stderr, "store_start_at=%p\n",store_start_at);
+  *store_start_at = get_boundary_tag_pointer(p);
   *result = p_to_return;
   return 0;
-}
-
-static BOUNDARY_TAG* get_boundary_tag_pointer(void *p) {
-  return ((BOUNDARY_TAG*)(p)) - 1;
-}
-
-static BOUNDARY_TAG get_boundary_tag(void *p) {
-  return *(get_boundary_tag_pointer(p));
 }
 
 static void ff_free(void *p) {
   BOUNDARY_TAG bt = get_boundary_tag(p);
   if (!bt.is_overallocated) {
     if (bt.size >= mmap_lower_bound) {
-      int r = munmap(get_boundary_tag_pointer(p), bt.size);
+      BOUNDARY_TAG* btp = get_boundary_tag_pointer(p);
+      assert(((uintptr_t)(btp)) % page_size == 0);
+      int r = munmap(btp, bt.size);
       assert(r == 0);
     } else {
       assert(0); // not ready
     }
   } else {
-    assert(0); // not ready
+    BOUNDARY_TAG *original_tag_p = (BOUNDARY_TAG*)(*(get_overallocated_original_stored_at(p)));
+    fprintf(stderr, "freeing original_tag_p=%p\n", original_tag_p);
+    *original_tag_p = (BOUNDARY_TAG){0, bt.size};
+    fprintf(stderr, "fixed up boundary tag={%lu %lu}\n", (size_t)(original_tag_p->is_overallocated), (size_t)(original_tag_p->size));
+    ff_free(original_tag_p + 1);
   }
 }
 
 // Tester
 static void test1(void) {
+  fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p;
   int r = ff_malloc_e(&p, 16);
   assert(r == 0);
@@ -337,7 +351,7 @@ static void test1(void) {
 }
 
 static void test_big_malloc(void) {
-  fprintf(stderr, "\ntest_big_malloc\n");
+  fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p;
   int r = ff_malloc_e(&p, 2*mmap_lower_bound);
   assert(r==0);
@@ -352,7 +366,7 @@ static void test_big_malloc(void) {
 }
 
 static void test_big_posix_memalign(void) {
-  fprintf(stderr, "\ntest_posix_memalign_big\n");
+  fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *result;
   int r = ff_posix_memalign(&result, 32, 2*mmap_lower_bound);
   assert(r==0);
@@ -361,6 +375,8 @@ static void test_big_posix_memalign(void) {
   BOUNDARY_TAG bt = ((BOUNDARY_TAG*)(result))[-1];
   fprintf(stderr, "bt={%d %lu}\n", bt.is_overallocated, (size_t)(bt.size));
   assert(bt.is_overallocated);
+
+  ff_free(result);
 }
 
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
