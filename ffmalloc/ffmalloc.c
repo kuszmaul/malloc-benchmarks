@@ -306,6 +306,28 @@ static int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   return 0;
 }
 
+static BOUNDARY_TAG* get_boundary_tag_pointer(void *p) {
+  return ((BOUNDARY_TAG*)(p)) - 1;
+}
+
+static BOUNDARY_TAG get_boundary_tag(void *p) {
+  return *(get_boundary_tag_pointer(p));
+}
+
+static void ff_free(void *p) {
+  BOUNDARY_TAG bt = get_boundary_tag(p);
+  if (!bt.is_overallocated) {
+    if (bt.size >= mmap_lower_bound) {
+      int r = munmap(get_boundary_tag_pointer(p), bt.size);
+      assert(r == 0);
+    } else {
+      assert(0); // not ready
+    }
+  } else {
+    assert(0); // not ready
+  }
+}
+
 // Tester
 static void test1(void) {
   void *p;
@@ -325,6 +347,8 @@ static void test_big_malloc(void) {
   fprintf(stderr, "requested size = %d\n", 2*mmap_lower_bound);
   fprintf(stderr, "bt.size=%lu\n", (size_t)(bt.size));
   assert(bt.size == 2*mmap_lower_bound+page_size);
+
+  ff_free(p);
 }
 
 static void test_big_posix_memalign(void) {
