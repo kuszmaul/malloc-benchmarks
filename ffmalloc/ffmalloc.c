@@ -69,6 +69,8 @@
 
 #include "ffmalloc.h"
 
+static const bool debug = false;
+
 enum {
   page_size = 4096,
   mmap_log_lower_bound = 18,
@@ -190,7 +192,7 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
   size = alignup(size + sizeof(BOUNDARY_TAG), page_size);
   assert(size >= mmap_lower_bound);
   void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  fprintf(stderr, "mmap(0, %lu, ...) => %p\n", size, p);
+  if (debug) fprintf(stderr, "mmap(0, %lu, ...) => %p\n", size, p);
   if (p == (void*)-1) {
     assert(errno == ENOMEM);
     return ENOMEM;
@@ -310,22 +312,24 @@ static void fftree_print(FFTREE *tree, int indent) {
 }
 
 static int ff_posix_memalign(void **result, size_t alignment, size_t size) {
-  fprintf(stderr, "%s(..., %lu, %lu)\n", __FUNCTION__, alignment, size);
+  if (debug) fprintf(stderr, "%s(..., %lu, %lu)\n", __FUNCTION__, alignment, size);
   if (!ispow2(alignment)) return EINVAL;
   assert(alignment % sizeof(void*) == 0);
   if (size == 0) {
     *result = NULL;
-    fprintf(stderr, " => 0");
+    if (debug) fprintf(stderr, " => 0");
     return 0;
   }
   if (alignment <= sizeof(BOUNDARY_TAG)) {
     // small alignments don't need anything
     int r = ff_malloc_e(result, size);
-    fprintf(stderr, "%s => %d", __FUNCTION__, r);
-    if (r == 0) {
-      fprintf(stderr, " %p", *result);
+    if (debug) {
+      fprintf(stderr, "%s => %d", __FUNCTION__, r);
+      if (r == 0) {
+        fprintf(stderr, " %p", *result);
+      }
+      fprintf(stderr, "\n");
     }
-    fprintf(stderr, "\n");
     return r;
   }
   size_t amount_to_malloc = sizeof(BOUNDARY_TAG) + size + alignment - 1;
@@ -335,23 +339,23 @@ static int ff_posix_memalign(void **result, size_t alignment, size_t size) {
     fprintf(stderr, " => %d\n", r);
     return r;
   }
-  fprintf(stderr, "ff_malloc returned %p\n", p);
+  if (debug) fprintf(stderr, "ff_malloc returned %p\n", p);
   // We now have
   //   p[-8] the original boundary tag (which we won't use)
   //   p[0] space for the new boundary tag
   //   p[8 .. 8 + size + alignment -1]    space for an aligned block.
   BOUNDARY_TAG original_boundary_tag = get_boundary_tag(p);
   void *p_to_return = alignup_pointer((char*)p + sizeof(BOUNDARY_TAG), alignment);
-  fprintf(stderr, "Got %p aligning to 0x%lx yields %p\n", p, alignment, p_to_return);
+  if (debug) fprintf(stderr, "Got %p aligning to 0x%lx yields %p\n", p, alignment, p_to_return);
   BOUNDARY_TAG *new_tag_p = get_boundary_tag_pointer(p_to_return);
   *new_tag_p = (BOUNDARY_TAG){1, original_boundary_tag.size};
-  fprintf(stderr, "new_tag_p=%p\n", new_tag_p);
-  fprintf(stderr, "new_tag={%d %lu}\n", new_tag_p->is_memaligned, (size_t)(new_tag_p->size));
+  if (debug) fprintf(stderr, "new_tag_p=%p\n", new_tag_p);
+  if (debug) fprintf(stderr, "new_tag={%d %lu}\n", new_tag_p->is_memaligned, (size_t)(new_tag_p->size));
   void ** store_start_at = get_memaligned_original_stored_at_pointer(p_to_return);
-  fprintf(stderr, "store_start_at=%p, storing %p\n",store_start_at, get_boundary_tag_pointer(p));
+  if (debug) fprintf(stderr, "store_start_at=%p, storing %p\n",store_start_at, get_boundary_tag_pointer(p));
   *store_start_at = get_boundary_tag_pointer(p);
   *result = p_to_return;
-  fprintf(stderr, "%s => 0 %p\n", __FUNCTION__, p_to_return);
+  if (debug) fprintf(stderr, "%s => 0 %p\n", __FUNCTION__, p_to_return);
   return 0;
 }
 
@@ -371,25 +375,27 @@ static void ff_free(void *p) {
     // memalignment hacking.  (We could have overwritten the boundary tag with
     // the original_stored_at information.)
     BOUNDARY_TAG *original_tag_p = (BOUNDARY_TAG*)(*(get_memaligned_original_stored_at_pointer(p)));
-    fprintf(stderr, "freeing original_tag_p=%p\n", original_tag_p);
+    if (debug) fprintf(stderr, "freeing original_tag_p=%p\n", original_tag_p);
     *original_tag_p = (BOUNDARY_TAG){0, bt.size};
-    fprintf(stderr, "fixed up boundary tag={%lu %lu}\n", (size_t)(original_tag_p->is_memaligned), (size_t)(original_tag_p->size));
+    if (debug) fprintf(stderr, "fixed up boundary tag={%lu %lu}\n", (size_t)(original_tag_p->is_memaligned), (size_t)(original_tag_p->size));
     ff_free(original_tag_p + 1);
   }
 }
 
 static void my_mincore(void *addr, size_t length, unsigned char *vec) {
-  fprintf(stderr, "mincore(%p, %lu, ...) => ",  addr, length);
+  if (debug) fprintf(stderr, "mincore(%p, %lu, ...) => ",  addr, length);
   errno = 0;
   int r = mincore((void*)(addr), length, vec);
   if (r != 0) {
     perror("mincore");
   }
   assert(r == 0);
-  for (size_t i = 0; i < (length + page_size - 1)/page_size; i++) {
-    fprintf(stderr, "%u", vec[i] & 1);
+  if (debug) {
+    for (size_t i = 0; i < (length + page_size - 1)/page_size; i++) {
+      fprintf(stderr, "%u", vec[i] & 1);
+    }
+    fprintf(stderr, "\n");
   }
-  fprintf(stderr, "\n");
 }
 
 static void my_mincore_test_all_ones(void *addr, size_t length) {
@@ -485,12 +491,12 @@ static void test_big_posix_memalign(size_t alignment) {
     int r = ff_posix_memalign(&result, alignment, 2*mmap_lower_bound);
     assert(r==0);
   }
-  fprintf(stderr, "result=%p\n", result);
+  if (debug) fprintf(stderr, "result=%p\n", result);
   assert((uintptr_t)(result)%alignment == 0);
   BOUNDARY_TAG *btp = get_boundary_tag_pointer(result);
   uintptr_t block_start = (uintptr_t)btp;
   BOUNDARY_TAG bt = get_boundary_tag(result);
-  fprintf(stderr, "bt={%d %lu}\n", bt.is_memaligned, (size_t)(bt.size));
+  if (debug) fprintf(stderr, "bt={%d %lu}\n", bt.is_memaligned, (size_t)(bt.size));
   if (alignment == sizeof(void*)) {
     assert(!bt.is_memaligned);
     // We got the first address is aligned.
@@ -502,14 +508,14 @@ static void test_big_posix_memalign(size_t alignment) {
     return;
   } else {
     assert(bt.is_memaligned);
-    fprintf(stderr, "memaligned original = %p\n", get_memaligned_original(result));
+    if (debug) fprintf(stderr, "memaligned original = %p\n", get_memaligned_original(result));
     void *raw_block_start_p = get_memaligned_original(result);
     uintptr_t raw_block_start = (uintptr_t)(raw_block_start_p);
     assert(raw_block_start + sizeof(void*) + sizeof(BOUNDARY_TAG) + alignment > (uintptr_t)(result));
     assert((raw_block_start & (page_size-1)) == 0);
-    fprintf(stderr, "raw_block_start=%lx\n", raw_block_start);
+    if (debug) fprintf(stderr, "raw_block_start=%lx\n", raw_block_start);
     if (raw_block_start < (uintptr_t)(result) - 4096) {
-      fprintf(stderr, "line %d\n", __LINE__);
+      if (debug) fprintf(stderr, "line %d\n", __LINE__);
       my_mincore_test_one_then_all_zeros(raw_block_start_p, (uintptr_t)result - raw_block_start - 4096);
     }
     my_mincore_test_one_then_all_zeros(
@@ -517,7 +523,7 @@ static void test_big_posix_memalign(size_t alignment) {
         2*mmap_lower_bound + page_size);
     memset(result, 1, 2*mmap_lower_bound);
     if (raw_block_start < (uintptr_t)(result) - 4096) {
-      fprintf(stderr, "line %d\n", __LINE__);
+      if (debug) fprintf(stderr, "line %d\n", __LINE__);
       my_mincore_test_one_then_all_zeros(raw_block_start_p, (uintptr_t)result - raw_block_start - 4096);
     }
     my_mincore_test_all_ones(
