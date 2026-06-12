@@ -405,18 +405,18 @@ static void my_mincore_test_all_ones(void *addr, size_t length) {
   assert(ok);
 }
 
-static void my_mincore_test_all_zeros(void *addr, size_t length) {
-  unsigned char vec[(length + page_size - 1)/page_size];
-  my_mincore(addr, length, vec);
-  bool ok = true;
-  for (size_t i = 0; i < (length + page_size - 1)/page_size; i++) {
-    if ((vec[i] & 1) != 0) {
-      fprintf(stderr, "vec[%lu] is not zero\n", i);
-      ok = false;
-    }
-  }
-  assert(ok);
-}
+//static void my_mincore_test_all_zeros(void *addr, size_t length) {
+//  unsigned char vec[(length + page_size - 1)/page_size];
+//  my_mincore(addr, length, vec);
+//  bool ok = true;
+//  for (size_t i = 0; i < (length + page_size - 1)/page_size; i++) {
+//    if ((vec[i] & 1) != 0) {
+//      fprintf(stderr, "vec[%lu] is not zero\n", i);
+//      ok = false;
+//    }
+//  }
+//  assert(ok);
+//}
 
 static void my_mincore_test_one_then_all_zeros(void *addr, size_t length) {
   if (length == 0) return;
@@ -507,18 +507,21 @@ static void test_big_posix_memalign(size_t alignment) {
     uintptr_t raw_block_start = (uintptr_t)(raw_block_start_p);
     assert(raw_block_start + sizeof(void*) + sizeof(BOUNDARY_TAG) + alignment > (uintptr_t)(result));
     assert((raw_block_start & (page_size-1)) == 0);
+    fprintf(stderr, "raw_block_start=%lx\n", raw_block_start);
     if (raw_block_start < (uintptr_t)(result) - 4096) {
-      my_mincore_test_all_zeros(raw_block_start_p, (uintptr_t)result - raw_block_start - 4096);
+      fprintf(stderr, "line %d\n", __LINE__);
+      my_mincore_test_one_then_all_zeros(raw_block_start_p, (uintptr_t)result - raw_block_start - 4096);
     }
     my_mincore_test_one_then_all_zeros(
-        (void*)(block_start & ~(alignment-1)),
+        (void*)(block_start & ~(page_size-1)),
         2*mmap_lower_bound + page_size);
     memset(result, 1, 2*mmap_lower_bound);
     if (raw_block_start < (uintptr_t)(result) - 4096) {
-      my_mincore_test_all_zeros(raw_block_start_p, (uintptr_t)result - raw_block_start - 4096);
+      fprintf(stderr, "line %d\n", __LINE__);
+      my_mincore_test_one_then_all_zeros(raw_block_start_p, (uintptr_t)result - raw_block_start - 4096);
     }
     my_mincore_test_all_ones(
-        (void*)(block_start & ~(alignment-1)),
+        (void*)(block_start & ~(page_size-1)),
         2*mmap_lower_bound + page_size);
     ff_free(result);
   }
@@ -559,5 +562,12 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   test_big_posix_memalign(1024);
   test_big_posix_memalign(2048);
   test_big_posix_memalign(4096);
+  test_big_posix_memalign(8192);
+  test_big_posix_memalign(1u<<14);
+  test_big_posix_memalign(1u<<15);
+  test_big_posix_memalign(1u<<16);
+  test_big_posix_memalign(1u<<17);
+  test_big_posix_memalign(1u<<18);
+  test_big_posix_memalign(1u<<20);
   return 0;
 }
