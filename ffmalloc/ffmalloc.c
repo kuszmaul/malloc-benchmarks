@@ -531,28 +531,6 @@ static void test_big_posix_memalign(size_t alignment) {
         2*mmap_lower_bound + page_size);
     ff_free(result);
   }
-
-  /* uintptr_t result_beginning_of_page = ((uintptr_t)(result)) & ~(page_size-1); */
-  /* fprintf(stderr, "result_beginning_of_page=%lx\n", result_beginning_of_page); */
-
-  /* if (alignment < 4096) { */
-  /*   // For small alignments */
-  /*   assert(get_memaligned_original(result) == (void*)(result_beginning_of_page)); */
-  /* } */
-
-
-  /* size_t expected_mmap_size = (2*mmap_lower_bound+page_size); */
-  /* unsigned char mincore_result[expected_mmap_size/page_size]; */
-  /* assert(result_beginning_of_page % page_size == 0); */
-  /* my_mincore((void*)(result_beginning_of_page), expected_mmap_size, mincore_result); */
-  /* assert((mincore_result[0] & 1) == 1); */
-  /* for (size_t i = 1; i < expected_mmap_size/page_size; i++) { */
-  /*   assert((mincore_result[i] & 1) == 0); */
-  /* } */
-  /* my_mincore_test_one_then_all_zeros((void*)(result_beginning_of_page), expected_mmap_size, mincore_result); */
-  /* memset(result, 1, 2*mmap_lower_bound); */
-  /* my_mincore_test_all_ones((void*)(result_beginning_of_page), expected_mmap_size, mincore_result); */
-  /* ff_free(result); */
 }
 
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
