@@ -71,6 +71,16 @@
 
 static const bool debug = false;
 
+static size_t max(size_t a, size_t b) {
+  return (a < b) ? b : a;
+}
+
+static size_t maxf(size_t *a, size_t b) {
+  size_t r = max(*a, b);
+  *a = r;
+  return r;
+}
+
 enum {
   page_size = 4096,
   mmap_log_lower_bound = 18,
@@ -80,6 +90,7 @@ enum {
 
 typedef struct fftree {
   struct fftree *left, *right;
+  size_t depth : 8; // depth includes the current node, so depth >= 1
   size_t size : mmap_log_lower_bound;
   size_t max_in_subtree : mmap_log_lower_bound;
 } FFTREE;
@@ -126,14 +137,71 @@ static FFTREE *get_rightmost_node(FFTREE *node) {
   }
 }
 
-static FFTREE *fftree_insert(FFTREE *tree, void* node, size_t node_size) {
+// Effect: Do the work for `fftree_validate`, where we have the additional
+// requirement that the address every node in `tree` must be strictly between
+// `lower_bound` and `upper_bound`.
+static void fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
+  if (tree == NULL) return;
+  if (lower_bound != NULL) {
+    assert(lower_bound < tree);
+  }
+  if (upper_bound != NULL) {
+    assert(tree < upper_bound);
+  }
+  size_t expect_depth = 1;
+  size_t expect_max_size = tree->size;
+  size_t left_depth = 0;
+  size_t right_depth = 0;
+  if (tree->left != NULL) {
+    fftree_validate_2(tree->left, lower_bound, tree);
+    left_depth = tree->left->depth;
+    maxf(&expect_depth, 1 + left_depth);
+    maxf(&expect_max_size, tree->left->max_in_subtree);
+  }
+  if (tree->right != NULL) {
+    fftree_validate_2(tree->right, tree, upper_bound);
+    right_depth = tree->right->depth;
+    maxf(&expect_depth, 1 + right_depth);
+    maxf(&expect_max_size, tree->right->max_in_subtree);
+  }
+
+  // Verify the augmentations are correct.
+  assert(expect_depth == tree->depth);
+  assert(expect_max_size == tree->max_in_subtree);
+
+  // Verify the tree is balanced.
+  if (left_depth < right_depth) {
+    assert(left_depth + 1 == right_depth);
+  } else if (right_depth < left_depth) {
+    assert(right_depth + 1 == left_depth);
+  }
+}
+
+// Effect: Verify the FFTREE.
+//
+//  1) `tree` is a search tree.  (That is, for every node, the addresses in the
+//  left subtree are < the address of a node < the addresses in the right
+//  subtree.)
+//
+//  2) The augmentations are correct.  (That is, `depth` and `max_in_subtree`
+//  are correct.)
+//
+//  3) The tree is balanced.  (That is, the `depth` of the left subtree is
+//  within one of the `depth` of the right subtree.)
+static void fftree_validate(FFTREE *tree) {
+  fftree_validate_2(tree, NULL, NULL);
+}
+
+static void fftree_insert(FFTREE **tree_p, void* node, size_t node_size) {
   assert(node != NULL);
+  assert(tree_p != NULL);
+  FFTREE *tree = *tree_p;
   if (tree == NULL) {
     tree = (FFTREE*)node;
     tree->left = NULL;
     tree->right = NULL;
     tree->max_in_subtree = tree->size = node_size;
-    return tree;
+    return;
   } else {
     assert(0);
   }
@@ -156,16 +224,6 @@ static size_t alignup(size_t n, size_t alignment) {
 static void* alignup_pointer(void* p, size_t alignment) {
   return (void*)(alignup((uintptr_t)(p), alignment));
 }
-
-static size_t max(size_t a, size_t b) {
-  return (a < b) ? b : a;
-}
-
-//static size_t maxf(size_t *a, size_t b) {
-//  size_t r = max(*a, b);
-//  *a = r;
-//  return r;
-//}
 
 static size_t compute_next_sbrk_size(size_t size) {
   size_t prev = last_sbrk_size;
@@ -267,8 +325,8 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
   // 32 is what?
   if (node->size >= size + 32) {
     // We can break the node in two.
-    arena = fftree_insert(
-        arena,
+    fftree_insert(
+        &arena,
         (char*)node + size + 8, // 8 for the boundary tag
         node->size - size - 8);
     fprintf(stderr, "Added tail block to arena to get\n");
@@ -368,7 +426,8 @@ static void ff_free(void *p) {
       int r = munmap(btp, bt.size);
       assert(r == 0);
     } else {
-      assert(0); // not ready
+      size_t size = bt.size;
+      fftree_insert(&arena, get_boundary_tag_pointer(p), size);
     }
   } else {
     // Reconstruct the boundary tag as it was originally before we did the
@@ -446,6 +505,9 @@ static void test1(void) {
   int r = ff_malloc_e(&p, 16);
   assert(r == 0);
   printf("allocated 16 got p=%p\n", p);
+  assert(sizeof(FFTREE) == 24);
+  ff_free(p);
+  fftree_validate(arena);
 }
 
 static void test_big_malloc(void) {
