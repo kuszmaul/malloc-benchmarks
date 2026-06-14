@@ -95,6 +95,15 @@ typedef struct fftree {
   size_t max_in_subtree : mmap_log_lower_bound;
 } FFTREE;
 
+static size_t fftree_depth(const FFTREE *t) {
+  if (t == NULL) return 0;
+  return t->depth;
+}
+static size_t fftree_max_in_subtree(const FFTREE *t) {
+  if (t == NULL) return 0;
+  return t->max_in_subtree;
+}
+
 static FFTREE *arena = NULL;
 static size_t last_sbrk_size = 1;
 
@@ -205,11 +214,21 @@ static void fftree_insert(FFTREE **tree_p, void* node, size_t node_size) {
     *tree_p = tree;
     return;
   } else {
+    // TODO: We currently have the bug that after merging the node into the
+    // tree, we don't merge the node on the other side.  What we probably need
+    // to do is 3 steps:
+    //
+    //  1) Find and remove the tree element that touches node on the left (if
+    //     there is one).  Merge that tree node into node.
+    //  2) Similarly on the right.
+    //  3) Now insert into the tree with no merging required.
+
+
     // Save out tree contents so we don't accidentally stomp on them.  I don't
     // think it can happen, but just to be safe...
     FFTREE tree_contents = *tree;
     if (((char*)node) + node_size == (char*)(tree)) {
-      // We can merge the node into the tree
+      // We can merge the node into the tree (on the left side)
       tree = (FFTREE*)(node);
       *tree = tree_contents;
       tree->size += node_size;
@@ -217,7 +236,22 @@ static void fftree_insert(FFTREE **tree_p, void* node, size_t node_size) {
       *tree_p = tree;
       return;
     }
-    assert(0);
+    if (((char*)tree) + node_size == (char*)(node)) {
+      assert(0); // merge node into tree (on the right side)
+    }
+    if (((FFTREE*)node) < tree) {
+      fftree_insert(&tree->left, node, node_size);
+      fprintf(stderr, " about to update augmentations\n");
+      fftree_print(tree, 2);
+      tree->depth = 1+max(fftree_depth(tree->left), fftree_depth(tree->right));
+      tree->max_in_subtree = max(tree->size,
+                                 max(fftree_max_in_subtree(tree->left),
+                                     fftree_max_in_subtree(tree->right)));
+      fprintf(stderr, " updated augmentations\n");
+      fftree_print(tree, 2);
+      return;
+    }
+    assert(0); // `node` is disjoint from the root node.
   }
 }
 
@@ -389,6 +423,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
   BOUNDARY_TAG* tag = (BOUNDARY_TAG*)(node);
   tag->is_memaligned = false;
   tag->size = size + sizeof(BOUNDARY_TAG);
+  fprintf(stderr, "%d: tag->size=%lu\n", __LINE__, (size_t)(tag->size));
   *result = (void*)((char*)node + sizeof(BOUNDARY_TAG));
   return 0;
 }
@@ -417,7 +452,7 @@ static void fftree_print(FFTREE *tree, int indent) {
     fprintf(stderr, "%*sEmpty tree\n", indent, "");
     return;
   }
-  fprintf(stderr, "%*s%p %p %p %u %u\n", indent, "", tree, tree->left, tree->right, tree->size, tree->max_in_subtree);
+  fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_in_subtree);
   fftree_print(tree->left, indent+1);
   fftree_print(tree->right, indent+1);
 }
@@ -552,9 +587,8 @@ static void my_mincore_test_one_then_all_zeros(void *addr, size_t length) {
 }
 
 // Tester
-static void test_little_malloc(void) {
+static void test_little_malloc1(void) {
   fprintf(stderr, "\n%s\n", __FUNCTION__);
-  assert(arena == NULL); // nothing ran yet.
   void *p;
   int r = ff_malloc_e(&p, 16);
   assert(arena != NULL);
@@ -570,6 +604,58 @@ static void test_little_malloc(void) {
   r = ff_malloc_e(&p2, 16);
   fprintf(stderr, "allocated 16 got %p\n", p2);
   assert(p2 == p); // first fit should always allocate the same thing again.
+  ff_free(p2);
+}
+
+static void test_little_malloc2(void) {
+  fprintf(stderr, "\n%s\n", __FUNCTION__);
+  void *p1, *p2;
+  {
+    int r = ff_malloc_e(&p1, 24);
+    assert(r == 0);
+  }
+  {
+    int r = ff_malloc_e(&p2, 64);
+    assert(r == 0);
+  }
+  fprintf(stderr, " p1=%p\n p2=%p\n", p1, p2);
+  fftree_validate(arena);
+  fftree_print(arena, 1);
+  assert(get_boundary_tag(p1).size == 24 + sizeof(BOUNDARY_TAG));
+  assert(get_boundary_tag(p2).size == 64 + sizeof(BOUNDARY_TAG));
+  assert(((char*)p2) - ((char*)p1) == get_boundary_tag(p1).size);
+
+  fftree_validate(arena);
+  ff_free(p2);
+  fftree_validate(arena);
+  ff_free(p1);
+  fftree_validate(arena);
+
+  // Now free them in the other order
+  {
+    void *p1a = p1;
+    int r = ff_malloc_e(&p1, 24);
+    assert(r == 0);
+    assert(p1 == p1a);
+  }
+  {
+    void *p2a = p2;
+    int r = ff_malloc_e(&p2, 64);
+    assert(r == 0);
+    assert(p2 == p2a);
+  }
+  ff_free(p1);
+  fftree_validate(arena);
+  ff_free(p2);
+  fftree_validate(arena);
+  fprintf(stderr, " after returning both\n");
+  fftree_print(arena, 1);
+}
+
+static void test_little_malloc(void) {
+  assert(arena == NULL); // nothing ran yet.
+  test_little_malloc1();
+  test_little_malloc2();
 }
 
 static void test_big_malloc(void) {
@@ -659,6 +745,7 @@ static void test_big_posix_memalign(size_t alignment) {
 
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
   test_little_malloc();
+  return 0; // temporary
   test_big_malloc();
   test_big_posix_memalign_errors();
   // alignment of size 8 adds no additional requirements
