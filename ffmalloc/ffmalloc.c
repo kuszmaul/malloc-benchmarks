@@ -67,57 +67,13 @@
 // Needed for tests
 #include <stdio.h>
 
+#include "headers.h"
 #include "ffmalloc.h"
 
 static const bool debug = false;
 
-static size_t max(size_t a, size_t b) {
-  return (a < b) ? b : a;
-}
-
-static size_t maxf(size_t *a, size_t b) {
-  size_t r = max(*a, b);
-  *a = r;
-  return r;
-}
-
-enum {
-  page_size = 4096,
-  mmap_log_lower_bound = 18,
- // Blocks this big or larger are mapped directly with mmap.
-  mmap_lower_bound = 1ul<<mmap_log_lower_bound,
-};
-
-typedef struct fftree {
-  struct fftree *left, *right;
-  size_t depth : 8; // depth includes the current node, so depth >= 1
-  size_t size : mmap_log_lower_bound;
-  size_t max_in_subtree : mmap_log_lower_bound;
-} FFTREE;
-
-static size_t fftree_depth(const FFTREE *t) {
-  if (t == NULL) return 0;
-  return t->depth;
-}
-static size_t fftree_max_in_subtree(const FFTREE *t) {
-  if (t == NULL) return 0;
-  return t->max_in_subtree;
-}
-
 static FFTREE *arena = NULL;
 static size_t last_sbrk_size = 1;
-
-typedef struct boundary_tag {
-  size_t is_memaligned : 1;
-  size_t size : 63; // including the boundary tag and any unused space at the end
-
-  // For munaligned mmapped blocks, the pointer we give the user points at a
-  // page + 8, and the boundary tag is page aligned.
-
-  // For aligned mmapped blocks, the pointer is page aligned and we boundary tag
-  // is in the last word of the previous page.
-
-} BOUNDARY_TAG;
 
 static BOUNDARY_TAG* get_boundary_tag_pointer(void *p) {
   return ((BOUNDARY_TAG*)(p)) - 1;
@@ -135,9 +91,6 @@ static void* get_memaligned_original(void *p) {
   return *get_memaligned_original_stored_at_pointer(p);
 }
 
-// For debugging
-static void fftree_print(FFTREE *tree, int indent);
-
 //static FFTREE *get_rightmost_node(FFTREE *node) {
 //  if (node == NULL) return NULL;
 //  while (true) {
@@ -146,74 +99,7 @@ static void fftree_print(FFTREE *tree, int indent);
 //  }
 //}
 
-// Effect: Do the work for `fftree_validate`, where we have the additional
-// requirement that the address every node in `tree` must be strictly between
-// `lower_bound` and `upper_bound`.
-static void fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
-  if (tree == NULL) return;
-  if (lower_bound != NULL) {
-    assert(lower_bound < tree);
-  }
-  if (upper_bound != NULL) {
-    assert(tree < upper_bound);
-  }
-  size_t expect_depth = 1;
-  size_t expect_max_size = tree->size;
-  size_t left_depth = 0;
-  size_t right_depth = 0;
-  if (tree->left != NULL) {
-    fftree_validate_2(tree->left, lower_bound, tree);
-    left_depth = tree->left->depth;
-    maxf(&expect_depth, 1 + left_depth);
-    maxf(&expect_max_size, tree->left->max_in_subtree);
-  }
-  if (tree->right != NULL) {
-    fftree_validate_2(tree->right, tree, upper_bound);
-    right_depth = tree->right->depth;
-    maxf(&expect_depth, 1 + right_depth);
-    maxf(&expect_max_size, tree->right->max_in_subtree);
-  }
-
-  // Verify the augmentations are correct.
-  assert(expect_depth == tree->depth);
-  assert(expect_max_size == tree->max_in_subtree);
-
-  // Verify the tree is balanced.
-  if (left_depth < right_depth) {
-    assert(left_depth + 1 == right_depth);
-  } else if (right_depth < left_depth) {
-    assert(right_depth + 1 == left_depth);
-  }
-}
-
-// Effect: Verify the FFTREE.
-//
-//  1) `tree` is a search tree.  (That is, for every node, the addresses in the
-//  left subtree are < the address of a node < the addresses in the right
-//  subtree.)
-//
-//  2) The augmentations are correct.  (That is, `depth` and `max_in_subtree`
-//  are correct.)
-//
-//  3) The tree is balanced.  (That is, the `depth` of the left subtree is
-//  within one of the `depth` of the right subtree.)
-static void fftree_validate(FFTREE *tree) {
-  fftree_validate_2(tree, NULL, NULL);
-}
-
 static void fftree_insert(FFTREE **tree_p, void* node, size_t node_size) {
-  assert(node != NULL);
-  assert(tree_p != NULL);
-  FFTREE *tree = *tree_p;
-  if (tree == NULL) {
-    tree = (FFTREE*)node;
-    tree->depth = 1;
-    tree->left = NULL;
-    tree->right = NULL;
-    tree->max_in_subtree = tree->size = node_size;
-    *tree_p = tree;
-    return;
-  } else {
     // TODO: We currently have the bug that after merging the node into the
     // tree, we don't merge the node on the other side.  What we probably need
     // to do is 3 steps:
@@ -227,6 +113,11 @@ static void fftree_insert(FFTREE **tree_p, void* node, size_t node_size) {
     // Save out tree contents so we don't accidentally stomp on them.  I don't
     // think it can happen, but just to be safe...
     FFTREE tree_contents = *tree;
+
+    {
+      FFTREE *left = fftree_find_left_adjacent_block_and_remove(tree_p, (FFTREE*)node);
+
+
     if (((char*)node) + node_size == (char*)(tree)) {
       // We can merge the node into the tree (on the left side)
       tree = (FFTREE*)(node);
@@ -243,11 +134,7 @@ static void fftree_insert(FFTREE **tree_p, void* node, size_t node_size) {
       fftree_insert(&tree->left, node, node_size);
       fprintf(stderr, " about to update augmentations\n");
       fftree_print(tree, 2);
-      tree->depth = 1+max(fftree_depth(tree->left), fftree_depth(tree->right));
-      tree->max_in_subtree = max(tree->size,
-                                 max(fftree_max_in_subtree(tree->left),
-                                     fftree_max_in_subtree(tree->right)));
-      fprintf(stderr, " updated augmentations\n");
+      fftree_update_augmentation(tree);
       fftree_print(tree, 2);
       return;
     }
@@ -284,17 +171,65 @@ static size_t compute_next_sbrk_size(size_t size) {
   return size;
 }
 
+// Effect: Find the rightmost child of *rootp, remove and return it.  Store the new root
+// of the tree in *rootp.
+static FFTREE* fftree_remove_rightmost(FFTREE **rootp) {
+  assert(rootp);
+  FFTREE *root = *rootp;
+  assert(root);
+  if (root->right) {
+    return fftree_remove_rightmost(&root->right);
+  } else {
+    *rootp = root->left;
+    root->left = NULL;
+    return root;
+  }
+}
+
+static FFTREE* fftree_remove_this_node(FFTREE **rootp, FFTREE *node) {
+  assert(*rootp == node); // TODO: Get rid of node argument?
+  if (node->left == NULL) {
+    *rootp = node->right;
+  } else if (node->right == NULL) {
+    *rootp = node->left;
+  } else {
+    // *rootp is unchanged
+    FFTREE *leftmost = fftree_remove_rightmost(&node->left);
+    leftmost->left = node->left;
+    leftmost->right = node->right;
+    fftree_update_augmentation(leftmost);
+    *rootp = leftmost;
+    node->left = NULL;
+    node->right = NULL;
+  }
+  return node;
+}
+
+static FFTREE *fftree_find_left_adjacent_block_and_remove(FFTREE **rootp, FFTREE *block) {
+  assert(rootp != NULL);
+  FFTREE *root = *rootp;
+  if (root == NULL) return NULL;
+  if (((char*)root) + root->size == (char*)(block)) {
+    // This is the one to remove
+    return fftree_remove_this_node(rootp, root);
+  } else {
+    FFTREE *result = fftree_find_left_adjacent_block_and_remove(
+        (root < block) ? &root->left : & root->right,
+        block);
+    if (result != NULL) {
+      fftree_update_augmentation(*rootp);
+      // maybe rebalance?
+    }
+    return result;
+  }
+}
+
 // Effect: Find the leftmost block that's at least as big as `size` and remove
 // it.  Return the block.  Return NULL if there is no such block.
 static FFTREE *fftree_find_first_fit_and_remove(FFTREE **rootp, size_t size) {
   assert(rootp != NULL);
   FFTREE *root = *rootp;
-  if (root == NULL) {
-    return NULL;
-  }
-  if (root->max_in_subtree < size) {
-    return NULL;
-  }
+  if (fftree_max_in_subtree(root) < size) return NULL;
   {
     FFTREE *left = root->left;
     if (fftree_max_in_subtree(left) >= size) {
@@ -304,17 +239,10 @@ static FFTREE *fftree_find_first_fit_and_remove(FFTREE **rootp, size_t size) {
     }
   }
   if (root->size >= size) {
-    if (root->left == NULL) {
-      *rootp = root->right;
-      root->right = NULL;
-      return root;
-    }
-    if (root->right == NULL) {
-      *rootp = root->left;
-      root->left = NULL;
-      return root;
-    }
-    assert(0);
+    // This is the node to remove.
+    FFTREE *result = fftree_remove_this_node(rootp, root);
+    fftree_update_augmentation(*rootp);
+    return result;
   }
   {
     FFTREE *right = root->right;

@@ -1,0 +1,81 @@
+#ifndef TREE_H
+#define TREE_H
+
+#include <stddef.h>
+
+#include "headers.h"
+
+// A FFTree is a binary search tree that can be used to implement a first-fit
+// allocator.
+//
+// The search tree holds the currently free blocks.
+//
+// The search tree is sorted by the address of the nodes.  (The node is
+// typically stored in the first few bytes of block being stored, and for the
+// tree code we always view the block (a `void*`) as a `FFTREE*` and we call it
+// a node.)
+//
+// Every node has two children (`left` and `right) as well as a `size` which is
+// the size of the block being managed.  It must be the case that the size is at
+// least `sizeof(FFTREE)`.
+//
+// Each node is augmented with a `depth`, which the longest distance from the
+// node to NULL.  By convention the depth of NULL is 0.  So for example, a node
+// with no children has depth 1.  We maintain the depth incrementally by
+// maintaining the invarant that the depth equals 1+max(depth(left),
+// depth(right)).
+//
+// The tree is further augmented with a `max_size_in_subtree`, which is the
+// maximum `size` over the entire subtree.  By contention the maximum size in
+// the NULL subtree is zero.  We maintain the `max_size_in_subtree`
+// incrementally by maintaining the invariant that
+// `max_size_in_subtree=max(size, max_size_in_subtree(left),
+// max_size_in_subtree(right)).
+//
+// The blocks of memory being managed by the tree are nonoverlapping.
+
+typedef struct fftree {
+  struct fftree *left, *right;
+  size_t depth : 8; // depth includes the current node, so depth >= 1
+  size_t size : mmap_log_lower_bound;
+  // The maximum over the subtree of the size.  That is, the size of the biggest
+  // node in the subtree.
+  size_t max_size_in_subtree : mmap_log_lower_bound;
+} FFTREE;
+
+size_t fftree_depth(const FFTREE *t);
+// Effect: Returns the depth of the tree (0 for t==NULL).
+
+size_t fftree_max_size_in_subtree(const FFTREE *t);
+// Effect: Returns the size of the biggest node in the subtree.
+
+
+void fftree_validate(FFTREE *tree);
+// Effect: Verifies the FFTREE.
+//
+//  1) `tree` is a search tree.  (That is, for every node, the addresses in the
+//  left subtree are < the address of a node < the addresses in the right
+//  subtree.)
+//
+//  2) The augmentations are correct.  (That is, `depth` and `max_in_subtree`
+//  are correct.)
+//
+//  3) The tree is balanced.  (That is, the `depth` of the left subtree is
+//  within one of the `depth` of the right subtree.)
+
+void fftree_print(FFTREE *tree, int indent);
+// Effect: Prints `tree`, indented by `indent`.
+//
+// Usage note: Useful for debugging.
+
+void fftree_insert(FFTREE **tree_p, FFTREE *node);
+// Effect: Insert `node` into `*tree_p`.  After running `ff_insert` the new root
+// of the tree is stored in `*tree_p`.
+//
+// Requires: `node` isn't in tree and doesn't overlap the tree.  `node->size`
+// must be have been initialized, but the other fields need not have been
+// initialized.
+
+FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
+
+#endif
