@@ -286,7 +286,7 @@ static size_t compute_next_sbrk_size(size_t size) {
 
 // Effect: Find the leftmost block that's at least as big as `size` and remove
 // it.  Return the block.  Return NULL if there is no such block.
-static FFTREE *fftree_find_and_remove(FFTREE **rootp, size_t size) {
+static FFTREE *fftree_find_first_fit_and_remove(FFTREE **rootp, size_t size) {
   assert(rootp != NULL);
   FFTREE *root = *rootp;
   if (root == NULL) {
@@ -297,12 +297,10 @@ static FFTREE *fftree_find_and_remove(FFTREE **rootp, size_t size) {
   }
   {
     FFTREE *left = root->left;
-    if (left != NULL) {
-      if (left->max_in_subtree >= size) {
-        FFTREE *result = fftree_find_and_remove(&root->left, size);
-        // TODO: update_augmentation and maybe rebalance
-        return result;
-      }
+    if (fftree_max_in_subtree(left) >= size) {
+      FFTREE *result = fftree_find_first_fit_and_remove(&root->left, size);
+      // TODO: update_augmentation and maybe rebalance
+      return result;
     }
   }
   if (root->size >= size) {
@@ -320,18 +318,14 @@ static FFTREE *fftree_find_and_remove(FFTREE **rootp, size_t size) {
   }
   {
     FFTREE *right = root->right;
-    if (right != NULL) {
-      if (right->max_in_subtree >= size) {
-        FFTREE *result = fftree_find_and_remove(&root->right, size);
-        // TODO: update_augmentation and maybe rebalance
-        return result;
-      }
+    if (fftree_max_in_subtree(right) >= size) {
+      FFTREE *result = fftree_find_first_fit_and_remove(&root->right, size);
+      // TODO: update_augmentation and maybe rebalance
+      return result;
     }
   }
   assert(0); // the max_in_subtree said there was a big enough block, but we didn't find one.
 }
-
-//static FFTREE *fftree_find_and_remove2(FFTREE *rootp, FFTREE **child, size_t size,
 
 // Handle the case for mallocing a large (mmapped) block.
 // Returns 0 on success (and sets *result) or an error code.
@@ -375,7 +369,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
   fprintf(stderr, "%s(..., %lu)\n", __FUNCTION__, size);
   assert(size < mmap_lower_bound);
   fprintf(stderr, " arena=%p\n", arena);
-  FFTREE *node = fftree_find_and_remove(&arena, size);
+  FFTREE *node = fftree_find_first_fit_and_remove(&arena, size);
   fprintf(stderr, " Got node=%p\n", node);
   fftree_validate(arena);
   if (node == NULL) {
@@ -396,7 +390,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     fftree_validate(arena);
     fprintf(stderr, "After putting the sbrk block in, the arena is:\n");
     fftree_print(arena, 1);
-    node = fftree_find_and_remove(&arena, size);
+    node = fftree_find_first_fit_and_remove(&arena, size);
     assert(node != NULL);
     fprintf(stderr, "After sbrk, find_and_remove got %p\n", node);
     fftree_validate(arena);
