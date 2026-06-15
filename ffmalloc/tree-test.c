@@ -371,6 +371,105 @@ static void test_fftree_insert(void) {
     free(s);
   }
 
+  {
+    FFTREE *node3a = fftree_remove_rightmost(&root);
+    printf("node3a=%p\n", node3a);
+    assert(node3a == node3);
+    char *s = fftree_sprint(root, data);
+    printf("s=\n%s\n", s);
+    assert(strcmp(s,
+                  "0x200 (nil) (nil) 2 32 32\n"
+                  " (nil) (nil) (nil) 1 32 32\n"
+                  "  Empty tree\n"
+                  "  Empty tree\n"
+                  " Empty tree\n"
+                  ) == 0);
+    free(s);
+  }
+
+  {
+    FFTREE *no_luck = fftree_find_and_remove_first_fit(&root, 0x100);
+    assert(no_luck == NULL);
+  }
+
+  {
+    FFTREE *node1a = fftree_find_and_remove_first_fit(&root, 32);
+    assert(node1a == node1);
+    char *s = fftree_sprint(root, data);
+    printf("s=\n%s\n", s);
+    assert(strcmp(s,
+                  "0x200 (nil) (nil) 1 32 32\n"
+                  " Empty tree\n"
+                  " Empty tree\n") == 0);
+    free(s);
+  }
+
+  fftree_insert(&root, node1);
+  fftree_insert(&root, node3);
+
+  FFTREE *node4 = (FFTREE *)(&data[0x250]);
+  *node4 = (FFTREE){NULL, NULL, 1, 48, 48};
+  fftree_insert(&root, node4);
+  FFTREE *node5 = (FFTREE *)(&data[0x500]);
+  *node5 = (FFTREE){NULL, NULL, 1, 48, 48};
+  fftree_insert(&root, node5);
+  assert(fftree_validate(root));
+  {
+    FFTREE *node4a = fftree_find_and_remove_first_fit(&root, 40);
+    assert(node4a == node4);
+    char *s = fftree_sprint(root, data);
+    assert(strcmp(s,
+                  "0x200 (nil) 0x400 3 32 48\n"
+                  " (nil) (nil) (nil) 1 32 32\n"
+                  "  Empty tree\n"
+                  "  Empty tree\n"
+                  " 0x400 (nil) 0x500 2 32 48\n"
+                  "  Empty tree\n"
+                  "  0x500 (nil) (nil) 1 48 48\n"
+                  "   Empty tree\n"
+                  "   Empty tree\n"
+                  ) == 0);
+    printf("s=\n%s\n", s);
+    free(s);
+  }
+  assert(fftree_validate(root));
+  {
+    FFTREE *node5a = fftree_find_and_remove_first_fit(&root, 48);
+    assert(node5a == node5);
+    char *s = fftree_sprint(root, data);
+    printf("s=\n%s\n", s);
+    assert(fftree_validate(root));
+    assert(strcmp(s,
+                  "0x200 (nil) 0x400 2 32 32\n"
+                  " (nil) (nil) (nil) 1 32 32\n"
+                  "  Empty tree\n"
+                  "  Empty tree\n"
+                  " 0x400 (nil) (nil) 1 32 32\n"
+                  "  Empty tree\n"
+                  "  Empty tree\n"
+                  ) == 0);
+    free(s);
+  }
+  assert(fftree_validate(root));
+  FFTREE *node6 = (FFTREE *)(&data[0x150]);
+  *node6 = (FFTREE){NULL, NULL, 1, 24, 24};
+  fftree_insert(&root, node6);
+  char *s = fftree_sprint(root, data);
+  printf("s=\n%s\n", s);
+  {
+    FFTREE *node1a = fftree_find_and_remove_first_fit(&root, 32);
+    printf("node1a=%p\n", (void*)(((char*)node1a) - data));
+    char *s = fftree_sprint(root, data);
+    printf("s=\n%s\n", s);
+    assert(node1a == node1);
+  }
+  {
+    FFTREE *node2a = fftree_find_and_remove_first_fit(&root, 32);
+    char *s = fftree_sprint(root, data);
+    printf("s=\n%s\n", s); // this isn't right, the tree still has node2 in it.
+    assert(root != node2);
+    assert(node2a == node2);
+  }
 
 }
 

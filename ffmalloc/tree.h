@@ -51,7 +51,7 @@ size_t fftree_max_size_in_subtree(const FFTREE *t);
 // Effect: Returns the size of the biggest node in the subtree.
 
 
-bool fftree_validate(FFTREE *tree);
+bool __attribute__((warn_unused_result)) fftree_validate(FFTREE *tree);
 // Effect: Verifies the FFTREE.
 //
 //  1) `tree` is a search tree.  (That is, for every node, the addresses in the
@@ -79,6 +79,8 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node);
 // Requires: `node` isn't in tree and doesn't overlap the tree.  `node->size`
 // must be have been initialized, but the other fields need not have been
 // initialized.
+
+FFTREE* fftree_remove_rightmost(FFTREE **rootp);
 
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
 

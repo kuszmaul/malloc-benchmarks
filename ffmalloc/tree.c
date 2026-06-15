@@ -4,6 +4,7 @@
 
 #include "max.h"
 #include "tree.h"
+#include "tree-test-helpers.h" // TODO remove this
 
 size_t fftree_depth(const FFTREE *t) {
   // Specification: see header file
@@ -72,7 +73,7 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
   return true;
 }
 
-bool fftree_validate(FFTREE *tree) {
+bool __attribute__((warn_unused_result)) fftree_validate(FFTREE *tree) {
   // Specification: see header file
   return fftree_validate_2(tree, NULL, NULL);
 }
@@ -167,7 +168,7 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node) {
   fftree_maybe_rebalance(tree_p);
 }
 
-static FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
+FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
   assert(rootp);
   FFTREE *root = *rootp;
   assert(root);
@@ -180,13 +181,14 @@ static FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
   return result;
 }
 
-FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
+static FFTREE* fftree_find_and_remove_first_fit1(FFTREE **rootp, size_t size, int depth) {
   assert(rootp != NULL);
   FFTREE *root = *rootp;
   if (fftree_max_size_in_subtree(root) < size) return NULL; // covers root==NULL
 
   if (fftree_max_size_in_subtree(root->left) >= size) {
-    FFTREE *result = fftree_find_and_remove_first_fit(&root->left, size);
+    FFTREE *result = fftree_find_and_remove_first_fit1(&root->left, size, depth+1);
+    fftree_update_augmentation(root);
     fftree_maybe_rebalance(rootp);
     return result;
   }
@@ -194,18 +196,32 @@ FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   if (root->size >= size) {
     // This is the node to remove
     if (root->left == NULL) {
+      printf("%*sline %d\n", depth, "", __LINE__);
       *rootp = root->right;
     } else if (root->right == NULL) {
+      printf("line %d\n", __LINE__);
       *rootp = root->left;
     } else {
+      printf("line %d\n", __LINE__);
       FFTREE *leftmost = fftree_remove_rightmost(&root->left);
+      char *s = fftree_sprint(root, root);
+      printf("removed rightmost s=\n%s\n", s);
       set_both(leftmost, root->left, root->right);
     }
+    assert(fftree_validate(root));
     return root;
   }
+  printf("%*sline %d\n", depth, "", __LINE__);
 
   assert(fftree_max_size_in_subtree(root->right) >= size);
-  FFTREE *result = fftree_find_and_remove_first_fit(&root->right, size);
+  FFTREE *result = fftree_find_and_remove_first_fit1(&root->right, size, depth+1);
+  assert(root == *rootp);
+  fftree_update_augmentation(root);
   fftree_maybe_rebalance(rootp);
+  assert(fftree_validate(*rootp));
   return result;
+}
+
+FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
+  return fftree_find_and_remove_first_fit1(rootp, size, 0);
 }
