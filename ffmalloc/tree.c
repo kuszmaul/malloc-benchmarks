@@ -29,19 +29,19 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
   // `lower_bound` and `upper_bound`.
   if (tree == NULL) return true;
   if (lower_bound != NULL) {
-    /*2*/ VASSERT(lower_bound < tree);
+    VASSERT(lower_bound < tree);
   }
   if (upper_bound != NULL) {
-    /*2*/ VASSERT(tree < upper_bound);
+    VASSERT(tree < upper_bound);
   }
   size_t expect_depth = 1;
   size_t expect_max_size = tree->size;
   size_t left_depth = 0;
   size_t right_depth = 0;
   if (tree->left != NULL) {
-    /*2*/ VASSERT((char*)(tree->left) + tree->left->size <= (char*)tree);
+    VASSERT((char*)(tree->left) + tree->left->size <= (char*)tree);
     if (!fftree_validate_2(tree->left, lower_bound, tree)) {
-      /*2*/ fprintf(stderr, "Failure at tree.c:%d (returning)\n", __LINE__); \
+      fprintf(stderr, "Failure at tree.c:%d (returning)\n", __LINE__); \
       return false;
     }
     left_depth = tree->left->depth;
@@ -49,9 +49,9 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
     maxf(&expect_max_size, tree->left->max_size_in_subtree);
   }
   if (tree->right != NULL) {
-    /*2*/ VASSERT((char*)(tree) + tree->size <= (char*)(tree->right));
+    VASSERT((char*)(tree) + tree->size <= (char*)(tree->right));
     if (!fftree_validate_2(tree->right, tree, upper_bound)) {
-      /*2*/fprintf(stderr, "Failure at tree.c:%d (returning)\n", __LINE__); \
+      fprintf(stderr, "Failure at tree.c:%d (returning)\n", __LINE__); \
       return false;
     }
     right_depth = tree->right->depth;
@@ -60,14 +60,14 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
   }
 
   // Verify the augmentations are correct.
-  /*2*/ VASSERT(expect_depth == tree->depth);
-  /*2*/ VASSERT(expect_max_size == tree->max_size_in_subtree);
+  VASSERT(expect_depth == tree->depth);
+  VASSERT(expect_max_size == tree->max_size_in_subtree);
 
   // Verify the tree is balanced.
   if (left_depth < right_depth) {
-    /*2*/ VASSERT(left_depth + 1 == right_depth);
+    VASSERT(left_depth + 1 == right_depth);
   } else if (right_depth < left_depth) {
-    /*2*/ VASSERT(right_depth + 1 == left_depth);
+    VASSERT(right_depth + 1 == left_depth);
   }
   return true;
 }
