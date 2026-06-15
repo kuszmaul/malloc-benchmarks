@@ -65,9 +65,9 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
 
   // Verify the tree is balanced.
   if (left_depth < right_depth) {
-    VASSERT(left_depth + 1 == right_depth);
+    /*2*/ VASSERT(left_depth + 1 == right_depth);
   } else if (right_depth < left_depth) {
-    VASSERT(right_depth + 1 == left_depth);
+    /*2*/ VASSERT(right_depth + 1 == left_depth);
   }
   return true;
 }

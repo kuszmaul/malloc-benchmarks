@@ -169,7 +169,7 @@ static void test_fftree_validate(void) {
   //      3        //
   // So note that each node's children look OK, but 3 is to the left of 2.
   {
-    // Start by making this and then conver it.
+    // Start by making this and then convert it.
     //     2      //
     //    / \     //
     //   1   4    //
@@ -207,6 +207,39 @@ static void test_fftree_validate(void) {
     assert(!fftree_validate(tt.tree));;
     free_test_tree(tt);
   }
+  {
+    // Complain about a tree that's unbalanced.
+    //     a      //
+    //      \     //
+    //       c    //
+    //      /     //
+    //     b      //
+    TEST_TREE tt = make_tree(
+        desc(32, 0,
+             NULL,
+             desc(32, 0,
+                  desc(32, 0, NULL, NULL),
+                  NULL)));
+    assert(!fftree_validate(tt.tree));;
+    free_test_tree(tt);
+  }
+  {
+    // Complain about a tree that's unbalanced.
+    //     a      //
+    //    /       //
+    //   c        //
+    //    \       //
+    //     b      //
+    TEST_TREE tt = make_tree(
+        desc(32, 0,
+             desc(32, 0,
+                  NULL,
+                  desc(32, 0, NULL, NULL)),
+             NULL));
+    assert(!fftree_validate(tt.tree));;
+    free_test_tree(tt);
+  }
+
 }
 
 int main(void) {
