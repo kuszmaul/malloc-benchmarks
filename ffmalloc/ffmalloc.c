@@ -369,16 +369,6 @@ static int ff_malloc_e(void **result, size_t size) {
 
 ///////////////////////////////// tests ///////////////////////////////////////
 
-static void fftree_print(FFTREE *tree, int indent) {
-  if (tree == NULL) {
-    fprintf(stderr, "%*sEmpty tree\n", indent, "");
-    return;
-  }
-  fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_in_subtree);
-  fftree_print(tree->left, indent+1);
-  fftree_print(tree->right, indent+1);
-}
-
 static int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   if (debug) fprintf(stderr, "%s(..., %lu, %lu)\n", __FUNCTION__, alignment, size);
   if (!ispow2(alignment)) return EINVAL;

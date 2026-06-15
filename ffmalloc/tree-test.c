@@ -130,17 +130,23 @@ static void test_fftree_validate(void) {
     assert(!fftree_validate(tt.tree));
     free_test_tree(tt);
   }
+  // A good tree with two nodes and a right child
+  {
+    TEST_TREE tt = make_tree(desc(24, 0,
+                                  NULL,
+                                  desc(24, 0, NULL, NULL)));
+    assert(fftree_validate(tt.tree));
+    free_test_tree(tt);
+  }
   // Not a search tree (wrong order with a left child)
   {
-    FFTREE a[] = {{&a[1], NULL, 2, 19, 19},
-                   {NULL, NULL, 1, 18, 19}};
-    assert(!fftree_validate(&a[0]));
-  }
-  // A good tree with two nodes and a right chlid.
-  {
-    FFTREE a[] = {{NULL, &a[1], 2, 19, 19},
-                   {NULL, NULL, 1, 18, 19}};
-    assert(fftree_validate(&a[0]));
+    TEST_TREE tt = make_tree(desc(24, 0,
+                                  NULL,
+                                  desc(24, 0, NULL, NULL)));
+    tt.tree->left = tt.tree->right;
+    tt.tree->right = NULL;
+    assert(!fftree_validate(tt.tree));
+    free_test_tree(tt);
   }
   // A good tree with depth 3.
   {
@@ -154,7 +160,53 @@ static void test_fftree_validate(void) {
     free_test_tree(tt);
   }
   // Not a search tree (locally each node is ordered, but the grandchild is out
-  // of order.
+  // of order, too far to the right).  The tree looks like
+  //       2       //
+  //      / \      //
+  //     /   4     //
+  //    1          //
+  //     \         //
+  //      3        //
+  // So note that each node's children look OK, but 3 is to the left of 2.
+  {
+    // Start by making this and then conver it.
+    //     2      //
+    //    / \     //
+    //   1   4    //
+    //      /     //
+    //     3      //
+    TEST_TREE tt = make_tree(
+        desc(32, 0,
+             desc(32, 0, NULL, NULL),
+             desc(32, 0,
+                  desc(32, 0, NULL, NULL),
+                  NULL)));
+    assert(fftree_validate(tt.tree));;
+    assert(tt.tree->left->right == NULL);
+    tt.tree->left->right = tt.tree->right->left;
+    tt.tree->right->left = NULL;
+    assert(!fftree_validate(tt.tree));;
+    free_test_tree(tt);
+  }
+  // Same thing only the other way around (with the grandchild too far to the left)
+  {
+    TEST_TREE tt = make_tree(
+        desc(32, 0,
+             desc(32, 0,
+                  NULL,
+                  desc(32, 0, NULL, NULL)),
+             desc(32, 0, NULL, NULL)));
+    assert(fftree_validate(tt.tree));;
+    assert(tt.tree->right->left == NULL);
+    tt.tree->right->left = tt.tree->left->right;
+    tt.tree->right->depth = 2;
+    tt.tree->left->right = NULL;
+    tt.tree->left->depth = 1;
+    fprintf(stderr, "line %d\n", __LINE__);
+    //fftree_print(tt.tree, 1);
+    assert(!fftree_validate(tt.tree));;
+    free_test_tree(tt);
+  }
 }
 
 int main(void) {

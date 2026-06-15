@@ -23,39 +23,45 @@ size_t fftree_max_size_in_subtree(const FFTREE *t) {
     }                                                      \
 })
 
-static bool fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
+static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
   // Effect: Do the work for `fftree_validate`, where we have the additional
   // requirement that the address every node in `tree` must be strictly between
   // `lower_bound` and `upper_bound`.
   if (tree == NULL) return true;
   if (lower_bound != NULL) {
-    VASSERT(lower_bound < tree);
+    /*2*/ VASSERT(lower_bound < tree);
   }
   if (upper_bound != NULL) {
-    VASSERT(tree < upper_bound);
+    /*2*/ VASSERT(tree < upper_bound);
   }
   size_t expect_depth = 1;
   size_t expect_max_size = tree->size;
   size_t left_depth = 0;
   size_t right_depth = 0;
   if (tree->left != NULL) {
-    /**/ VASSERT((char*)(tree->left) + tree->left->size <= (char*)tree);
-    fftree_validate_2(tree->left, lower_bound, tree);
+    /*2*/ VASSERT((char*)(tree->left) + tree->left->size <= (char*)tree);
+    if (!fftree_validate_2(tree->left, lower_bound, tree)) {
+      /*2*/ fprintf(stderr, "Failure at tree.c:%d (returning)\n", __LINE__); \
+      return false;
+    }
     left_depth = tree->left->depth;
     maxf(&expect_depth, 1 + left_depth);
     maxf(&expect_max_size, tree->left->max_size_in_subtree);
   }
   if (tree->right != NULL) {
-    /**/ VASSERT((char*)(tree) + tree->size <= (char*)(tree->right));
-    fftree_validate_2(tree->right, tree, upper_bound);
+    /*2*/ VASSERT((char*)(tree) + tree->size <= (char*)(tree->right));
+    if (!fftree_validate_2(tree->right, tree, upper_bound)) {
+      /*2*/fprintf(stderr, "Failure at tree.c:%d (returning)\n", __LINE__); \
+      return false;
+    }
     right_depth = tree->right->depth;
     maxf(&expect_depth, 1 + right_depth);
     maxf(&expect_max_size, tree->right->max_size_in_subtree);
   }
 
   // Verify the augmentations are correct.
-  /**/ VASSERT(expect_depth == tree->depth);
-  /**/ VASSERT(expect_max_size == tree->max_size_in_subtree);
+  /*2*/ VASSERT(expect_depth == tree->depth);
+  /*2*/ VASSERT(expect_max_size == tree->max_size_in_subtree);
 
   // Verify the tree is balanced.
   if (left_depth < right_depth) {
@@ -200,4 +206,14 @@ FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   FFTREE *result = fftree_find_and_remove_first_fit(&root->right, size);
   maybe_rebalance(rootp);
   return result;
+}
+
+void fftree_print(FFTREE *tree, int indent) {
+  if (tree == NULL) {
+    fprintf(stderr, "%*sEmpty tree\n", indent, "");
+    return;
+  }
+  fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_size_in_subtree);
+  fftree_print(tree->left, indent+1);
+  fftree_print(tree->right, indent+1);
 }
