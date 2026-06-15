@@ -82,4 +82,13 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node);
 
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
 
+// Internal functions, exposed here for testing
+
+void fftree_update_augmentation(FFTREE *tree);
+// Effect: Updates the augmentation fields (depth and max_size_in_subtree).
+//
+// Usage note: Useful if you change tree->left or tree->right.
+
+void fftree_maybe_rebalance(FFTREE **);
+
 #endif

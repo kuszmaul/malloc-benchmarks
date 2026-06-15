@@ -77,10 +77,8 @@ bool fftree_validate(FFTREE *tree) {
   return fftree_validate_2(tree, NULL, NULL);
 }
 
-static void fftree_update_augmentation(FFTREE *tree) {
-  // Effect: Updates the augmentation fields (depth and max_size_in_subtree).
-  //
-  // Usage note: Useful if you change tree->left or tree->right.
+void fftree_update_augmentation(FFTREE *tree) {
+  // Specification: See header file
 
   assert(tree);
   tree->depth = 1+max(fftree_depth(tree->left), fftree_depth(tree->right));
@@ -106,11 +104,12 @@ static void set_both(FFTREE *node, FFTREE *left, FFTREE *right) {
   fftree_update_augmentation(node);
 }
 
-static void maybe_rebalance(FFTREE **tree_p) {
+void fftree_maybe_rebalance(FFTREE **tree_p) {
   FFTREE *tree = *tree_p;
   FFTREE *left = tree->left;
   FFTREE *right = tree->right;
-  if (fftree_depth(left) + 1 < fftree_depth(right)) {
+  if (fftree_depth(right) + 1 < fftree_depth(left)) {
+    // The left tree is too deep
     FFTREE *ll = left->left;
     FFTREE *lr = left->right;
     if (fftree_depth(ll) >= fftree_depth(lr)) {
@@ -129,6 +128,8 @@ static void maybe_rebalance(FFTREE **tree_p) {
       *tree_p = lr;
     }
   } else if (fftree_depth(left) + 1 < fftree_depth(right)) {
+    printf("The right tree is too deep\n");
+    // The right tree is too deep
     FFTREE *rl = right->left;
     FFTREE *rr = right->right;
     if (fftree_depth(rr) >= fftree_depth(rl)) {
@@ -137,12 +138,13 @@ static void maybe_rebalance(FFTREE **tree_p) {
       set_left(right, tree);
       *tree_p = right;
     } else {
+      printf("Double rotation\n");
       // Double rotation
       FFTREE *rll = rl->left;
       FFTREE *rlr = rl->right;
-      set_left(right, rlr);
       set_right(tree, rll);
-      set_both(rl, right, tree);
+      set_left(right, rlr);
+      set_both(rl, tree, right);
       *tree_p = rl;
     }
   }
@@ -162,7 +164,7 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node) {
   }
   fftree_insert((node<tree) ? &tree->left : &tree->right, node);
   fftree_update_augmentation(tree);
-  maybe_rebalance(tree_p);
+  fftree_maybe_rebalance(tree_p);
 }
 
 static FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
@@ -174,7 +176,7 @@ static FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
     return root;
   }
   FFTREE *result = fftree_remove_rightmost(&root->right);
-  maybe_rebalance(rootp);
+  fftree_maybe_rebalance(rootp);
   return result;
 }
 
@@ -185,7 +187,7 @@ FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
 
   if (fftree_max_size_in_subtree(root->left) >= size) {
     FFTREE *result = fftree_find_and_remove_first_fit(&root->left, size);
-    maybe_rebalance(rootp);
+    fftree_maybe_rebalance(rootp);
     return result;
   }
 
@@ -204,16 +206,6 @@ FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
 
   assert(fftree_max_size_in_subtree(root->right) >= size);
   FFTREE *result = fftree_find_and_remove_first_fit(&root->right, size);
-  maybe_rebalance(rootp);
+  fftree_maybe_rebalance(rootp);
   return result;
-}
-
-void fftree_print(FFTREE *tree, int indent) {
-  if (tree == NULL) {
-    fprintf(stderr, "%*sEmpty tree\n", indent, "");
-    return;
-  }
-  fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_size_in_subtree);
-  fftree_print(tree->left, indent+1);
-  fftree_print(tree->right, indent+1);
 }
