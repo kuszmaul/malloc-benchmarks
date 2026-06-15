@@ -1,40 +1,52 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "max.h"
 #include "tree.h"
 
 size_t fftree_depth(const FFTREE *t) {
+  // Specification: see header file
   if (t == NULL) return 0;
   return t->depth;
 }
 size_t fftree_max_size_in_subtree(const FFTREE *t) {
+  // Specification: see header file
   if (t == NULL) return 0;
   return t->max_size_in_subtree;
 }
 
-// Effect: Do the work for `fftree_validate`, where we have the additional
-// requirement that the address every node in `tree` must be strictly between
-// `lower_bound` and `upper_bound`.
-static void fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
-  if (tree == NULL) return;
+#define VASSERT(a) ({                                      \
+    if (!(a)) {                                            \
+      fprintf(stderr, "Failure at tree.c:%d\n", __LINE__); \
+      return false;                                        \
+    }                                                      \
+})
+
+static bool fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
+  // Effect: Do the work for `fftree_validate`, where we have the additional
+  // requirement that the address every node in `tree` must be strictly between
+  // `lower_bound` and `upper_bound`.
+  if (tree == NULL) return true;
   if (lower_bound != NULL) {
-    assert(lower_bound < tree);
+    VASSERT(lower_bound < tree);
   }
   if (upper_bound != NULL) {
-    assert(tree < upper_bound);
+    VASSERT(tree < upper_bound);
   }
   size_t expect_depth = 1;
   size_t expect_max_size = tree->size;
   size_t left_depth = 0;
   size_t right_depth = 0;
   if (tree->left != NULL) {
+    /**/ VASSERT((char*)(tree->left) + tree->left->size <= (char*)tree);
     fftree_validate_2(tree->left, lower_bound, tree);
     left_depth = tree->left->depth;
     maxf(&expect_depth, 1 + left_depth);
     maxf(&expect_max_size, tree->left->max_size_in_subtree);
   }
   if (tree->right != NULL) {
+    /**/ VASSERT((char*)(tree) + tree->size <= (char*)(tree->right));
     fftree_validate_2(tree->right, tree, upper_bound);
     right_depth = tree->right->depth;
     maxf(&expect_depth, 1 + right_depth);
@@ -42,19 +54,21 @@ static void fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_b
   }
 
   // Verify the augmentations are correct.
-  assert(expect_depth == tree->depth);
-  assert(expect_max_size == tree->max_size_in_subtree);
+  /**/ VASSERT(expect_depth == tree->depth);
+  /**/ VASSERT(expect_max_size == tree->max_size_in_subtree);
 
   // Verify the tree is balanced.
   if (left_depth < right_depth) {
-    assert(left_depth + 1 == right_depth);
+    VASSERT(left_depth + 1 == right_depth);
   } else if (right_depth < left_depth) {
-    assert(right_depth + 1 == left_depth);
+    VASSERT(right_depth + 1 == left_depth);
   }
+  return true;
 }
 
-void fftree_validate(FFTREE *tree) {
-  fftree_validate_2(tree, NULL, NULL);
+bool fftree_validate(FFTREE *tree) {
+  // Specification: see header file
+  return fftree_validate_2(tree, NULL, NULL);
 }
 
 static void fftree_update_augmentation(FFTREE *tree) {

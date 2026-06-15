@@ -1,6 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "headers.h"
@@ -50,7 +51,7 @@ size_t fftree_max_size_in_subtree(const FFTREE *t);
 // Effect: Returns the size of the biggest node in the subtree.
 
 
-void fftree_validate(FFTREE *tree);
+bool fftree_validate(FFTREE *tree);
 // Effect: Verifies the FFTREE.
 //
 //  1) `tree` is a search tree.  (That is, for every node, the addresses in the
@@ -62,6 +63,9 @@ void fftree_validate(FFTREE *tree);
 //
 //  3) The tree is balanced.  (That is, the `depth` of the left subtree is
 //  within one of the `depth` of the right subtree.)
+//
+// Returns true if the validation passes, else prints at least some message
+// (where?, and how can we test it?)  and returns false.
 
 void fftree_print(FFTREE *tree, int indent);
 // Effect: Prints `tree`, indented by `indent`.
