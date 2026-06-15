@@ -277,8 +277,9 @@ static void test_fftree_update_augmentation(void) {
   }
 }
 
-static void test_fftree_maybe_rebalance(void) {
-    TEST_TREE tt = make_tree(
+static void test_fftree_maybe_rebalance1(void) {
+
+  TEST_TREE tt = make_tree(
         desc(32, 0,
              NULL,
              desc(32, 0,
@@ -305,11 +306,40 @@ static void test_fftree_maybe_rebalance(void) {
     }
 }
 
+static void test_fftree_maybe_rebalance2(void) {
+    TEST_TREE tt = make_tree(
+        desc(32, 0,
+             NULL,
+             desc(32, 0,
+                  NULL,
+                  desc(32, 0, NULL, NULL))));
+    assert(!fftree_validate(tt.tree));
+    fftree_print(tt.tree, 0);
+    fftree_maybe_rebalance(&tt.tree);
+    fftree_print(tt.tree, 0);
+    assert(fftree_validate(tt.tree));
+    {
+      char *s = fftree_sprint(tt.tree, tt.alloc);
+      assert(strcmp(
+          s,
+          "0x20 (nil) 0x40 2 32 32\n"
+          " (nil) (nil) (nil) 1 32 32\n"
+          "  Empty tree\n"
+          "  Empty tree\n"
+          " 0x40 (nil) (nil) 1 32 32\n"
+          "  Empty tree\n"
+          "  Empty tree\n"
+                    ) == 0);
+      free(s);
+    }
+}
+
 int main(void) {
   test_fftree_depth();
   test_max_size_in_subtree();
   test_fftree_validate();
   test_fftree_update_augmentation();
-  test_fftree_maybe_rebalance();
+  test_fftree_maybe_rebalance1();
+  test_fftree_maybe_rebalance2();
   return 0;
 }
