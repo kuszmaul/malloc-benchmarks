@@ -5,4 +5,12 @@ ffmalloc.o: ffmalloc.h
 tree.o: tree.h headers.h
 tree-test.o: tree.h headers.h
 tree-test: tree-test.o tree.o
-
+tree-test-gcov: tree.h headers.h tree.c tree-test.c
+	gcc --coverage -o $@ tree.c tree-test.c
+tree-test.gcov: OPTFLAGS = -O0 -coverage
+tree-test.gcov: LDFLAGS = -coverage
+tree-test.gcov: tree-test
+	./$<
+	gcov tree.c
+clean:
+	rm -f *.o tree-test *.gcda *.gcno

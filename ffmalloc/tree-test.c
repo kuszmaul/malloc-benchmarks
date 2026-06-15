@@ -239,7 +239,6 @@ static void test_fftree_validate(void) {
     assert(!fftree_validate(tt.tree));;
     free_test_tree(tt);
   }
-
 }
 
 int main(void) {
