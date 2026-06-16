@@ -314,27 +314,3 @@
     #####:  310:  fftree_delete(rootp, result);
     #####:  311:  return result;
         -:  312:}
-        -:  313:
-        -:  314:/* FFTREE* find_prev(FFTREE *root, const FFTREE *node) { */
-        -:  315:/*   if (root == NULL) return NULL; */
-        -:  316:/*   if (node < root) { */
-        -:  317:/*     FFTREE *prev = find_prev(root->left, node); */
-        -:  318:/*     if (prev == NULL) */
-        -:  319:/*   if (node == root) return find_rightmost(root->left, node) */
-        -:  320:/*   if (node <= root) return find_prev(root->left); */
-        -:  321:
-        -:  322:/*   if (node < root)  */
-        -:  323:/*   if (node == root) return  */
-        -:  324:/*   if (((char*)(root)) + root->size == (char*)(node)) { */
-        -:  325:/*     return root; */
-        -:  326:/*   } */
-        -:  327:/*   if (root <= node) { */
-        -:  328:/*     assert(((char*)(root)) + root->size < (char*)(node)); */
-        -:  329:/*     return find_prev_adjacent(root->left, node); */
-        -:  330:/*   } else { */
-        -:  331:/*     // `root > node` so what we want may be to left or to the right. */
-        -:  332:/*     // Look left first */
-        -:  333:/*     FFTREE *result = find_prev_adjacent(root-> */
-        -:  334:/*     return find_prev_adjacent( */
-        -:  335:/*   } */
-        -:  336:/* } */

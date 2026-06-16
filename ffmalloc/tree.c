@@ -223,7 +223,6 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
   }
 }
 
-#if 1
 /* TODO: Should go into the ffmalloc code */
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   FFTREE *result = fftree_find_first_fit(*rootp, size);
@@ -231,58 +230,6 @@ FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   fftree_delete(rootp, result);
   return result;
 }
-#else
-// This is probably slower, but we should measure it to find out.
-
-static FFTREE* fftree_find_and_remove_first_fit1(FFTREE **rootp, size_t size, int depth) {
-  assert(rootp != NULL);
-  FFTREE *root = *rootp;
-  if (fftree_max_size_in_subtree(root) < size) return NULL; // covers root==NULL
-
-  if (fftree_max_size_in_subtree(root->left) >= size) {
-    FFTREE *result = fftree_find_and_remove_first_fit1(&root->left, size, depth+1);
-    fftree_update_augmentation(root);
-    fftree_maybe_rebalance(rootp);
-    result->left = result->right = NULL;
-    return result;
-  }
-
-  if (root->size >= size) {
-    // This is the node to remove
-    if (root->left == NULL) {
-      printf("%*sline %d\n", depth, "", __LINE__);
-      *rootp = root->right;
-    } else if (root->right == NULL) {
-      printf("line %d\n", __LINE__);
-      *rootp = root->left;
-    } else {
-      printf("line tree.c:%d\n", __LINE__);
-      FFTREE *rightmost_of_left = fftree_remove_rightmost(&root->left);
-      char *s = fftree_sprint(root, root);
-      assert(!fftree_in(root, rightmost_of_left));
-      printf("removed rightmost s=\n%s\n", s);
-      set_both(rightmost_of_left, root->left, root->right);
-      *rootp = rightmost_of_left;
-    }
-    assert(fftree_validate(root));
-    root->left = root->right = NULL;
-    return root;
-  }
-  printf("%*sline %d\n", depth, "", __LINE__);
-
-  assert(fftree_max_size_in_subtree(root->right) >= size);
-  FFTREE *result = fftree_find_and_remove_first_fit1(&root->right, size, depth+1);
-  assert(root == *rootp);
-  fftree_update_augmentation(root);
-  fftree_maybe_rebalance(rootp);
-  assert(fftree_validate(*rootp));
-  return result;
-}
-
-FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
-  return fftree_find_and_remove_first_fit1(rootp, size, 0);
-}
-#endif
 
 FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node) {
   if (tree == NULL) return NULL;
