@@ -357,9 +357,9 @@ static void test_fftree_insert(void) {
     free(s);
   }
 
-  FFTREE *node400 = (FFTREE *)(&data[0x400]);
-  *node400 = (FFTREE){NULL, NULL, 1, 32, 32};
-  fftree_insert(&root, node400);
+  FFTREE *n400 = (FFTREE *)(&data[0x400]);
+  *n400 = (FFTREE){NULL, NULL, 1, 32, 32};
+  fftree_insert(&root, n400);
   {
     char *s = fftree_sprint(root, data);
     assert(strcmp(s,
@@ -374,9 +374,9 @@ static void test_fftree_insert(void) {
   }
 
   {
-    FFTREE *node400a = fftree_remove_rightmost(&root);
-    printf("node400a=%p\n", node400a);
-    assert(node400a == node400);
+    FFTREE *n400a = fftree_remove_rightmost(&root);
+    printf("n400a=%p\n", n400a);
+    assert(n400a == n400);
     char *s = fftree_sprint(root, data);
     printf("s=\n%s\n", s);
     assert(strcmp(s,
@@ -408,7 +408,7 @@ static void test_fftree_insert(void) {
   }
 
   fftree_insert(&root, n000);
-  fftree_insert(&root, node400);
+  fftree_insert(&root, n400);
 
   FFTREE *n250 = (FFTREE *)(&data[0x250]);
   *n250 = (FFTREE){NULL, NULL, 1, 48, 48};
@@ -470,22 +470,53 @@ static void test_fftree_insert(void) {
     assert(!fftree_in(root, n000a));
   }
   {
-    FFTREE *n200 = fftree_find_and_remove_first_fit(&root, 32);
+    FFTREE *n200a = fftree_find_and_remove_first_fit(&root, 32);
     {
       char *s = fftree_sprint(root, data);
       printf("LINE %d s=\n%s\n", __LINE__, s);
       free(s);
     }
     {
-      char *s = fftree_sprint(n200, data);
+      char *s = fftree_sprint(n200a, data);
       printf("removed\n%s\n", s);
       free(s);
     }
     assert(!fftree_in(root, n200));
     assert(root != n200);
-    assert(n200 == n200);
+    assert(n200a == n200);
+    {
+      char *s = fftree_sprint(root, data);
+      printf("LINE %d\n%s\n", __LINE__, s);
+      free(s);
+    }
   }
-
+  // Make something where when we find the node we want, the left is not null and the right is null.
+  FFTREE *n300 = (FFTREE *)(&data[0x300]);
+  *n300 = (FFTREE){NULL, NULL, 1, 48, 48};
+  FFTREE *n600 = (FFTREE *)(&data[0x600]);
+  *n600 = (FFTREE){NULL, NULL, 1, 32, 32};
+  fftree_insert(&root, n600);
+  fftree_insert(&root, n300);
+  fftree_insert(&root, n200);
+    {
+      char *s = fftree_sprint(root, data);
+      printf("LINE %d\n%s\n", __LINE__, s);
+      free(s);
+    }
+  {
+    FFTREE *n300b = fftree_find_and_remove_first_fit(&root, 48);
+    assert(n300b == n300);
+  }
+  {
+    char *s = fftree_sprint(root, data);
+    printf("LINE %d s=\n%s\n", __LINE__, s);
+    free(s);
+  }
+  // Now finally n200 is the node we want, its left is non-null and its right is null.
+  {
+    FFTREE *n200b = fftree_find_and_remove_first_fit(&root, 32);
+    assert(n200b == n200);
+  }
 }
 
 int main(void) {
