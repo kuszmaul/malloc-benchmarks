@@ -332,6 +332,7 @@ static void test_fftree_insert(void) {
   *n000 = (FFTREE){NULL, NULL, 1, 32, 32};
   assert(!fftree_in(root, n000));
   assert(fftree_find_prev(root, n000) == NULL);
+  assert(fftree_find_next(root, n000) == NULL);
 
   fftree_insert(&root, n000);
   assert(fftree_in(root, n000));
@@ -345,6 +346,7 @@ static void test_fftree_insert(void) {
     free(s);
   }
   assert(fftree_find_prev(root, n000) == NULL);
+  assert(fftree_find_next(root, n000) == NULL);
 
   FFTREE *n200 = (FFTREE *)(&data[0x200]);
   *n200 = (FFTREE){NULL, NULL, 1, 32, 32};
@@ -361,6 +363,8 @@ static void test_fftree_insert(void) {
   }
   assert(fftree_find_prev(root, n000) == NULL);
   assert(fftree_find_prev(root, n200) == n000);
+  assert(fftree_find_next(root, n000) == n200);
+  assert(fftree_find_next(root, n200) == NULL);
 
   FFTREE *n400 = (FFTREE *)(&data[0x400]);
   *n400 = (FFTREE){NULL, NULL, 1, 32, 32};
@@ -381,6 +385,10 @@ static void test_fftree_insert(void) {
   assert(fftree_find_prev(root, n200) == n000);
   assert(fftree_find_prev(root, n400) == n200);
 
+  assert(fftree_find_next(root, n000) == n200);
+  assert(fftree_find_next(root, n200) == n400);
+  assert(fftree_find_next(root, n400) == NULL);
+
   {
     FFTREE *n400a = fftree_remove_rightmost(&root);
     printf("n400a=%p\n", n400a);
@@ -399,6 +407,8 @@ static void test_fftree_insert(void) {
   assert(fftree_find_prev(root, n000) == NULL);
   assert(fftree_find_prev(root, n200) == n000);
 
+  assert(fftree_find_next(root, n000) == n200);
+  assert(fftree_find_next(root, n200) == NULL);
   {
     FFTREE *no_luck = fftree_find_and_remove_first_fit(&root, 0x100);
     assert(no_luck == NULL);
@@ -427,11 +437,19 @@ static void test_fftree_insert(void) {
   *n500 = (FFTREE){NULL, NULL, 1, 48, 48};
   fftree_insert(&root, n500);
   assert(fftree_validate(root));
+
   assert(fftree_find_prev(root, n000) == NULL);
   assert(fftree_find_prev(root, n200) == n000);
   assert(fftree_find_prev(root, n250) == n200);
   assert(fftree_find_prev(root, n400) == n250);
   assert(fftree_find_prev(root, n500) == n400);
+
+  assert(fftree_find_next(root, n000) == n200);
+  assert(fftree_find_next(root, n200) == n250);
+  assert(fftree_find_next(root, n250) == n400);
+  assert(fftree_find_next(root, n400) == n500);
+  assert(fftree_find_next(root, n500) == NULL);
+
   {
     FFTREE *n250a = fftree_find_and_remove_first_fit(&root, 40);
     assert(n250a == n250);
@@ -560,14 +578,36 @@ static void test_fftree_insert(void) {
     }
   }
   {
-    // Find a previous item but it's not adjancent
+    // Find a previous item but it's not adjacent
     FFTREE *n550 = (FFTREE *)&data[0x550];
     *n550 = (FFTREE){NULL, NULL, 1, 32, 32};
     assert(fftree_find_prev(root, n550) == n400);
     assert(!fftree_find_and_remove_prev_adjacent(&root, n550));
   }
-  assert(!fftree_find_prev(root, n000));
-  assert(!fftree_find_and_remove_prev_adjacent(&root, n000));
+  assert(fftree_find_prev(root, n000) == NULL);
+  assert(fftree_find_and_remove_prev_adjacent(&root, n000) == NULL);
+  {
+    char *s = fftree_sprint(root, data);
+    printf("LINE %d s=\n%s\n", __LINE__, s);
+    free(s);
+  }
+  {
+    // Find a next item but it's not adjacent
+    assert(fftree_find_next(root, n400) == n600);
+    assert(fftree_find_and_remove_next_adjacent(&root, n400) == NULL);
+  }
+  assert(fftree_find_next(root, n600) == NULL);
+  assert(fftree_find_and_remove_next_adjacent(&root, n600) == NULL);
+  {
+    // Find a next item that is adjacent
+    FFTREE *n3c0 = (FFTREE *)&data[0x3c0];
+    *n3c0 = (FFTREE){NULL, NULL, 1, 64, 64};
+    assert(fftree_find_next(root, n3c0) == n400);
+    FFTREE *n400a = fftree_find_and_remove_next_adjacent(&root, n3c0);
+    assert(n400a != NULL);
+    assert(n400a == n400);
+  }
+
 }
 
 int main(void) {

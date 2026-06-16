@@ -245,6 +245,20 @@ FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node) {
   }
 }
 
+FFTREE* fftree_find_next(FFTREE *tree, const FFTREE *node) {
+  if (tree == NULL) return NULL;
+  else if (tree > node) {
+    FFTREE *p = fftree_find_next(tree->left, node);
+    // If there's nothing useful in tree->left, then `node` is the answer.
+    if (p == NULL) {
+      return tree;
+    }
+    return p;
+  } else { // (tree < node)
+    return fftree_find_next(tree->right, node);
+  }
+}
+
 /* Should this go into the ffmalloc code? */
 FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node) {
   FFTREE *result = fftree_find_prev(*rootp, node);
@@ -252,6 +266,19 @@ FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node)
     return NULL;
   }
   if (((char*)(result)) + result->size != (char*)(node)) {
+    return NULL;
+  }
+  fftree_delete(rootp, result);
+  return result;
+}
+
+/* Should this go into the ffmalloc code? */
+FFTREE* fftree_find_and_remove_next_adjacent(FFTREE **rootp, const FFTREE *node) {
+  FFTREE *result = fftree_find_next(*rootp, node);
+  if (result == NULL) {
+    return NULL;
+  }
+  if (((char*)(node)) + node->size != (char*)(result)) {
     return NULL;
   }
   fftree_delete(rootp, result);

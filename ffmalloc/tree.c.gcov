@@ -10,20 +10,20 @@
         -:    6:#include "tree.h"
         -:    7:#include "tree-test-helpers.h" // TODO remove this
         -:    8:
-      338:    9:size_t fftree_depth(const FFTREE *t) {
+      340:    9:size_t fftree_depth(const FFTREE *t) {
         -:   10:  // Specification: see header file
-      338:   11:  if (t == NULL) {
-      157:   12:    return 0;
+      340:   11:  if (t == NULL) {
+      158:   12:    return 0;
         -:   13:  } else {
-      181:   14:    return t->depth;
+      182:   14:    return t->depth;
         -:   15:  }
         -:   16:}
-      223:   17:size_t fftree_max_size_in_subtree(const FFTREE *t) {
+      225:   17:size_t fftree_max_size_in_subtree(const FFTREE *t) {
         -:   18:  // Specification: see header file
-      223:   19:  if (t == NULL) {
-      109:   20:    return 0;
+      225:   19:  if (t == NULL) {
+      110:   20:    return 0;
         -:   21:  } else {
-      114:   22:    return t->max_size_in_subtree;
+      115:   22:    return t->max_size_in_subtree;
         -:   23:  }
         -:   24:}
         -:   25:
@@ -90,16 +90,16 @@
        29:   86:  return fftree_validate_2(tree, NULL, NULL);
         -:   87:}
         -:   88:
-       53:   89:void fftree_update_augmentation(FFTREE *tree) {
+       54:   89:void fftree_update_augmentation(FFTREE *tree) {
         -:   90:  // Specification: See header file
         -:   91:
-      53*:   92:  assert(tree);
-       53:   93:  tree->depth = 1+max(fftree_depth(tree->left), fftree_depth(tree->right));
-       53:   94:  tree->max_size_in_subtree = max(tree->size,
-       53:   95:                                  max(fftree_max_size_in_subtree(tree->left),
-       53:   96:                                      fftree_max_size_in_subtree(tree->right)));
-       53:   97:  fprintf(stderr, " updated augmentations\n");
-       53:   98:}
+      54*:   92:  assert(tree);
+       54:   93:  tree->depth = 1+max(fftree_depth(tree->left), fftree_depth(tree->right));
+       54:   94:  tree->max_size_in_subtree = max(tree->size,
+       54:   95:                                  max(fftree_max_size_in_subtree(tree->left),
+       54:   96:                                      fftree_max_size_in_subtree(tree->right)));
+       54:   97:  fprintf(stderr, " updated augmentations\n");
+       54:   98:}
         -:   99:
         8:  100:static void set_left(FFTREE *node, FFTREE *child) {
         8:  101:  node->left = child;
@@ -111,11 +111,11 @@
         8:  107:  fftree_update_augmentation(node);
         8:  108:}
         -:  109:
-        6:  110:static void set_both(FFTREE *node, FFTREE *left, FFTREE *right) {
-        6:  111:  node->left = left;
-        6:  112:  node->right = right;
-        6:  113:  fftree_update_augmentation(node);
-        6:  114:}
+        7:  110:static void set_both(FFTREE *node, FFTREE *left, FFTREE *right) {
+        7:  111:  node->left = left;
+        7:  112:  node->right = right;
+        7:  113:  fftree_update_augmentation(node);
+        7:  114:}
         -:  115:
        34:  116:void fftree_maybe_rebalance(FFTREE **tree_p) {
        34:  117:  FFTREE *tree = *tree_p;
@@ -180,39 +180,39 @@
        20:  176:  fftree_maybe_rebalance(tree_p);
         -:  177:}
         -:  178:
-        4:  179:FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
-       4*:  180:  assert(rootp);
-        4:  181:  FFTREE *root = *rootp;
-       4*:  182:  assert(root);
-        4:  183:  if (root->right == NULL) {
-        3:  184:    *rootp = root->left;
-        3:  185:    return root;
+        5:  179:FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
+       5*:  180:  assert(rootp);
+        5:  181:  FFTREE *root = *rootp;
+       5*:  182:  assert(root);
+        5:  183:  if (root->right == NULL) {
+        4:  184:    *rootp = root->left;
+        4:  185:    return root;
         -:  186:  }
         1:  187:  FFTREE *result = fftree_remove_rightmost(&root->right);
         1:  188:  fftree_maybe_rebalance(rootp);
         1:  189:  return result;
         -:  190:}
         -:  191:
-       17:  192:void fftree_delete(FFTREE **rootp, FFTREE *node) {
-      17*:  193:  assert(rootp != NULL);
-       17:  194:  FFTREE *root = *rootp;
-       17:  195:  if (root == node) {
-        8:  196:    if (root->left == NULL) {
+       18:  192:void fftree_delete(FFTREE **rootp, FFTREE *node) {
+      18*:  193:  assert(rootp != NULL);
+       18:  194:  FFTREE *root = *rootp;
+       18:  195:  if (root == node) {
+        9:  196:    if (root->left == NULL) {
         5:  197:      *rootp = root->right;
-        3:  198:    } else if (root->right == NULL) {
+        4:  198:    } else if (root->right == NULL) {
         1:  199:      *rootp = root->left;
         -:  200:    } else {
-        2:  201:      FFTREE *new_root = fftree_remove_rightmost(&root->left);
-        2:  202:      set_both(new_root, root->left, root->right);
-        2:  203:      *rootp = new_root;
+        3:  201:      FFTREE *new_root = fftree_remove_rightmost(&root->left);
+        3:  202:      set_both(new_root, root->left, root->right);
+        3:  203:      *rootp = new_root;
         -:  204:    }
-        8:  205:    node->left = node->right = NULL; // Not really necessary...
+        9:  205:    node->left = node->right = NULL; // Not really necessary...
         -:  206:  } else {
         9:  207:    fftree_delete((node < root) ? &root->left : &root->right, node);
         9:  208:    fftree_update_augmentation(root);
         9:  209:    fftree_maybe_rebalance(rootp);
         -:  210:  }
-       17:  211:}
+       18:  211:}
         -:  212:
        17:  213:FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
         -:  214:  // Specification: See header file.
@@ -249,15 +249,42 @@
         -:  245:  }
         -:  246:}
         -:  247:
-        -:  248:/* Should this go into the ffmalloc code? */
-        3:  249:FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node) {
-        3:  250:  FFTREE *result = fftree_find_prev(*rootp, node);
-        3:  251:  if (result == NULL) {
-        1:  252:    return NULL;
-        -:  253:  }
-        2:  254:  if (((char*)(result)) + result->size != (char*)(node)) {
-        1:  255:    return NULL;
-        -:  256:  }
-        1:  257:  fftree_delete(rootp, result);
-        1:  258:  return result;
-        -:  259:}
+       60:  248:FFTREE* fftree_find_next(FFTREE *tree, const FFTREE *node) {
+       60:  249:  if (tree == NULL) return NULL;
+       40:  250:  else if (tree > node) {
+       13:  251:    FFTREE *p = fftree_find_next(tree->left, node);
+        -:  252:    // If there's nothing useful in tree->left, then `node` is the answer.
+       13:  253:    if (p == NULL) {
+       12:  254:      return tree;
+        -:  255:    }
+        1:  256:    return p;
+        -:  257:  } else { // (tree < node)
+       27:  258:    return fftree_find_next(tree->right, node);
+        -:  259:  }
+        -:  260:}
+        -:  261:
+        -:  262:/* Should this go into the ffmalloc code? */
+        3:  263:FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node) {
+        3:  264:  FFTREE *result = fftree_find_prev(*rootp, node);
+        3:  265:  if (result == NULL) {
+        1:  266:    return NULL;
+        -:  267:  }
+        2:  268:  if (((char*)(result)) + result->size != (char*)(node)) {
+        1:  269:    return NULL;
+        -:  270:  }
+        1:  271:  fftree_delete(rootp, result);
+        1:  272:  return result;
+        -:  273:}
+        -:  274:
+        -:  275:/* Should this go into the ffmalloc code? */
+        3:  276:FFTREE* fftree_find_and_remove_next_adjacent(FFTREE **rootp, const FFTREE *node) {
+        3:  277:  FFTREE *result = fftree_find_next(*rootp, node);
+        3:  278:  if (result == NULL) {
+        1:  279:    return NULL;
+        -:  280:  }
+        2:  281:  if (((char*)(node)) + node->size != (char*)(result)) {
+        1:  282:    return NULL;
+        -:  283:  }
+        1:  284:  fftree_delete(rootp, result);
+        1:  285:  return result;
+        -:  286:}

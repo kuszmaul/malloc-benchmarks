@@ -98,12 +98,22 @@ FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node);
 // Effect: Find and return the maximal `n in tree` such that `n < node`.  Return
 // NULL if there is no such node.
 
+FFTREE* fftree_find_next(FFTREE *tree, const FFTREE *node);
+// Effect: Find and return the minimal `n in tree` such that `n > node`.  Return
+// NULL if there is no such node.
+
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
 
 FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node);
 // Effect: If the previous node to `node` is adjacent to `node`, then find it
 // (return it) and remove it from the tree.  If there is no previous node or
-// it's not adjancent, return NULL.
+// it's not adjacent, return NULL.
+
+FFTREE* fftree_find_and_remove_next_adjacent(FFTREE **rootp, const FFTREE *node);
+// Effect: If the next node to `node` is adjacent to `node`, then find it
+// (return it) and remove it from the tree.  If there is no next node or
+// it's not adjacent, return NULL.
+
 
 // Internal functions, exposed here for testing
 
