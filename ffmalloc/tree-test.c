@@ -331,6 +331,8 @@ static void test_fftree_insert(void) {
   FFTREE *n000 = (FFTREE *)(&data[0]);
   *n000 = (FFTREE){NULL, NULL, 1, 32, 32};
   assert(!fftree_in(root, n000));
+  assert(fftree_find_prev(root, n000) == NULL);
+
   fftree_insert(&root, n000);
   assert(fftree_in(root, n000));
 
@@ -342,6 +344,7 @@ static void test_fftree_insert(void) {
                   " Empty tree\n") == 0);
     free(s);
   }
+  assert(fftree_find_prev(root, n000) == NULL);
 
   FFTREE *n200 = (FFTREE *)(&data[0x200]);
   *n200 = (FFTREE){NULL, NULL, 1, 32, 32};
@@ -356,6 +359,8 @@ static void test_fftree_insert(void) {
                   "  Empty tree\n") == 0);
     free(s);
   }
+  assert(fftree_find_prev(root, n000) == NULL);
+  assert(fftree_find_prev(root, n200) == n000);
 
   FFTREE *n400 = (FFTREE *)(&data[0x400]);
   *n400 = (FFTREE){NULL, NULL, 1, 32, 32};
@@ -372,6 +377,9 @@ static void test_fftree_insert(void) {
                   "  Empty tree\n") == 0);
     free(s);
   }
+  assert(fftree_find_prev(root, n000) == NULL);
+  assert(fftree_find_prev(root, n200) == n000);
+  assert(fftree_find_prev(root, n400) == n200);
 
   {
     FFTREE *n400a = fftree_remove_rightmost(&root);
@@ -388,6 +396,8 @@ static void test_fftree_insert(void) {
                   ) == 0);
     free(s);
   }
+  assert(fftree_find_prev(root, n000) == NULL);
+  assert(fftree_find_prev(root, n200) == n000);
 
   {
     FFTREE *no_luck = fftree_find_and_remove_first_fit(&root, 0x100);
@@ -417,6 +427,11 @@ static void test_fftree_insert(void) {
   *n500 = (FFTREE){NULL, NULL, 1, 48, 48};
   fftree_insert(&root, n500);
   assert(fftree_validate(root));
+  assert(fftree_find_prev(root, n000) == NULL);
+  assert(fftree_find_prev(root, n200) == n000);
+  assert(fftree_find_prev(root, n250) == n200);
+  assert(fftree_find_prev(root, n400) == n250);
+  assert(fftree_find_prev(root, n500) == n400);
   {
     FFTREE *n250a = fftree_find_and_remove_first_fit(&root, 40);
     assert(n250a == n250);
@@ -437,6 +452,7 @@ static void test_fftree_insert(void) {
     free(s);
   }
   assert(fftree_validate(root));
+
   {
     FFTREE *n500a = fftree_find_and_remove_first_fit(&root, 48);
     assert(n500a == n500);

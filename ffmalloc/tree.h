@@ -94,7 +94,16 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size);
 // Implementation note: The `max_size_in_subtree` augmentation can be used to
 // make this run in time `O(log n)`.
 
+FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node);
+// Effect: Find and return the maximal `n in tree` such that `n < node`.  Return
+// NULL if there is no such node.
+
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
+
+FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node);
+// Effect: If the previous node to `node` is adjacent to `node`, then find it
+// (return it) and remove it from the tree.  If there is no previous node or
+// it's not adjancent, return NULL.
 
 // Internal functions, exposed here for testing
 

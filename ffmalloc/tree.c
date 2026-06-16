@@ -8,13 +8,19 @@
 
 size_t fftree_depth(const FFTREE *t) {
   // Specification: see header file
-  if (t == NULL) return 0;
-  return t->depth;
+  if (t == NULL) {
+    return 0;
+  } else {
+    return t->depth;
+  }
 }
 size_t fftree_max_size_in_subtree(const FFTREE *t) {
   // Specification: see header file
-  if (t == NULL) return 0;
-  return t->max_size_in_subtree;
+  if (t == NULL) {
+    return 0;
+  } else {
+    return t->max_size_in_subtree;
+  }
 }
 
 #define VASSERT(a) ({                                      \
@@ -28,7 +34,9 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
   // Effect: Do the work for `fftree_validate`, where we have the additional
   // requirement that the address every node in `tree` must be strictly between
   // `lower_bound` and `upper_bound`.
-  if (tree == NULL) return true;
+  if (tree == NULL) {
+    return true;
+  }
   if (lower_bound != NULL) {
     VASSERT(lower_bound < tree);
   }
@@ -204,8 +212,9 @@ void fftree_delete(FFTREE **rootp, FFTREE *node) {
 
 FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
   // Specification: See header file.
-  if (fftree_max_size_in_subtree(root) < size) return NULL; // covers root=NULL
-  if (fftree_max_size_in_subtree(root->left) >= size) {
+  if (fftree_max_size_in_subtree(root) < size) {
+    return NULL; // covers root=NULL
+  } else if (fftree_max_size_in_subtree(root->left) >= size) {
     return fftree_find_first_fit(root->left, size);
   } else if (root->size >= size) {
     return root;
@@ -215,6 +224,7 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
 }
 
 #if 1
+/* TODO: Should go into the ffmalloc code */
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   FFTREE *result = fftree_find_first_fit(*rootp, size);
   if (result == NULL) return NULL;
@@ -273,3 +283,30 @@ FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   return fftree_find_and_remove_first_fit1(rootp, size, 0);
 }
 #endif
+
+FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node) {
+  if (tree == NULL) return NULL;
+  else if (tree < node) {
+    FFTREE *p = fftree_find_prev(tree->right, node);
+    // If there's nothing useful in tree->right, then `node` is the answer.
+    if (p == NULL) {
+      return tree;
+    }
+    return p;
+  } else { // (tree > node)
+    return fftree_find_prev(tree->left, node);
+  }
+}
+
+/* TODO: Should go into the ffmalloc code */
+FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node) {
+  FFTREE *result = fftree_find_prev(*rootp, node);
+  if (result == NULL) {
+    return NULL;
+  }
+  if (((char*)(result)) + result->size != (char*)(node)) {
+    return NULL;
+  }
+  fftree_delete(rootp, result);
+  return result;
+}
