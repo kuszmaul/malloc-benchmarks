@@ -82,8 +82,6 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node);
 
 FFTREE* fftree_remove_rightmost(FFTREE **rootp);
 
-bool fftree_in(const FFTREE *root, const FFTREE *node);
-
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
 
 // Internal functions, exposed here for testing

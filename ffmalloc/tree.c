@@ -181,14 +181,6 @@ FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
   return result;
 }
 
-bool fftree_in(const FFTREE *root, const FFTREE *node) {
-  assert(node != NULL);
-  if (root == NULL) return false;
-  if (root == node) return true;
-  if (node < root) return fftree_in(root->left, node);
-  return fftree_in(root->right, node);
-}
-
 static FFTREE* fftree_find_and_remove_first_fit1(FFTREE **rootp, size_t size, int depth) {
   assert(rootp != NULL);
   FFTREE *root = *rootp;

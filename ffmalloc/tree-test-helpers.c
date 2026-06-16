@@ -73,3 +73,12 @@ char* fftree_sprint(FFTREE *tree, void *alloc) {
   fftree_sprint2(tree, 0, &buf, alloc);
   return buf.string;
 }
+
+bool fftree_in(const FFTREE *root, const FFTREE *node) {
+  // Specification: See header file
+  assert(node != NULL);
+  if (root == NULL) return false;
+  if (root == node) return true;
+  if (node < root) return fftree_in(root->left, node);
+  return fftree_in(root->right, node);
+}
