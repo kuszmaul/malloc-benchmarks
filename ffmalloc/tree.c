@@ -223,7 +223,7 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
   }
 }
 
-/* TODO: Should go into the ffmalloc code */
+/* Should go into the ffmalloc code? */
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   FFTREE *result = fftree_find_first_fit(*rootp, size);
   if (result == NULL) return NULL;
@@ -245,7 +245,7 @@ FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node) {
   }
 }
 
-/* TODO: Should go into the ffmalloc code */
+/* Should this go into the ffmalloc code? */
 FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node) {
   FFTREE *result = fftree_find_prev(*rootp, node);
   if (result == NULL) {

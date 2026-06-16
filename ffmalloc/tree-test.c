@@ -533,6 +533,41 @@ static void test_fftree_insert(void) {
     FFTREE *n200b = fftree_find_and_remove_first_fit(&root, 32);
     assert(n200b == n200);
   }
+
+  {
+    char *s = fftree_sprint(root, data);
+    printf("LINE %d s=\n%s\n", __LINE__, s);
+    free(s);
+  }
+  {
+    FFTREE *n420 = (FFTREE *)&data[0x420];
+    *n420 = (FFTREE){NULL, NULL, 1, 32, 32};
+    {
+      FFTREE *n400a = fftree_find_and_remove_prev_adjacent(&root, n420);
+      assert(n400a == n400);
+      {
+        char *s = fftree_sprint(root, data);
+        printf("LINE %d s=\n%s\n", __LINE__, s);
+        free(s);
+      }
+      n400a->size += 32; // add in the 420
+      fftree_insert(&root, n400);
+      {
+        char *s = fftree_sprint(root, data);
+        printf("LINE %d s=\n%s\n", __LINE__, s);
+        free(s);
+      }
+    }
+  }
+  {
+    // Find a previous item but it's not adjancent
+    FFTREE *n550 = (FFTREE *)&data[0x550];
+    *n550 = (FFTREE){NULL, NULL, 1, 32, 32};
+    assert(fftree_find_prev(root, n550) == n400);
+    assert(!fftree_find_and_remove_prev_adjacent(&root, n550));
+  }
+  assert(!fftree_find_prev(root, n000));
+  assert(!fftree_find_and_remove_prev_adjacent(&root, n000));
 }
 
 int main(void) {
