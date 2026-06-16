@@ -82,6 +82,18 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node);
 
 FFTREE* fftree_remove_rightmost(FFTREE **rootp);
 
+void fftree_delete(FFTREE **tree_p, FFTREE*node);
+// Effect: Remove `node` from `*tree_p`.  The new root is stored in `*troee_p`.
+//
+// Requires: `node` is in the tree.
+
+FFTREE* fftree_find_first_fit(FFTREE *root, size_t size);
+// Effect: Find and return the leftmost node which has size >= `size`.  If no
+// such node exists, run `NULL`.
+//
+// Implementation note: The `max_size_in_subtree` augmentation can be used to
+// make this run in time `O(log n)`.
+
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
 
 // Internal functions, exposed here for testing

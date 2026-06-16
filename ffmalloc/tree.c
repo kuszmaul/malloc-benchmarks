@@ -181,6 +181,49 @@ FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
   return result;
 }
 
+void fftree_delete(FFTREE **rootp, FFTREE *node) {
+  assert(rootp != NULL);
+  FFTREE *root = *rootp;
+  if (root == node) {
+    if (root->left == NULL) {
+      *rootp = root->right;
+    } else if (root->right == NULL) {
+      *rootp = root->left;
+    } else {
+      FFTREE *new_root = fftree_remove_rightmost(&root->left);
+      set_both(new_root, root->left, root->right);
+      *rootp = new_root;
+    }
+    node->left = node->right = NULL; // Not really necessary...
+  } else {
+    fftree_delete((node < root) ? &root->left : &root->right, node);
+    fftree_update_augmentation(root);
+    fftree_maybe_rebalance(rootp);
+  }
+}
+
+FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
+  // Specification: See header file.
+  if (fftree_max_size_in_subtree(root) < size) return NULL; // covers root=NULL
+  if (fftree_max_size_in_subtree(root->left) >= size) {
+    return fftree_find_first_fit(root->left, size);
+  } else if (root->size >= size) {
+    return root;
+  } else {
+    return fftree_find_first_fit(root->right, size);
+  }
+}
+
+#if 1
+FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
+  FFTREE *result = fftree_find_first_fit(*rootp, size);
+  if (result == NULL) return NULL;
+  fftree_delete(rootp, result);
+  return result;
+}
+#else
+// This is probably slower, but we should measure it to find out.
+
 static FFTREE* fftree_find_and_remove_first_fit1(FFTREE **rootp, size_t size, int depth) {
   assert(rootp != NULL);
   FFTREE *root = *rootp;
@@ -229,3 +272,4 @@ static FFTREE* fftree_find_and_remove_first_fit1(FFTREE **rootp, size_t size, in
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   return fftree_find_and_remove_first_fit1(rootp, size, 0);
 }
+#endif
