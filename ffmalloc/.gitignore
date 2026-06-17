@@ -1,7 +1,5 @@
-ffmalloc-test
-tree-test
-tree-test-gcov
-gcov
+gcov/
+test/
 *.d
 *.iwyu
 *.runiwyu

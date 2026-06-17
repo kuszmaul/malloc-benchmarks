@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/resource.h>
-#include <unistd.h>
 
 #include "headers.h"
 #include "ffmalloc.h"
@@ -245,37 +243,6 @@ static void test_big_posix_memalign(size_t alignment) {
   }
 }
 
-static void test_sbrk_failure(void) {
-  struct rlimit v;
-  int r = getrlimit(RLIMIT_DATA, &v);
-  assert(r==0);
-  fprintf(stderr, "rlimit is 0x%lx\n", v.rlim_cur);
-  void* b=sbrk(0);
-  fprintf(stderr, "sbrk is %p\n", b);
-  v.rlim_cur = 256 * 1024;
-  r = setrlimit(RLIMIT_DATA, &v);
-  assert(r==0);
-  r = getrlimit(RLIMIT_DATA, &v);
-  assert(r==0);
-  fprintf(stderr, "rlimit is 0x%lx\n", v.rlim_cur);
-
-  void *p2 = sbrk(1024*1024);
-  assert(p2 == (void*)-1);
-  {
-    void *p;
-    int r = ff_malloc_e(&p, mmap_lower_bound/2);
-    assert(r == 0);
-  }
-  {
-    void *p;
-    int r = ff_malloc_e(&p, mmap_lower_bound/2);
-    assert(r == ENOMEM);
-  }
-  v.rlim_cur = -1;
-  r = setrlimit(RLIMIT_DATA, &v);
-  assert(r==0);
-}
-
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
   test_little_malloc();
   test_big_malloc();
@@ -296,7 +263,5 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   test_big_posix_memalign(1u<<17);
   test_big_posix_memalign(1u<<18);
   test_big_posix_memalign(1u<<20);
-
-  test_sbrk_failure();
   return 0;
 }
