@@ -4,6 +4,11 @@ CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrou
 ffmalloc.o: ffmalloc.h headers.h tree.h
 ffmalloc-test.o: headers.h ffmalloc.h tree.h
 ffmalloc-test: ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o
+ffmalloc-test.gcov: OPTFLAGS = -O0 -coverage
+ffmalloc-test.gcov: LDFLAGS = -coverage
+ffmalloc-test.gcov: ffmalloc-test
+	./ffmalloc-test
+	gcov ffmalloc.c
 
 tree.o: tree.h headers.h
 tree-test.o: tree.h tree-test-helpers.h headers.h
