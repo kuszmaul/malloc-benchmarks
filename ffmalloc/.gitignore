@@ -1,6 +1,5 @@
 ffmalloc-test
 tree-test
 tree-test-gcov
-*.gcda
-*.gcno
-*.gcov
+gcov
+*.d

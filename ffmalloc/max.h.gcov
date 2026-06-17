@@ -1,0 +1,19 @@
+        -:    0:Source:max.h
+        -:    0:Graph:gcov/tree.gcno
+        -:    0:Data:gcov/tree.gcda
+        -:    0:Runs:1
+        -:    1:#ifndef MAX_H
+        -:    2:#define MAX_H
+        -:    3:
+        -:    4:#include <stddef.h>
+        -:    5:
+      250:    6:static inline size_t max(size_t a, size_t b) {
+      250:    7:  return (a < b) ? b : a;
+        -:    8:}
+        -:    9:
+       88:   10:static inline size_t maxf(size_t *a, size_t b) {
+       88:   11:  size_t r = max(*a, b);
+       88:   12:  *a = r;
+       88:   13:  return r;
+        -:   14:}
+        -:   15:#endif

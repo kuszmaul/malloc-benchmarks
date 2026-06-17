@@ -1,0 +1,324 @@
+        -:    0:Source:ffmalloc.c
+        -:    0:Graph:gcov/ffmalloc.gcno
+        -:    0:Data:gcov/ffmalloc.gcda
+        -:    0:Runs:1
+        -:    1:// First-fit implementation of malloc.
+        -:    2:
+        -:    3:// Definitions:
+        -:    4://
+        -:    5://   Small blocks: b locks that are managed with first fit.
+        -:    6://
+        -:    7://   Large blocks: are memory-mapped rather than managed with first fit.
+        -:    8://    "large" maens >= `mmap_lower_bound`, which is tentatively, `1<<18`.
+        -:    9://
+        -:   10://   Word: 8 bytes.
+        -:   11://
+        -:   12://   Page: 4096 bytes (we have `page_size == 4096`).
+        -:   13://
+        -:   14://   Boundary tag: [the idea is due to Knuth TAOCP vol 1].  The malloc functions
+        -:   15://    return a pointer to the user.  Just before that pointer is a word
+        -:   16://    containing a header, called the boundary tag. The boundary tag is 1 word containing
+        -:   17://      ```
+        -:   18://      struct boundary_tag {
+        -:   19://          size_t is_memaligned:1;
+        -:   20://          size_t size:63;
+        -:   21://      }}
+        -:   22://      ```
+        -:   23://
+        -:   24://    The meaning is this:
+        -:   25://
+        -:   26://      If `is_memaligned` is `false` then `size` is the number of bytes in the
+        -:   27://        block.  if `size` is >= `mmap_lower_bound` then the block is mmapped.
+        -:   28://        The size must be a multiple of `page_size`.
+        -:   29://
+        -:   30://      If `is_memaligned` is `true` then we this block is the result of a call
+        -:   31://        to `posix_memalign` or `aligned_alloc` or `memalign`.  To allocate a
+        -:   32://        block of size `s` aligned to `a` (which must be a power of two) we
+        -:   33://        need to allocate extra bytes and then waste part of the allocation.
+        -:   34://        The idea is that if we allocate `s + a - 1` bytes, then somewhere in
+        -:   35://        the resulting block there is a block of size `s` that is aligned to
+        -:   36://        `a`.  For a memaligned block we need a 2-word header: The first is
+        -:   37://        a pointer to the actual beginning of the block, and the second is our
+        -:   38://        header with `is_memaligned==true`.  The `size` is the size of the
+        -:   39://        originally allocated block.  (And if `size >= mmap_lower_bound` then
+        -:   40://        the originally allocated block is allocated via mmap and the size is a
+        -:   41://        multiple of `page_size`.)
+        -:   42://
+        -:   43://        When allocating a memaligned block, one could imagine peeling off the
+        -:   44://        unused memory at the beginning of the allocation and making it
+        -:   45://        available for different allocation.  Doing so could be problematic,
+        -:   46://        however, sine the resulting block would be in the wrong place for
+        -:   47://        first fit.  You could end up with a very small block at a very high
+        -:   48://        address, which would violate the invariant proved in Robson77 (Section
+        -:   49://        3) that small blocks appear only at low addresses. For memaligned
+        -:   50://        blocks, the extra block wouldn't even be in the right part of the
+        -:   51://        address space.  So instead, we simply treat the unused memory as part
+        -:   52://        of the allocation.
+        -:   53://
+        -:   54://        We also special-case alignment==8, since that adds no alignment
+        -:   55://        constraints: it just directly calls malloc, which always returns
+        -:   56://        8-byte aligned values.
+        -:   57:
+        -:   58:#include <assert.h>
+        -:   59:#include <errno.h>
+        -:   60:#include <stdbool.h>
+        -:   61:#include <stddef.h>
+        -:   62:#include <stdint.h>
+        -:   63:#include <string.h>
+        -:   64:#include <sys/mman.h>
+        -:   65:#include <unistd.h>
+        -:   66:
+        -:   67:// Needed for tests
+        -:   68:#include <stdio.h>
+        -:   69:
+        -:   70:#include "headers.h"
+        -:   71:#include "ffmalloc.h"
+        -:   72:#include "tree.h"
+        -:   73:
+        -:   74:static const bool debug = false;
+        -:   75:
+        -:   76:FFTREE *arena = NULL;
+        -:   77:static size_t last_sbrk_size = 1;
+        -:   78:
+       17:   79:BOUNDARY_TAG* get_boundary_tag_pointer(void *p) {
+       17:   80:  return ((BOUNDARY_TAG*)(p)) - 1;
+        -:   81:}
+        -:   82:
+    #####:   83:static void** get_memaligned_original_stored_at_pointer(void *p) {
+    #####:   84:  return ((void**)(get_boundary_tag_pointer(p))) - 1;
+        -:   85:}
+        -:   86:
+       11:   87:BOUNDARY_TAG get_boundary_tag(void *p) {
+       11:   88:  return *(get_boundary_tag_pointer(p));
+        -:   89:}
+        -:   90:
+    #####:   91:void* get_memaligned_original(void *p) {
+    #####:   92:  return *get_memaligned_original_stored_at_pointer(p);
+        -:   93:}
+        -:   94:
+        7:   95:static bool ispow2(size_t n) {
+       7*:   96:  return n > 0 && (n & (n-1)) == 0;
+        -:   97:}
+        -:   98:
+        -:   99://static bool is_aligned(size_t n, size_t alignment) {
+        -:  100://  assert(ispow2(alignment));
+        -:  101://  return (n & (alignment - 1)) == 0;
+        -:  102://}
+        -:  103:
+        7:  104:static size_t alignup(size_t n, size_t alignment) {
+       7*:  105:  assert(ispow2(alignment));
+        7:  106:  return (n + alignment - 1) & ~(alignment -1);
+        -:  107:}
+        -:  108:
+    #####:  109:static void* alignup_pointer(void* p, size_t alignment) {
+    #####:  110:  return (void*)(alignup((uintptr_t)(p), alignment));
+        -:  111:}
+        -:  112:
+        1:  113:static size_t compute_next_sbrk_size(size_t size) {
+        1:  114:  size_t prev = last_sbrk_size;
+        1:  115:  if (prev < size) {
+        1:  116:    size = alignup(size, page_size);
+        -:  117:  } else {
+    #####:  118:    size *= 2;
+        -:  119:  }
+        1:  120:  last_sbrk_size = size;
+        1:  121:  return size;
+        -:  122:}
+        -:  123:
+        -:  124:// Handle the case for mallocing a large (mmapped) block.
+        -:  125:// Returns 0 on success (and sets *result) or an error code.
+    #####:  126:static int ff_malloc_mmap_e(void** result, size_t size) {
+    #####:  127:  size = alignup(size + sizeof(BOUNDARY_TAG), page_size);
+    #####:  128:  assert(size >= mmap_lower_bound);
+    #####:  129:  void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    #####:  130:  if (debug) fprintf(stderr, "mmap(0, %lu, ...) => %p\n", size, p);
+    #####:  131:  if (p == (void*)-1) {
+    #####:  132:    assert(errno == ENOMEM);
+    #####:  133:    return ENOMEM;
+        -:  134:  }
+    #####:  135:  BOUNDARY_TAG *bt = p;
+    #####:  136:  bt->is_memaligned = false;
+    #####:  137:  bt->size = size;
+    #####:  138:  *result = (void*)((char*)p + sizeof(BOUNDARY_TAG));
+    #####:  139:  return 0;
+        -:  140:}
+        -:  141:
+        7:  142:static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size) {
+       7*:  143:  assert(node_size >= sizeof(FFTREE));
+        7:  144:  FFTREE *here = (FFTREE*)node;
+        7:  145:  *here = (FFTREE){NULL, NULL, 0, node_size, node_size};
+        -:  146:  {
+        7:  147:    FFTREE *prev = fftree_find_and_remove_prev_adjacent(tree_p, here);
+        7:  148:    if (prev != NULL) {
+        1:  149:      prev->size += node_size;
+        1:  150:      here = prev;
+        -:  151:    }
+        -:  152:  }
+        -:  153:  {
+        7:  154:    FFTREE *next = fftree_find_and_remove_next_adjacent(tree_p, here);
+        7:  155:    if (next != NULL) {
+        5:  156:      here->size += next->size;
+        -:  157:    }
+        -:  158:  }
+        7:  159:  fftree_insert(tree_p, here);
+        7:  160:}
+        -:  161:
+        -:  162:/* static void* ff_malloc_mmap_aligned(size_t size, size_t alignment) { */
+        -:  163:/*   assert(ispow2(alignment)); */
+        -:  164:/*   mmaped_size = alignup(size + 2*sizeof(BOUNDARY_TAG) + sizeof(void*), page_size); */
+        -:  165:/*   void* p = mmap(0, mmaped_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0); */
+        -:  166:/*   assert(p); */
+        -:  167:/*   { */
+        -:  168:/*     BOUNDARY_TAG *bt = p; */
+        -:  169:/*     bt->is_memaligned = false; */
+        -:  170:/*     bt->size = mmaped_size; */
+        -:  171:/*   } */
+        -:  172:/*   char *returned_pointer = (char*)(alignup((uintptr_t)p + 2*sizeof(BOUNDARY_TAG), alignment)); */
+        -:  173:/*   { */
+        -:  174:/*     BOUNDARY_TAG *bt = returned_pointer - sizeof(BOUNDARY_TAG); */
+        -:  175:/*     bt->is_memaligned = true; */
+        -:  176:/*     bt->size = */
+        -:  177:
+        -:  178:
+        -:  179:
+        -:  180:/* } */
+        -:  181:
+        6:  182:static int ff_malloc_firstfit_e(void **result, size_t size) {
+        6:  183:  fprintf(stderr, "%s(..., %lu)\n", __FUNCTION__, size);
+       6*:  184:  assert(size < mmap_lower_bound);
+        6:  185:  FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
+        6:  186:  fprintf(stderr, " Got node=%p\n", node);
+        6:  187:  if (node == NULL) {
+        1:  188:    const size_t overhead_at_beginning = 8;
+        -:  189:    // So we'll need a few extra bytes at the end to have a free block at the end.
+        1:  190:    const size_t overhead_at_end = sizeof(FFTREE);
+        -:  191:    // We'll also need a size_t in the overhead for the boundary tag.
+        1:  192:    const size_t overhead = overhead_at_beginning + overhead_at_end;
+        1:  193:    const size_t n_to_sbrk = compute_next_sbrk_size(size + overhead);
+        1:  194:    void *p = sbrk(n_to_sbrk);;
+        1:  195:    if (p == (void*)-1) {
+    #####:  196:      assert(errno == ENOMEM);
+    #####:  197:      return ENOMEM;
+        -:  198:    }
+        1:  199:    fftree_insert_and_merge(&arena, p, n_to_sbrk);
+        1:  200:    fprintf(stderr, "After sbrk and insert\n");
+       1*:  201:    assert(fftree_validate(arena));
+        1:  202:    node = fftree_find_and_remove_first_fit(&arena, size);
+        -:  203:  }
+       6*:  204:  assert(fftree_validate(arena));
+        6:  205:  fprintf(stderr, "Removed from tree, the node is\n");
+        6:  206:  fftree_print(node, 0);
+        6:  207:  fprintf(stderr, "the tree is\n");
+        6:  208:  fftree_print(arena, 0);
+        -:  209:
+        6:  210:  size_t nsize = node->size;
+        -:  211:
+        6:  212:  if (nsize >= size + sizeof(FFTREE) + sizeof(BOUNDARY_TAG)) {
+        -:  213:    // We can break the node in two.  There's enough space for the boundary tag
+        -:  214:    // and for the cut off piece to hold an FFTREE.
+        6:  215:    FFTREE *here = (FFTREE*)((char*)node + size + sizeof(BOUNDARY_TAG));
+        6:  216:    here->size = nsize - size - sizeof(BOUNDARY_TAG);
+        -:  217:    // Don't need to merge here, since there won't be any adjacent nodes.
+        6:  218:    fftree_insert(&arena, here);
+       6*:  219:    assert(fftree_validate(arena));
+        6:  220:    fprintf(stderr, "Added tail block to arena to get\n");
+        6:  221:    fftree_print(arena, 0);
+        -:  222:  }
+        6:  223:  BOUNDARY_TAG* tag = (BOUNDARY_TAG*)(node);
+        6:  224:  tag->is_memaligned = false;
+        6:  225:  tag->size = size + sizeof(BOUNDARY_TAG);
+        6:  226:  fprintf(stderr, "%d: tag->size=%lu\n", __LINE__, (size_t)(tag->size));
+        6:  227:  *result = (void*)((char*)node + sizeof(BOUNDARY_TAG));
+        6:  228:  return 0;
+        -:  229:}
+        -:  230:
+        -:  231:// `ff_malloc_e` is like malloc except that it uses the calling interface that
+        -:  232:// posix_memalign uses.  It returns 0 on success (and stores the result in
+        -:  233:// *result) or returns an error code.
+        6:  234:int ff_malloc_e(void **result, size_t size) {
+        6:  235:  fftree_print(arena, 0);
+        6:  236:  if (size == 0) {
+    #####:  237:    *result = NULL;
+    #####:  238:    return 0;
+        -:  239:  }
+        6:  240:  size = alignup(size, 8);
+        6:  241:  if (size >= mmap_lower_bound) {
+    #####:  242:    return ff_malloc_mmap_e(result, size);
+        -:  243:  } else {
+        6:  244:    return ff_malloc_firstfit_e(result, size);
+        -:  245:  }
+        -:  246:}
+        -:  247:
+        -:  248:///////////////////////////////// tests ///////////////////////////////////////
+        -:  249:
+    #####:  250:int ff_posix_memalign(void **result, size_t alignment, size_t size) {
+    #####:  251:  if (debug) fprintf(stderr, "%s(..., %lu, %lu)\n", __FUNCTION__, alignment, size);
+    #####:  252:  if (!ispow2(alignment)) return EINVAL;
+    #####:  253:  assert(alignment % sizeof(void*) == 0);
+    #####:  254:  if (size == 0) {
+    #####:  255:    *result = NULL;
+    #####:  256:    if (debug) fprintf(stderr, " => 0");
+    #####:  257:    return 0;
+        -:  258:  }
+    #####:  259:  if (alignment <= sizeof(BOUNDARY_TAG)) {
+        -:  260:    // small alignments don't need anything
+    #####:  261:    int r = ff_malloc_e(result, size);
+    #####:  262:    if (debug) {
+    #####:  263:      fprintf(stderr, "%s => %d", __FUNCTION__, r);
+    #####:  264:      if (r == 0) {
+    #####:  265:        fprintf(stderr, " %p", *result);
+        -:  266:      }
+    #####:  267:      fprintf(stderr, "\n");
+        -:  268:    }
+    #####:  269:    return r;
+        -:  270:  }
+    #####:  271:  size_t amount_to_malloc = sizeof(BOUNDARY_TAG) + size + alignment - 1;
+        -:  272:  void *p;
+    #####:  273:  int r = ff_malloc_e(&p, amount_to_malloc);
+    #####:  274:  if (r != 0) {
+    #####:  275:    fprintf(stderr, " => %d\n", r);
+    #####:  276:    return r;
+        -:  277:  }
+    #####:  278:  if (debug) fprintf(stderr, "ff_malloc returned %p\n", p);
+        -:  279:  // We now have
+        -:  280:  //   p[-8] the original boundary tag (which we won't use)
+        -:  281:  //   p[0] space for the new boundary tag
+        -:  282:  //   p[8 .. 8 + size + alignment -1]    space for an aligned block.
+    #####:  283:  BOUNDARY_TAG original_boundary_tag = get_boundary_tag(p);
+    #####:  284:  void *p_to_return = alignup_pointer((char*)p + sizeof(BOUNDARY_TAG), alignment);
+    #####:  285:  if (debug) fprintf(stderr, "Got %p aligning to 0x%lx yields %p\n", p, alignment, p_to_return);
+    #####:  286:  BOUNDARY_TAG *new_tag_p = get_boundary_tag_pointer(p_to_return);
+    #####:  287:  *new_tag_p = (BOUNDARY_TAG){1, original_boundary_tag.size};
+    #####:  288:  if (debug) fprintf(stderr, "new_tag_p=%p\n", new_tag_p);
+    #####:  289:  if (debug) fprintf(stderr, "new_tag={%d %lu}\n", new_tag_p->is_memaligned, (size_t)(new_tag_p->size));
+    #####:  290:  void ** store_start_at = get_memaligned_original_stored_at_pointer(p_to_return);
+    #####:  291:  if (debug) fprintf(stderr, "store_start_at=%p, storing %p\n",store_start_at, get_boundary_tag_pointer(p));
+    #####:  292:  *store_start_at = get_boundary_tag_pointer(p);
+    #####:  293:  *result = p_to_return;
+    #####:  294:  if (debug) fprintf(stderr, "%s => 0 %p\n", __FUNCTION__, p_to_return);
+    #####:  295:  return 0;
+        -:  296:}
+        -:  297:
+        6:  298:void ff_free(void *p) {
+        6:  299:  BOUNDARY_TAG bt = get_boundary_tag(p);
+        6:  300:  if (!bt.is_memaligned) {
+        6:  301:    if (bt.size >= mmap_lower_bound) {
+    #####:  302:      BOUNDARY_TAG* btp = get_boundary_tag_pointer(p);
+    #####:  303:      assert(((uintptr_t)(btp)) % page_size == 0);
+    #####:  304:      int r = munmap(btp, bt.size);
+    #####:  305:      assert(r == 0);
+        -:  306:    } else {
+        6:  307:      size_t size = bt.size;
+        6:  308:      fftree_insert_and_merge(&arena, get_boundary_tag_pointer(p), size);
+        -:  309:    }
+        -:  310:  } else {
+        -:  311:    // Reconstruct the boundary tag as it was originally before we did the
+        -:  312:    // memalignment hacking.  (We could have overwritten the boundary tag with
+        -:  313:    // the original_stored_at information.)
+    #####:  314:    BOUNDARY_TAG *original_tag_p = (BOUNDARY_TAG*)(*(get_memaligned_original_stored_at_pointer(p)));
+    #####:  315:    if (debug) fprintf(stderr, "freeing original_tag_p=%p\n", original_tag_p);
+    #####:  316:    *original_tag_p = (BOUNDARY_TAG){0, bt.size};
+    #####:  317:    if (debug) fprintf(stderr, "fixed up boundary tag={%lu %lu}\n", (size_t)(original_tag_p->is_memaligned), (size_t)(original_tag_p->size));
+    #####:  318:    ff_free(original_tag_p + 1);
+        -:  319:  }
+        6:  320:}
