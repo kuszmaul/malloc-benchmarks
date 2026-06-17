@@ -12,45 +12,44 @@ ffmalloc-test.gcov: ffmalloc-test
 
 TREE_O_DEPS = tree.h headers.h max.h
 tree.o: $(TREE_O_DEPS)
-gcov/tree.o: $(patsubst %,gcov/%,$(TREE_O_DEPS))
+#gcov/tree.o: $(patsubst %,gcov/%,$(TREE_O_DEPS))
 
 TREE_TEST_O_DEPS = tree.h tree-test-helpers.h headers.h max.h
 tree-test.o: $(TREE_TEST_O_DEPS)
-gcov/tree-test.o: $(patsubst %,gcov/%,$(TREE_TEST_O_DEPS))
+#gcov/tree-test.o: $(patsubst %,gcov/%,$(TREE_TEST_O_DEPS))
 
 tree-test-helpers.o: tree.h
 
 TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o
 tree-test: $(TREE_TEST_DEPS)
 
-gcov/tree.c.gcov: gcov/tree-test
-	$<
-	gcov gcov/tree.c
-gcov/tree-test: $(patsubst %,gcov/%,$(TREE_TEST_DEPS))
+#gcov/tree.c.gcov: gcov/tree-test
+#	$<
+#	gcov gcov/tree.c
+#
 tree.c.gcov: gcov/tree-test
-	gcov/$<
-	gcov tree.c
+	$<
+	gcov tree.c -o gcov
 
 gcov:
 	mkdir gcov
-gcov/%.c: | gcov
-	(cd gcov;ln ../$(patsubst gcov/%,%,$@))
-gcov/%.h: | gcov
-	(cd gcov;ln ../$(patsubst gcov/%,%,$@))
 gcov/%: OPTFLAGS=-O0 -coverage
 gcov/%: LDFLAGS=-coverage
+gcov/%.o: %.c | gcov
+	$(CC) $(CFLAGS) -c -o $@ $<
+gcov/tree-test: $(patsubst %,gcov/%,$(TREE_TEST_DEPS))
+	$(CC) $(LDFLAGS) $^ -coverage -o $@
+
 # Don't delete those symlinks.
 .SECONDARY: $(patsubst %,gcov/%,$(wildcard *.c *.h))
 
-# %.d: %.c
-# 	@set -e; rm -f $@; \
-#          $(CC) -M $(CPPFLAGS) $< > $@.$$$$; \
-#          sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-#          rm -f $@.$$$$
-
-# SOURCES_HERE = $(wildcard *.c)
-# SOURCES = $(SOURCES_HERE) $(patsubst %,gcov/%,$(SOURCES_HERE))
-# include $(SOURCES:.c=.d)
+%.d: %.c
+	@set -e; rm -f $@; \
+         $(CC) -M $(CPPFLAGS) $< > $@.$$$$; \
+         sed 's,\($*\)\.o[ :]*,build/\1.o gcov/\1.o $@ : ,g' < $@.$$$$ > $@; \
+         rm -f $@.$$$$
+SOURCES = $(wildcard *.c)
+include $(SOURCES:.c=.d)
 
 clean:
-	rm -fr *.o tree-test *.gcda *.gcno gcov *.d
+	rm -fr *.o tree-test *.gcda *.gcno gcov *.d *.gcov
