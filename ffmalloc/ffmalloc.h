@@ -1,3 +1,6 @@
+#ifndef FFMALLOC_H
+#define FFMALLOC_H
+
 #include <stddef.h>
 
 #include "headers.h"
@@ -11,3 +14,4 @@ extern FFTREE *arena;
 BOUNDARY_TAG* get_boundary_tag_pointer(void *p);
 BOUNDARY_TAG get_boundary_tag(void*p);
 void* get_memaligned_original(void *p);
+#endif

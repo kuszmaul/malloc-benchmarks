@@ -5,9 +5,14 @@ tests: run-iwyu
 tests: tree-test.run tree.c.gcov
 tests: ffmalloc-test.run ffmalloc.c.gcov
 tests: ffmalloc-sbrk-test.run
+tests: check-include-guards.run
 
 %.run: test/%
 	$<
+
+check-include-guards.run: $(patsubst %, check-include-guards-%, $(wildcard *.h))
+check-include-guards-%.h: %.h ./check-include-guards
+	./check-include-guards $<
 
 run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 %.iwyu: %.c

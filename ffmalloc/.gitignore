@@ -3,3 +3,4 @@ test/
 *.d
 *.iwyu
 *.runiwyu
+check-include-guards
