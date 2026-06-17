@@ -3,3 +3,5 @@ tree-test
 tree-test-gcov
 gcov
 *.d
+*.iwyu
+*.runiwyu

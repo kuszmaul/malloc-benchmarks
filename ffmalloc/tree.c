@@ -4,7 +4,6 @@
 
 #include "max.h"
 #include "tree.h"
-#include "tree-test-helpers.h" // TODO remove this
 
 size_t fftree_depth(const FFTREE *t) {
   // Specification: see header file

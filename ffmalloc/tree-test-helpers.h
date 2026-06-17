@@ -1,6 +1,8 @@
 #ifndef TREE_TEST_HELPERS_H
 #define TREE_TEST_HELPERS_H
 
+#include <stdbool.h>
+
 #include "tree.h"
 
 // Print a version of the tree to a malloc'd string.  All non-null pointers are

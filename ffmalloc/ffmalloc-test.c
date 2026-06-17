@@ -1,11 +1,11 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
 #include <unistd.h>
 
 #include "headers.h"
@@ -71,7 +71,23 @@ static void my_mincore_test_one_then_all_zeros(void *addr, size_t length) {
   assert(ok);
 }
 
-// Tester
+static void test_little_malloc0(void) {
+  fprintf(stderr, "\n%s\n", __FUNCTION__);
+  {
+    void *p;
+    int r = ff_malloc_e(&p, 0);
+    assert(r == 0);
+    assert(p == NULL);
+  }
+  {
+    void *p;
+    int r = ff_posix_memalign(&p, 8, 0);
+    assert(r == 0);
+    assert(p == NULL);
+  }
+
+}
+
 static void test_little_malloc1(void) {
   fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p;
@@ -139,6 +155,7 @@ static void test_little_malloc2(void) {
 
 static void test_little_malloc(void) {
   assert(arena == NULL); // nothing ran yet.
+  test_little_malloc0();
   test_little_malloc1();
   test_little_malloc2();
 }
@@ -228,9 +245,39 @@ static void test_big_posix_memalign(size_t alignment) {
   }
 }
 
+static void test_sbrk_failure(void) {
+  struct rlimit v;
+  int r = getrlimit(RLIMIT_DATA, &v);
+  assert(r==0);
+  fprintf(stderr, "rlimit is 0x%lx\n", v.rlim_cur);
+  void* b=sbrk(0);
+  fprintf(stderr, "sbrk is %p\n", b);
+  v.rlim_cur = 256 * 1024;
+  r = setrlimit(RLIMIT_DATA, &v);
+  assert(r==0);
+  r = getrlimit(RLIMIT_DATA, &v);
+  assert(r==0);
+  fprintf(stderr, "rlimit is 0x%lx\n", v.rlim_cur);
+
+  void *p2 = sbrk(1024*1024);
+  assert(p2 == (void*)-1);
+  {
+    void *p;
+    int r = ff_malloc_e(&p, mmap_lower_bound/2);
+    assert(r == 0);
+  }
+  {
+    void *p;
+    int r = ff_malloc_e(&p, mmap_lower_bound/2);
+    assert(r == ENOMEM);
+  }
+  v.rlim_cur = -1;
+  r = setrlimit(RLIMIT_DATA, &v);
+  assert(r==0);
+}
+
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
   test_little_malloc();
-  return 0; // temporary
   test_big_malloc();
   test_big_posix_memalign_errors();
   // alignment of size 8 adds no additional requirements
@@ -249,5 +296,7 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) 
   test_big_posix_memalign(1u<<17);
   test_big_posix_memalign(1u<<18);
   test_big_posix_memalign(1u<<20);
+
+  test_sbrk_failure();
   return 0;
 }

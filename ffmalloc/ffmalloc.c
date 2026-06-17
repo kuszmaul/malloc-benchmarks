@@ -60,7 +60,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -194,10 +193,9 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     void *p = sbrk(n_to_sbrk);;
     if (p == (void*)-1) {
       assert(errno == ENOMEM);
-      return ENOMEM;
+      return errno;
     }
     fftree_insert_and_merge(&arena, p, n_to_sbrk);
-    fprintf(stderr, "After sbrk and insert\n");
     assert(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
   }
@@ -253,19 +251,11 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   assert(alignment % sizeof(void*) == 0);
   if (size == 0) {
     *result = NULL;
-    if (debug) fprintf(stderr, " => 0");
     return 0;
   }
   if (alignment <= sizeof(BOUNDARY_TAG)) {
     // small alignments don't need anything
     int r = ff_malloc_e(result, size);
-    if (debug) {
-      fprintf(stderr, "%s => %d", __FUNCTION__, r);
-      if (r == 0) {
-        fprintf(stderr, " %p", *result);
-      }
-      fprintf(stderr, "\n");
-    }
     return r;
   }
   size_t amount_to_malloc = sizeof(BOUNDARY_TAG) + size + alignment - 1;

@@ -1,11 +1,19 @@
 OPTFLAGS = -O0
 CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes -Wmissing-prototypes
 
+tests: run-iwyu
 tests: tree-test.run tree.c.gcov
 tests: ffmalloc-test.run ffmalloc.c.gcov
 
 %.run: test/%
 	$<
+
+run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
+%.iwyu: %.c
+	iwyu $< 2>$@
+%.runiwyu: %.iwyu
+	! fgrep -q should $<
+	touch $@
 
 FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o
 
