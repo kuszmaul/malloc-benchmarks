@@ -1,7 +1,7 @@
 OPTFLAGS = -O0
 CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes -Wmissing-prototypes
-ffmalloc:
-ffmalloc.o: ffmalloc.h
+ffmalloc: ffmalloc.o tree.o tree-test-helpers.o
+ffmalloc.o: ffmalloc.h headers.h tree.h
 tree.o: tree.h headers.h
 tree-test.o: tree.h tree-test-helpers.h headers.h
 tree-test-helpers.o: tree.h

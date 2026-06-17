@@ -69,6 +69,7 @@
 
 #include "headers.h"
 #include "ffmalloc.h"
+#include "tree.h"
 
 static const bool debug = false;
 
@@ -89,57 +90,6 @@ static BOUNDARY_TAG get_boundary_tag(void *p) {
 
 static void* get_memaligned_original(void *p) {
   return *get_memaligned_original_stored_at_pointer(p);
-}
-
-//static FFTREE *get_rightmost_node(FFTREE *node) {
-//  if (node == NULL) return NULL;
-//  while (true) {
-//    if (node->right == NULL) return node;
-//    node = node->right;
-//  }
-//}
-
-static void fftree_insert(FFTREE **tree_p, void* node, size_t node_size) {
-    // TODO: We currently have the bug that after merging the node into the
-    // tree, we don't merge the node on the other side.  What we probably need
-    // to do is 3 steps:
-    //
-    //  1) Find and remove the tree element that touches node on the left (if
-    //     there is one).  Merge that tree node into node.
-    //  2) Similarly on the right.
-    //  3) Now insert into the tree with no merging required.
-
-
-    // Save out tree contents so we don't accidentally stomp on them.  I don't
-    // think it can happen, but just to be safe...
-    FFTREE tree_contents = *tree;
-
-    {
-      FFTREE *left = fftree_find_left_adjacent_block_and_remove(tree_p, (FFTREE*)node);
-
-
-    if (((char*)node) + node_size == (char*)(tree)) {
-      // We can merge the node into the tree (on the left side)
-      tree = (FFTREE*)(node);
-      *tree = tree_contents;
-      tree->size += node_size;
-      tree->max_in_subtree = max(tree->max_in_subtree, tree->size);
-      *tree_p = tree;
-      return;
-    }
-    if (((char*)tree) + node_size == (char*)(node)) {
-      assert(0); // merge node into tree (on the right side)
-    }
-    if (((FFTREE*)node) < tree) {
-      fftree_insert(&tree->left, node, node_size);
-      fprintf(stderr, " about to update augmentations\n");
-      fftree_print(tree, 2);
-      fftree_update_augmentation(tree);
-      fftree_print(tree, 2);
-      return;
-    }
-    assert(0); // `node` is disjoint from the root node.
-  }
 }
 
 static bool ispow2(size_t n) {
@@ -171,90 +121,6 @@ static size_t compute_next_sbrk_size(size_t size) {
   return size;
 }
 
-// Effect: Find the rightmost child of *rootp, remove and return it.  Store the new root
-// of the tree in *rootp.
-static FFTREE* fftree_remove_rightmost(FFTREE **rootp) {
-  assert(rootp);
-  FFTREE *root = *rootp;
-  assert(root);
-  if (root->right) {
-    return fftree_remove_rightmost(&root->right);
-  } else {
-    *rootp = root->left;
-    root->left = NULL;
-    return root;
-  }
-}
-
-static FFTREE* fftree_remove_this_node(FFTREE **rootp, FFTREE *node) {
-  assert(*rootp == node); // TODO: Get rid of node argument?
-  if (node->left == NULL) {
-    *rootp = node->right;
-  } else if (node->right == NULL) {
-    *rootp = node->left;
-  } else {
-    // *rootp is unchanged
-    FFTREE *leftmost = fftree_remove_rightmost(&node->left);
-    leftmost->left = node->left;
-    leftmost->right = node->right;
-    fftree_update_augmentation(leftmost);
-    *rootp = leftmost;
-    node->left = NULL;
-    node->right = NULL;
-  }
-  return node;
-}
-
-static FFTREE *fftree_find_left_adjacent_block_and_remove(FFTREE **rootp, FFTREE *block) {
-  assert(rootp != NULL);
-  FFTREE *root = *rootp;
-  if (root == NULL) return NULL;
-  if (((char*)root) + root->size == (char*)(block)) {
-    // This is the one to remove
-    return fftree_remove_this_node(rootp, root);
-  } else {
-    FFTREE *result = fftree_find_left_adjacent_block_and_remove(
-        (root < block) ? &root->left : & root->right,
-        block);
-    if (result != NULL) {
-      fftree_update_augmentation(*rootp);
-      // maybe rebalance?
-    }
-    return result;
-  }
-}
-
-// Effect: Find the leftmost block that's at least as big as `size` and remove
-// it.  Return the block.  Return NULL if there is no such block.
-static FFTREE *fftree_find_first_fit_and_remove(FFTREE **rootp, size_t size) {
-  assert(rootp != NULL);
-  FFTREE *root = *rootp;
-  if (fftree_max_in_subtree(root) < size) return NULL;
-  {
-    FFTREE *left = root->left;
-    if (fftree_max_in_subtree(left) >= size) {
-      FFTREE *result = fftree_find_first_fit_and_remove(&root->left, size);
-      // TODO: update_augmentation and maybe rebalance
-      return result;
-    }
-  }
-  if (root->size >= size) {
-    // This is the node to remove.
-    FFTREE *result = fftree_remove_this_node(rootp, root);
-    fftree_update_augmentation(*rootp);
-    return result;
-  }
-  {
-    FFTREE *right = root->right;
-    if (fftree_max_in_subtree(right) >= size) {
-      FFTREE *result = fftree_find_first_fit_and_remove(&root->right, size);
-      // TODO: update_augmentation and maybe rebalance
-      return result;
-    }
-  }
-  assert(0); // the max_in_subtree said there was a big enough block, but we didn't find one.
-}
-
 // Handle the case for mallocing a large (mmapped) block.
 // Returns 0 on success (and sets *result) or an error code.
 static int ff_malloc_mmap_e(void** result, size_t size) {
@@ -271,6 +137,26 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
   bt->size = size;
   *result = (void*)((char*)p + sizeof(BOUNDARY_TAG));
   return 0;
+}
+
+static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size) {
+  assert(node_size >= sizeof(FFTREE));
+  FFTREE *here = (FFTREE*)node;
+  *here = (FFTREE){NULL, NULL, 0, node_size, node_size};
+  {
+    FFTREE *prev = fftree_find_and_remove_prev_adjacent(tree_p, here);
+    if (prev != NULL) {
+      prev->size += node_size;
+      here = prev;
+    }
+  }
+  {
+    FFTREE *next = fftree_find_and_remove_next_adjacent(tree_p, here);
+    if (next != NULL) {
+      here->size += next->size;
+    }
+  }
+  fftree_insert(tree_p, here);
 }
 
 /* static void* ff_malloc_mmap_aligned(size_t size, size_t alignment) { */
@@ -296,12 +182,9 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
 static int ff_malloc_firstfit_e(void **result, size_t size) {
   fprintf(stderr, "%s(..., %lu)\n", __FUNCTION__, size);
   assert(size < mmap_lower_bound);
-  fprintf(stderr, " arena=%p\n", arena);
-  FFTREE *node = fftree_find_first_fit_and_remove(&arena, size);
+  FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
   fprintf(stderr, " Got node=%p\n", node);
-  fftree_validate(arena);
   if (node == NULL) {
-    // Invariant, we always have a free block at the end so that we can add 8 bytes to it if needed.
     const size_t overhead_at_beginning = 8;
     // So we'll need a few extra bytes at the end to have a free block at the end.
     const size_t overhead_at_end = sizeof(FFTREE);
@@ -313,17 +196,12 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
       assert(errno == ENOMEM);
       return ENOMEM;
     }
-    fftree_insert(&arena, p, n_to_sbrk);
-    assert(arena != NULL);
-    fftree_validate(arena);
-    fprintf(stderr, "After putting the sbrk block in, the arena is:\n");
-    fftree_print(arena, 1);
-    node = fftree_find_first_fit_and_remove(&arena, size);
-    assert(node != NULL);
-    fprintf(stderr, "After sbrk, find_and_remove got %p\n", node);
-    fftree_validate(arena);
+    fftree_insert_and_merge(&arena, p, n_to_sbrk);
+    fprintf(stderr, "After sbrk and insert\n");
+    assert(fftree_validate(arena));
+    node = fftree_find_and_remove_first_fit(&arena, size);
   }
-  fftree_validate(arena);
+  assert(fftree_validate(arena));
   fprintf(stderr, "Removed from tree, the node is\n");
   fftree_print(node, 0);
   fprintf(stderr, "the tree is\n");
@@ -334,11 +212,11 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
   if (nsize >= size + sizeof(FFTREE) + sizeof(BOUNDARY_TAG)) {
     // We can break the node in two.  There's enough space for the boundary tag
     // and for the cut off piece to hold an FFTREE.
-    fftree_insert(
-        &arena,
-        (char*)node + size + sizeof(BOUNDARY_TAG),
-        nsize - size - sizeof(BOUNDARY_TAG));
-    fftree_validate(arena);
+    FFTREE *here = (FFTREE*)((char*)node + size + sizeof(BOUNDARY_TAG));
+    here->size = nsize - size - sizeof(BOUNDARY_TAG);
+    // Don't need to merge here, since there won't be any adjacent nodes.
+    fftree_insert(&arena, here);
+    assert(fftree_validate(arena));
     fprintf(stderr, "Added tail block to arena to get\n");
     fftree_print(arena, 0);
   }
@@ -427,7 +305,7 @@ static void ff_free(void *p) {
       assert(r == 0);
     } else {
       size_t size = bt.size;
-      fftree_insert(&arena, get_boundary_tag_pointer(p), size);
+      fftree_insert_and_merge(&arena, get_boundary_tag_pointer(p), size);
     }
   } else {
     // Reconstruct the boundary tag as it was originally before we did the
@@ -510,7 +388,7 @@ static void test_little_malloc1(void) {
   fprintf(stderr, "boundary tag: size=%lu\n", (size_t)(get_boundary_tag(p).size));
   assert(get_boundary_tag(p).size == 24);
   ff_free(p);
-  fftree_validate(arena);
+  assert(fftree_validate(arena));
 
   void *p2;
   r = ff_malloc_e(&p2, 16);
@@ -531,17 +409,17 @@ static void test_little_malloc2(void) {
     assert(r == 0);
   }
   fprintf(stderr, " p1=%p\n p2=%p\n", p1, p2);
-  fftree_validate(arena);
+  assert(fftree_validate(arena));
   fftree_print(arena, 1);
   assert(get_boundary_tag(p1).size == 24 + sizeof(BOUNDARY_TAG));
   assert(get_boundary_tag(p2).size == 64 + sizeof(BOUNDARY_TAG));
   assert(((char*)p2) - ((char*)p1) == get_boundary_tag(p1).size);
 
-  fftree_validate(arena);
+  assert(fftree_validate(arena));
   ff_free(p2);
-  fftree_validate(arena);
+  assert(fftree_validate(arena));
   ff_free(p1);
-  fftree_validate(arena);
+  assert(fftree_validate(arena));
 
   // Now free them in the other order
   {
@@ -557,9 +435,9 @@ static void test_little_malloc2(void) {
     assert(p2 == p2a);
   }
   ff_free(p1);
-  fftree_validate(arena);
+  assert(fftree_validate(arena));
   ff_free(p2);
-  fftree_validate(arena);
+  assert(fftree_validate(arena));
   fprintf(stderr, " after returning both\n");
   fftree_print(arena, 1);
 }
