@@ -38,5 +38,4 @@ TODO: implement an iwyu test
 TODO: implement #include guard test
 TODO: build the library with only the exported API
 TODO: make the include dependencies be done automatically
-TODO: make the gcov tests co-exist with the non-gcov tests.
 
