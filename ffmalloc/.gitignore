@@ -1,4 +1,4 @@
-ffmalloc
+ffmalloc-test
 tree-test
 tree-test-gcov
 *.gcda

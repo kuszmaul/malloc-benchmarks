@@ -101,3 +101,7 @@
  
 
 Wilson's "solved" paper is claimed to be able to use lifetime prediction.   Need to look at that.
+
+Discussion: When doing realloc that shrinks a block, there's a temptation to
+shave the end of the block and add the unused bytes to the free tree.  I suspect
+this is a bad idea.  But maybe it would be OK.
