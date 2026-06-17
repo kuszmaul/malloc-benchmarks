@@ -37,5 +37,4 @@ TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn
 TODO: implement an iwyu test
 TODO: implement #include guard test
 TODO: build the library with only the exported API
-TODO: make the include dependencies be done automatically
 
