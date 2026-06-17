@@ -1,6 +1,6 @@
-        -:    0:Source:tree.c
-        -:    0:Graph:tree.gcno
-        -:    0:Data:tree.gcda
+        -:    0:Source:gcov/tree.c
+        -:    0:Graph:gcov/tree.gcno
+        -:    0:Data:gcov/tree.gcda
         -:    0:Runs:1
         -:    1:#include <assert.h>
         -:    2:#include <stdbool.h>
