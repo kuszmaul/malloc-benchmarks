@@ -73,7 +73,12 @@ static void *sbrk_end = NULL;
 
 
 bool ffmalloc_owns_address(void *p) {
-  return (((void*)(arena)) <= p ) && (p < sbrk_end);
+  writes(2, "ffmalloc_owns? "); writep(2, p);
+  writes(2, "\narena          "); writep(2, arena);
+  writes(2, "\n end           "); writep(2, sbrk_end);
+  bool result = (((void*)(arena)) <= p ) && (p < sbrk_end);
+  if (result) writes(2, "\n => true\n"); else writes(2, "\n => false;\n");
+  return result;
 }
 
 BOUNDARY_TAG* get_boundary_tag_pointer(void *p) {
@@ -163,12 +168,14 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     // We'll also need a size_t in the overhead for the boundary tag.
     const size_t overhead = overhead_at_beginning + overhead_at_end;
     const size_t n_to_sbrk = compute_next_sbrk_size(size + overhead);
+    // TODO: Watch out that we don't sbrk more than a gigabyte per call to sbrk.
     void *p = sbrk(n_to_sbrk);;
     if (p == (void*)-1) {
       ASSERT(errno == ENOMEM);
       return errno;
     }
     sbrk_end = (char*)p+n_to_sbrk;
+    writes(2, "did sbrk, now sbrk_end="); writep(2, sbrk_end); writes(2, "\n");
     fftree_insert_and_merge(&arena, p, n_to_sbrk);
     ASSERT(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
