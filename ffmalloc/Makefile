@@ -7,20 +7,23 @@ tests: ffmalloc-test.run ffmalloc.c.gcov
 tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
 
-dylib-bump.run: dylib/libbump.so dylib-test
-	LD_PRELOAD=dylib/libbump.so ./dylib-test
-dylib/libbump.so: bumpmalloc.c | dylib/
+dylib-bump.run: lib/libbump.so dylib-test
+	LD_PRELOAD=lib/libbump.so ./dylib-test
+lib/libbump.so: bumpmalloc.c | lib/
 	cc --shared -fPIC $(CFLAGS) bumpmalloc.c -o $@
 
-dylib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | dylib/
-	cc --shared -fPIC $(CFLAGS) malloc-api.c ffmalloc.c tree.c -o $@
+slib/libffmalloc.a: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | slib/
+	cc $(CFLAGS) $^ -o $@
+
+lib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | lib/
+	cc --shared -fPIC $(CFLAGS) $^ -o $@
 dylib-test:
 
 dylib-libc.run: dylib-test
 	./dylib-test
 
-dylib-ffmalloc.run: dylib-test dylib/libffmalloc.so
-	LD_PRELOAD=dylib/libffmalloc.so ./dylib-test
+dylib-ffmalloc.run: dylib-test lib/libffmalloc.so
+	LD_PRELOAD=lib/libffmalloc.so ./dylib-test
 
 %.run: test/%
 	$<
@@ -90,4 +93,4 @@ SOURCES = $(wildcard *.c)
 include $(SOURCES:.c=.d)
 
 clean:
-	rm -fr *.o tree-test test gcov *.gcov *.d.* *.iwyu
+	rm -fr *.o tree-test test gcov *.gcov *.d.* *.iwyu lib
