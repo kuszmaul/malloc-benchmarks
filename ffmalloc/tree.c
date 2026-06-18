@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdbool.h>
 
 #include "max.h"
@@ -21,15 +20,6 @@ size_t fftree_max_size_in_subtree(const FFTREE *t) {
     return t->max_size_in_subtree;
   }
 }
-
-#define VASSERT(a) ({                                      \
-    if (!(a)) {                                            \
-      writes(2, "Failure at tree.c:");                     \
-      writeul(2, __LINE__);                                \
-      writec(2, '\n');                                     \
-      return false;                                        \
-    }                                                      \
-})
 
 static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
   // Effect: Do the work for `fftree_validate`, where we have the additional
@@ -93,7 +83,7 @@ bool __attribute__((warn_unused_result)) fftree_validate(FFTREE *tree) {
 
 void fftree_update_augmentation(FFTREE *tree) {
   // Specification: See header file
-  assert(tree);
+  ASSERT(tree);
   tree->depth = 1+max(fftree_depth(tree->left), fftree_depth(tree->right));
   tree->max_size_in_subtree = max(tree->size,
                                   max(fftree_max_size_in_subtree(tree->left),
@@ -161,8 +151,8 @@ void fftree_maybe_rebalance(FFTREE **tree_p) {
 }
 
 void fftree_insert(FFTREE **tree_p, FFTREE *node) {
-  assert(node != NULL);
-  assert(tree_p != NULL);
+  ASSERT(node != NULL);
+  ASSERT(tree_p != NULL);
   FFTREE *tree = *tree_p;
   if (tree == NULL) {
     node->depth = 1;
@@ -178,9 +168,9 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node) {
 }
 
 FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
-  assert(rootp);
+  ASSERT(rootp);
   FFTREE *root = *rootp;
-  assert(root);
+  ASSERT(root);
   if (root->right == NULL) {
     *rootp = root->left;
     return root;
@@ -191,7 +181,7 @@ FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
 }
 
 void fftree_delete(FFTREE **rootp, FFTREE *node) {
-  assert(rootp != NULL);
+  ASSERT(rootp != NULL);
   FFTREE *root = *rootp;
   if (root == node) {
     if (root->left == NULL) {

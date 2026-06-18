@@ -78,10 +78,8 @@ test/ffmalloc-test: $(patsubst %,test/%,$(FFMALLOC_TEST_DEPS))
 test/ffmalloc-sbrk-test: $(patsubst %,test/%,$(FFMALLOC_SBRK_TEST_DEPS))
 	$(CC) $(LDFLAGS) $^ -coverage -o $@
 
-# Don't delete those symlinks.
-.SECONDARY: $(patsubst %,gcov/%,$(wildcard *.c *.h))
-
 .PRECIOUS: %.iwyu
+.PRECIOUS: %/
 
 %.d: %.c
 	@set -e; rm -f $@; \

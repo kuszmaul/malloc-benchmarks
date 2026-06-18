@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -79,7 +78,7 @@ typedef struct strbuf {
 } STRBUF;
 
 static void ensure_space(STRBUF *buf, size_t size) {
-  assert(buf->capacity - buf->size >= size);
+  ASSERT(buf->capacity - buf->size >= size);
 }
 
 static void writec_strbuf(STRBUF *buf, char c) {
@@ -169,7 +168,7 @@ void fftree_sprint(char *str, size_t str_size, FFTREE *tree, void *alloc) {
 
 bool fftree_in(const FFTREE *root, const FFTREE *node) {
   // Specification: See header file
-  assert(node != NULL);
+  ASSERT(node != NULL);
   if (root == NULL) return false;
   if (root == node) return true;
   if (node < root) return fftree_in(root->left, node);

@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "tree.h"
 
@@ -28,5 +29,25 @@ void fftree_sprint(char *str, size_t str_size, FFTREE *tree, void *alloc);
 
 bool fftree_in(const FFTREE *tree, const FFTREE *node);
 // Effect: Return true iff `node` is a node in `tree`.
+
+#define VASSERT(a) ({                                      \
+    if (!(a)) {                                            \
+      writes(2, "Failure at ");                            \
+      writes(2, __FILE__);                                 \
+      writec(2, ':');                                      \
+      writeul(2, __LINE__);                                \
+      writec(2, '\n');                                     \
+      return false;                                        \
+    }                                                      \
+})
+
+#define ASSERT(a) ({                                       \
+    if (!(a)) {                                            \
+      writes(2, "Failure at ");                            \
+      writes(2, __FILE__);                                 \
+      writec(2, ':');                                      \
+      abort();                                             \
+    }                                                      \
+})
 
 #endif

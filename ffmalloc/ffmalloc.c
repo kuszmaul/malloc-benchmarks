@@ -55,7 +55,6 @@
 //        constraints: it just directly calls malloc, which always returns
 //        8-byte aligned values.
 
-#include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -97,13 +96,8 @@ static bool ispow2(size_t n) {
   return n > 0 && (n & (n-1)) == 0;
 }
 
-//static bool is_aligned(size_t n, size_t alignment) {
-//  assert(ispow2(alignment));
-//  return (n & (alignment - 1)) == 0;
-//}
-
 static size_t alignup(size_t n, size_t alignment) {
-  assert(ispow2(alignment));
+  ASSERT(ispow2(alignment));
   return (n + alignment - 1) & ~(alignment -1);
 }
 
@@ -126,10 +120,10 @@ static size_t compute_next_sbrk_size(size_t size) {
 // Returns 0 on success (and sets *result) or an error code.
 static int ff_malloc_mmap_e(void** result, size_t size) {
   size = alignup(size + sizeof(BOUNDARY_TAG), page_size);
-  assert(size >= mmap_lower_bound);
+  ASSERT(size >= mmap_lower_bound);
   void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (p == (void*)-1) {
-    assert(errno == ENOMEM);
+    ASSERT(errno == ENOMEM);
     return ENOMEM;
   }
   BOUNDARY_TAG *bt = p;
@@ -140,7 +134,7 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
 }
 
 static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size) {
-  assert(node_size >= sizeof(FFTREE));
+  ASSERT(node_size >= sizeof(FFTREE));
   FFTREE *here = (FFTREE*)node;
   *here = (FFTREE){NULL, NULL, 0, node_size, node_size};
   {
@@ -159,28 +153,8 @@ static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_siz
   fftree_insert(tree_p, here);
 }
 
-/* static void* ff_malloc_mmap_aligned(size_t size, size_t alignment) { */
-/*   assert(ispow2(alignment)); */
-/*   mmaped_size = alignup(size + 2*sizeof(BOUNDARY_TAG) + sizeof(void*), page_size); */
-/*   void* p = mmap(0, mmaped_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0); */
-/*   assert(p); */
-/*   { */
-/*     BOUNDARY_TAG *bt = p; */
-/*     bt->is_memaligned = false; */
-/*     bt->size = mmaped_size; */
-/*   } */
-/*   char *returned_pointer = (char*)(alignup((uintptr_t)p + 2*sizeof(BOUNDARY_TAG), alignment)); */
-/*   { */
-/*     BOUNDARY_TAG *bt = returned_pointer - sizeof(BOUNDARY_TAG); */
-/*     bt->is_memaligned = true; */
-/*     bt->size = */
-
-
-
-/* } */
-
 static int ff_malloc_firstfit_e(void **result, size_t size) {
-  assert(size < mmap_lower_bound);
+  ASSERT(size < mmap_lower_bound);
   FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
   if (node == NULL) {
     const size_t overhead_at_beginning = 8;
@@ -191,15 +165,15 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     const size_t n_to_sbrk = compute_next_sbrk_size(size + overhead);
     void *p = sbrk(n_to_sbrk);;
     if (p == (void*)-1) {
-      assert(errno == ENOMEM);
+      ASSERT(errno == ENOMEM);
       return errno;
     }
     sbrk_end = (char*)p+n_to_sbrk;
     fftree_insert_and_merge(&arena, p, n_to_sbrk);
-    assert(fftree_validate(arena));
+    ASSERT(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
   }
-  assert(fftree_validate(arena));
+  ASSERT(fftree_validate(arena));
   fftree_print(node, 0);
   fftree_print(arena, 0);
 
@@ -212,7 +186,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     here->size = nsize - size - sizeof(BOUNDARY_TAG);
     // Don't need to merge here, since there won't be any adjacent nodes.
     fftree_insert(&arena, here);
-    assert(fftree_validate(arena));
+    ASSERT(fftree_validate(arena));
     fftree_print(arena, 0);
   }
   BOUNDARY_TAG* tag = (BOUNDARY_TAG*)(node);
@@ -244,7 +218,7 @@ int ff_malloc_e(void **result, size_t size) {
 
 int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   if (!ispow2(alignment)) return EINVAL;
-  assert(alignment % sizeof(void*) == 0);
+  ASSERT(alignment % sizeof(void*) == 0);
   if (size == 0) {
     *result = NULL;
     return 0;
@@ -279,9 +253,9 @@ void ff_free(void *p) {
   if (!bt.is_memaligned) {
     if (bt.size >= mmap_lower_bound) {
       BOUNDARY_TAG* btp = get_boundary_tag_pointer(p);
-      assert(((uintptr_t)(btp)) % page_size == 0);
+      ASSERT(((uintptr_t)(btp)) % page_size == 0);
       int r = munmap(btp, bt.size);
-      assert(r == 0);
+      ASSERT(r == 0);
     } else {
       size_t size = bt.size;
       fftree_insert_and_merge(&arena, get_boundary_tag_pointer(p), size);
