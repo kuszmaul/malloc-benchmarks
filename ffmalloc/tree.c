@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 #include "max.h"
 #include "tree.h"
+#include "tree-test-helpers.h"
 
 size_t fftree_depth(const FFTREE *t) {
   // Specification: see header file
@@ -24,7 +24,9 @@ size_t fftree_max_size_in_subtree(const FFTREE *t) {
 
 #define VASSERT(a) ({                                      \
     if (!(a)) {                                            \
-      fprintf(stderr, "Failure at tree.c:%d\n", __LINE__); \
+      writes(2, "Failure at tree.c:");                     \
+      writeul(2, __LINE__);                                \
+      writec(2, '\n');                                     \
       return false;                                        \
     }                                                      \
 })
@@ -49,7 +51,9 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
   if (tree->left != NULL) {
     VASSERT((char*)(tree->left) + tree->left->size <= (char*)tree);
     if (!fftree_validate_2(tree->left, lower_bound, tree)) {
-      fprintf(stderr, "Failure at tree.c:%d (returning)\n", __LINE__); \
+      writes(2, "Failure at tree.c:");
+      writeul(2, __LINE__);
+      writec(2, '\n');
       return false;
     }
     left_depth = tree->left->depth;
@@ -59,7 +63,9 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
   if (tree->right != NULL) {
     VASSERT((char*)(tree) + tree->size <= (char*)(tree->right));
     if (!fftree_validate_2(tree->right, tree, upper_bound)) {
-      fprintf(stderr, "Failure at tree.c:%d (returning)\n", __LINE__); \
+      writes(2, "Failure at tree.c:");
+      writeul(2, __LINE__);
+      writec(2, '\n');
       return false;
     }
     right_depth = tree->right->depth;
@@ -87,13 +93,11 @@ bool __attribute__((warn_unused_result)) fftree_validate(FFTREE *tree) {
 
 void fftree_update_augmentation(FFTREE *tree) {
   // Specification: See header file
-
   assert(tree);
   tree->depth = 1+max(fftree_depth(tree->left), fftree_depth(tree->right));
   tree->max_size_in_subtree = max(tree->size,
                                   max(fftree_max_size_in_subtree(tree->left),
                                       fftree_max_size_in_subtree(tree->right)));
-  fprintf(stderr, " updated augmentations\n");
 }
 
 static void set_left(FFTREE *node, FFTREE *child) {
@@ -136,7 +140,6 @@ void fftree_maybe_rebalance(FFTREE **tree_p) {
       *tree_p = lr;
     }
   } else if (fftree_depth(left) + 1 < fftree_depth(right)) {
-    printf("The right tree is too deep\n");
     // The right tree is too deep
     FFTREE *rl = right->left;
     FFTREE *rr = right->right;
@@ -146,7 +149,6 @@ void fftree_maybe_rebalance(FFTREE **tree_p) {
       set_left(right, tree);
       *tree_p = right;
     } else {
-      printf("Double rotation\n");
       // Double rotation
       FFTREE *rll = rl->left;
       FFTREE *rlr = rl->right;

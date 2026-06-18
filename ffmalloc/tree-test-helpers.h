@@ -6,6 +6,8 @@
 
 #include "tree.h"
 
+void writec(int fd, char c);
+
 void writes(int fd, char *str);
 // Effect: Write `str` to `fd`.
 

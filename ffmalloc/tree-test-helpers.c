@@ -8,7 +8,7 @@
 #include "tree.h"
 #include "tree-test-helpers.h"
 
-static void writec(int fd, char c) {
+void writec(int fd, char c) {
   write(fd, &c, 1);
 }
 
