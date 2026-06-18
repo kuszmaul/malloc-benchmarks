@@ -101,9 +101,24 @@ static void test_little_malloc1(void) {
 
   void *p2;
   r = ff_malloc_e(&p2, 16);
+  assert(r == 0);
   fprintf(stderr, "allocated 16 got %p\n", p2);
   assert(p2 == p); // first fit should always allocate the same thing again.
+
+  void *p3;
+  r = ff_malloc_e(&p3, 1);
+  assert(r == 0);
+  assert(ff_malloc_usable_size(p3) == sizeof(FFTREE) - sizeof(BOUNDARY_TAG));
+
+  void *p4;
+  r = ff_malloc_e(&p4, 1);
+  assert(r == 0);
+  assert((char*)p4 - (char*)p3 == sizeof(FFTREE));
+
   ff_free(p2);
+  ff_free(p3);
+  ff_free(p4);
+
 }
 
 static void test_little_malloc2(void) {

@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <malloc.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,4 +64,8 @@ void *realloc(void *p __attribute__((unused)), size_t size __attribute__((unused
 void *reallocarray(void *p __attribute__((unused)), size_t nmemb __attribute__((unused)), size_t size __attribute__((unused))) {
   write(1, "reallocarray\n", 13);
   abort();
+}
+
+size_t malloc_usable_size(void *p) {
+  return ff_malloc_usable_size(p);
 }

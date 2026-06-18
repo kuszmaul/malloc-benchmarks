@@ -17,7 +17,7 @@ slib/libffmalloc.a: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | slib/
 
 lib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | lib/
 	cc --shared -fPIC $(CFLAGS) $^ -o $@
-dylib-test:
+dylib-test: test/tree-test-helpers.o
 
 dylib-libc.run: dylib-test
 	./dylib-test

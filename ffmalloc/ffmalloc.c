@@ -64,19 +64,21 @@
 
 #include "headers.h"
 #include "ffmalloc.h"
+#include "max.h"
 #include "tree.h"
 #include "tree-test-helpers.h"
 
 FFTREE *arena = NULL;
 static size_t last_sbrk_size = 1;
+static void *sbrk_start = NULL;
 static void *sbrk_end = NULL;
 
 
 bool ffmalloc_owns_address(void *p) {
   writes(2, "ffmalloc_owns? "); writep(2, p);
-  writes(2, "\narena          "); writep(2, arena);
+  writes(2, "\n start         "); writep(2, sbrk_start);
   writes(2, "\n end           "); writep(2, sbrk_end);
-  bool result = (((void*)(arena)) <= p ) && (p < sbrk_end);
+  bool result = (sbrk_start <= p ) && (p < sbrk_end);
   if (result) writes(2, "\n => true\n"); else writes(2, "\n => false;\n");
   return result;
 }
@@ -139,6 +141,9 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
 }
 
 static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size) {
+  writes(2, "ffree_insert_and_merge node_size="); writeul(2, node_size);
+  writes(2, " sizeof(FFTREE)="); writeul(2, sizeof(FFTREE));
+  writes(2, "\n");
   ASSERT(node_size >= sizeof(FFTREE));
   FFTREE *here = (FFTREE*)node;
   *here = (FFTREE){NULL, NULL, 0, node_size, node_size};
@@ -159,6 +164,7 @@ static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_siz
 }
 
 static int ff_malloc_firstfit_e(void **result, size_t size) {
+  maxf(&size, sizeof(FFTREE) - sizeof(BOUNDARY_TAG));
   ASSERT(size < mmap_lower_bound);
   FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
   if (node == NULL) {
@@ -173,6 +179,9 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     if (p == (void*)-1) {
       ASSERT(errno == ENOMEM);
       return errno;
+    }
+    if (sbrk_start == NULL) {
+      sbrk_start = p;
     }
     sbrk_end = (char*)p+n_to_sbrk;
     writes(2, "did sbrk, now sbrk_end="); writep(2, sbrk_end); writes(2, "\n");
@@ -265,6 +274,7 @@ void ff_free(void *p) {
       ASSERT(r == 0);
     } else {
       size_t size = bt.size;
+      writes(2, "ffree size is "); writeul(2, size); writes(2, "\n");
       fftree_insert_and_merge(&arena, get_boundary_tag_pointer(p), size);
     }
   } else {
@@ -274,5 +284,14 @@ void ff_free(void *p) {
     BOUNDARY_TAG *original_tag_p = (BOUNDARY_TAG*)(*(get_memaligned_original_stored_at_pointer(p)));
     *original_tag_p = (BOUNDARY_TAG){0, bt.size};
     ff_free(original_tag_p + 1);
+  }
+}
+
+size_t ff_malloc_usable_size(void *p) {
+  BOUNDARY_TAG bt = get_boundary_tag(p);
+  if (!bt.is_memaligned) {
+    return bt.size - sizeof(BOUNDARY_TAG);
+  } else {
+    return bt.size + ((char*)p - (char*)(get_memaligned_original_stored_at_pointer(p)));
   }
 }

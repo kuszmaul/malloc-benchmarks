@@ -46,6 +46,8 @@ bool fftree_in(const FFTREE *tree, const FFTREE *node);
       writes(2, "Failure at ");                            \
       writes(2, __FILE__);                                 \
       writec(2, ':');                                      \
+      writeul(2, __LINE__);                                \
+      writec(2, '\n');                                     \
       abort();                                             \
     }                                                      \
 })
