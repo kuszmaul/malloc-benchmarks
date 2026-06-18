@@ -205,6 +205,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
 // posix_memalign uses.  It returns 0 on success (and stores the result in
 // *result) or returns an error code.
 int ff_malloc_e(void **result, size_t size, bool zero) {
+  size_t original_size = size;
   if (size == 0) {
     *result = NULL;
     return 0;
@@ -216,7 +217,7 @@ int ff_malloc_e(void **result, size_t size, bool zero) {
   } else {
     int r = ff_malloc_firstfit_e(result, size);
     if (r == 0 && zero) {
-      memset(result, 0, size);
+      memset(*result, 0, original_size);
     }
     return r;
   }

@@ -1,5 +1,6 @@
 #include <malloc.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "max.h"
@@ -64,9 +65,11 @@ void free(void*p __attribute__((__unused__))) {
   // Do nothing
 }
 
-void *calloc(size_t nmemb __attribute__((unused)), size_t size __attribute__((unused))) {
+void *calloc(size_t nmemb, size_t size) {
   write(1, "calloc\n", 7);
-  abort();
+  void *p = malloc(nmemb * size);
+  memset(p, 0, nmemb * size);
+  return p;
 }
 
 void *realloc(void *p __attribute__((unused)), size_t size __attribute__((unused))) {
