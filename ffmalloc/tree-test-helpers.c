@@ -1,17 +1,72 @@
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> // Need a working version of malloc to run tests.
+#include <string.h>
+#include <unistd.h>
 
 #include "tree.h"
 #include "tree-test-helpers.h"
 
+static void writec(int fd, char c) {
+  write(fd, &c, 1);
+}
+
+void writes(int fd, char *str) {
+  write(fd, str, strlen(str));
+}
+
+void writeux(int fd, unsigned long v) {
+  write(fd, "0x", 2);
+  for (size_t i = 0; i < 16; i++) {
+    size_t nibble = (v >> (15-i)) & 0xf;
+    writec(fd, (nibble < 10) ? nibble + '0' : nibble + 'a' - 10);
+  }
+}
+
+static void writeul0(int fd, unsigned long v) {
+  if (v == 0) return;
+  writeul0(fd, v / 10);
+  writec(fd, (v % 10) + '0');
+}
+
+void writeul(int fd, unsigned long v) {
+  if (v == 0) {
+    writec(fd, '0');
+  } else {
+    writeul0(fd, v);
+  }
+}
+
+void writep(int fd, void*p) {
+  if (p == NULL) {
+    writes(fd, "(nil)");
+  } else {
+    uintptr_t v = (uintptr_t)p;
+    writeux(fd, v);
+  }
+}
+
+static void writespaces(int fd, size_t n) {
+  for (size_t i = 0; i < n; i++) {
+    writec(fd, ' ');
+  }
+}
+
 void fftree_print(FFTREE *tree, int indent) {
   if (tree == NULL) {
-    fprintf(stderr, "%*sEmpty tree\n", indent, "");
+    writespaces(2, indent); writes(2, "Empty tree\n");
     return;
   }
-  fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_size_in_subtree);
+  writespaces(2, indent+1); writep(2, tree);
+  writec(2, ' '); writep(2, tree->left);
+  writec(2, ' '); writep(2, tree->right);
+  writec(2, ' '); writep(2, tree->right);
+  writec(2, ' '); writeul(2, tree->depth);
+  writec(2, ' '); writeul(2, tree->size);
+  writec(2, ' '); writeul(2, tree->max_size_in_subtree);
+  // fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_size_in_subtree);
   fftree_print(tree->left, indent+1);
   fftree_print(tree->right, indent+1);
 }
@@ -28,10 +83,6 @@ static void ensure_space(STRBUF *buf, size_t size) {
     buf->capacity = new_capacity;
     buf->string = realloc(buf->string, new_capacity);
   }
-}
-
-static STRBUF make_strbuf(void) {
-  return (STRBUF){malloc(16), 0, 16};
 }
 
 static void* offset_from(FFTREE *tree, void *alloc) {
@@ -68,10 +119,9 @@ static void fftree_sprint2(FFTREE *tree, int indent, STRBUF *buf, void *alloc) {
   }
 }
 
-char* fftree_sprint(FFTREE *tree, void *alloc) {
-  STRBUF buf = make_strbuf();
+void fftree_sprint(char *str, size_t str_size, FFTREE *tree, void *alloc) {
+  STRBUF buf = {str, 0, str_size};
   fftree_sprint2(tree, 0, &buf, alloc);
-  return buf.string;
 }
 
 bool fftree_in(const FFTREE *root, const FFTREE *node) {

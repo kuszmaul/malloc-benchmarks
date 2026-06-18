@@ -244,7 +244,7 @@ static void test_fftree_validate(void) {
 }
 
 static void test_fftree_update_augmentation(void) {
-  char *expect_print =
+  char expect_print[] =
       "(nil) (nil) 0x40 3 32 32\n"
       " Empty tree\n"
       " 0x40 0x20 (nil) 2 32 32\n"
@@ -252,6 +252,7 @@ static void test_fftree_update_augmentation(void) {
       "   Empty tree\n"
       "   Empty tree\n"
       "  Empty tree\n";
+  char s[sizeof(expect_print + 100)];
   {
     TEST_TREE tt = make_tree(
         desc(32, 0,
@@ -261,17 +262,15 @@ static void test_fftree_update_augmentation(void) {
                   NULL)));
     fftree_update_augmentation(tt.tree);
     {
-      char *s = fftree_sprint(tt.tree, tt.alloc);
+      fftree_sprint(s, sizeof(s), tt.tree, tt.alloc);
       assert(strcmp(s, expect_print) == 0);
-      free(s);
     }
     tt.tree->max_size_in_subtree = 0;
     tt.tree->depth = 0;
     fftree_update_augmentation(tt.tree);
     {
-      char *s = fftree_sprint(tt.tree, tt.alloc);
+      fftree_sprint(s, sizeof(s), tt.tree, tt.alloc);
       assert(strcmp(s, expect_print) == 0);
-      free(s);
     }
     free_test_tree(tt);
   }
@@ -286,15 +285,15 @@ static void test_fftree_maybe_rebalance_internal(TEST_TREE tt) {
       " 0x40 (nil) (nil) 1 32 32\n"
       "  Empty tree\n"
       "  Empty tree\n";
+  char s[sizeof(expect + 100)];
   assert(!fftree_validate(tt.tree));
   fftree_print(tt.tree, 0);
   fftree_maybe_rebalance(&tt.tree);
   fftree_print(tt.tree, 0);
   assert(fftree_validate(tt.tree));
   {
-    char *s = fftree_sprint(tt.tree, tt.alloc);
+    fftree_sprint(s, sizeof(s), tt.tree, tt.alloc);
     assert(strcmp(s, expect) == 0);
-    free(s);
   }
 }
 
@@ -338,12 +337,13 @@ static void test_fftree_insert(void) {
   assert(fftree_in(root, n000));
 
   {
-    char *s = fftree_sprint(root, data);
-    assert(strcmp(s,
-                  "(nil) (nil) (nil) 1 32 32\n"
-                  " Empty tree\n"
-                  " Empty tree\n") == 0);
-    free(s);
+    char expect[] =
+        "(nil) (nil) (nil) 1 32 32\n"
+        " Empty tree\n"
+        " Empty tree\n";
+    char s[sizeof(expect)+100];
+    fftree_sprint(s, sizeof(s), root, data);
+    assert(strcmp(s, expect) == 0);
   }
   assert(fftree_find_prev(root, n000) == NULL);
   assert(fftree_find_next(root, n000) == NULL);
@@ -352,14 +352,15 @@ static void test_fftree_insert(void) {
   *n200 = (FFTREE){NULL, NULL, 1, 32, 32};
   fftree_insert(&root, n200);
   {
-    char *s = fftree_sprint(root, data);
-    assert(strcmp(s,
-                  "(nil) (nil) 0x200 2 32 32\n"
-                  " Empty tree\n"
-                  " 0x200 (nil) (nil) 1 32 32\n"
-                  "  Empty tree\n"
-                  "  Empty tree\n") == 0);
-    free(s);
+    char expect[] =
+        "(nil) (nil) 0x200 2 32 32\n"
+        " Empty tree\n"
+        " 0x200 (nil) (nil) 1 32 32\n"
+        "  Empty tree\n"
+        "  Empty tree\n";
+    char s[sizeof(expect)+100];
+    fftree_sprint(s, sizeof(s),root, data);
+    assert(strcmp(s, expect) == 0);
   }
   assert(fftree_find_prev(root, n000) == NULL);
   assert(fftree_find_prev(root, n200) == n000);
@@ -370,16 +371,17 @@ static void test_fftree_insert(void) {
   *n400 = (FFTREE){NULL, NULL, 1, 32, 32};
   fftree_insert(&root, n400);
   {
-    char *s = fftree_sprint(root, data);
-    assert(strcmp(s,
-                  "0x200 (nil) 0x400 2 32 32\n"
-                  " (nil) (nil) (nil) 1 32 32\n"
-                  "  Empty tree\n"
-                  "  Empty tree\n"
-                  " 0x400 (nil) (nil) 1 32 32\n"
-                  "  Empty tree\n"
-                  "  Empty tree\n") == 0);
-    free(s);
+    char expect[] =
+        "0x200 (nil) 0x400 2 32 32\n"
+        " (nil) (nil) (nil) 1 32 32\n"
+        "  Empty tree\n"
+        "  Empty tree\n"
+        " 0x400 (nil) (nil) 1 32 32\n"
+        "  Empty tree\n"
+        "  Empty tree\n";
+    char s[sizeof(expect)+100];
+    fftree_sprint(s, sizeof(s), root, data);
+    assert(strcmp(s, expect) == 0);
   }
   assert(fftree_find_prev(root, n000) == NULL);
   assert(fftree_find_prev(root, n200) == n000);
@@ -393,16 +395,15 @@ static void test_fftree_insert(void) {
     FFTREE *n400a = fftree_remove_rightmost(&root);
     printf("n400a=%p\n", n400a);
     assert(n400a == n400);
-    char *s = fftree_sprint(root, data);
-    printf("s=\n%s\n", s);
-    assert(strcmp(s,
-                  "0x200 (nil) (nil) 2 32 32\n"
-                  " (nil) (nil) (nil) 1 32 32\n"
-                  "  Empty tree\n"
-                  "  Empty tree\n"
-                  " Empty tree\n"
-                  ) == 0);
-    free(s);
+    char expect[] =
+        "0x200 (nil) (nil) 2 32 32\n"
+        " (nil) (nil) (nil) 1 32 32\n"
+        "  Empty tree\n"
+        "  Empty tree\n"
+        " Empty tree\n";
+    char s[sizeof(expect)+100];
+    fftree_sprint(s, sizeof(s), root, data);
+    assert(strcmp(s, expect) == 0);
   }
   assert(fftree_find_prev(root, n000) == NULL);
   assert(fftree_find_prev(root, n200) == n000);
@@ -418,13 +419,13 @@ static void test_fftree_insert(void) {
     FFTREE *n000a = fftree_find_and_remove_first_fit(&root, 32);
     assert(n000a == n000);
     assert(!fftree_in(root, n000a));
-    char *s = fftree_sprint(root, data);
-    printf("s=\n%s\n", s);
-    assert(strcmp(s,
-                  "0x200 (nil) (nil) 1 32 32\n"
-                  " Empty tree\n"
-                  " Empty tree\n") == 0);
-    free(s);
+    char expect[] =
+        "0x200 (nil) (nil) 1 32 32\n"
+        " Empty tree\n"
+        " Empty tree\n";
+    char s[sizeof(expect)+100];
+    fftree_sprint(s, sizeof(s), root, data);
+    assert(strcmp(s, expect) == 0);
   }
 
   fftree_insert(&root, n000);
@@ -454,20 +455,19 @@ static void test_fftree_insert(void) {
     FFTREE *n250a = fftree_find_and_remove_first_fit(&root, 40);
     assert(n250a == n250);
     assert(!fftree_in(root, n250a));
-    char *s = fftree_sprint(root, data);
-    assert(strcmp(s,
-                  "0x200 (nil) 0x400 3 32 48\n"
-                  " (nil) (nil) (nil) 1 32 32\n"
-                  "  Empty tree\n"
-                  "  Empty tree\n"
-                  " 0x400 (nil) 0x500 2 32 48\n"
-                  "  Empty tree\n"
-                  "  0x500 (nil) (nil) 1 48 48\n"
-                  "   Empty tree\n"
-                  "   Empty tree\n"
-                  ) == 0);
-    printf("s=\n%s\n", s);
-    free(s);
+    char expect[] =
+        "0x200 (nil) 0x400 3 32 48\n"
+        " (nil) (nil) (nil) 1 32 32\n"
+        "  Empty tree\n"
+        "  Empty tree\n"
+        " 0x400 (nil) 0x500 2 32 48\n"
+        "  Empty tree\n"
+        "  0x500 (nil) (nil) 1 48 48\n"
+        "   Empty tree\n"
+        "   Empty tree\n";
+    char s[sizeof(expect)+100];
+    fftree_sprint(s, sizeof(s), root, data);
+    assert(strcmp(s, expect) == 0);
   }
   assert(fftree_validate(root));
 
@@ -475,54 +475,36 @@ static void test_fftree_insert(void) {
     FFTREE *n500a = fftree_find_and_remove_first_fit(&root, 48);
     assert(n500a == n500);
     assert(!fftree_in(root, n500a));
-    char *s = fftree_sprint(root, data);
-    printf("s=\n%s\n", s);
+    char expect[] =
+        "0x200 (nil) 0x400 2 32 32\n"
+        " (nil) (nil) (nil) 1 32 32\n"
+        "  Empty tree\n"
+        "  Empty tree\n"
+        " 0x400 (nil) (nil) 1 32 32\n"
+        "  Empty tree\n"
+        "  Empty tree\n";
+    char s[sizeof(expect)+100];
+    fftree_sprint(s, sizeof(s), root, data);
     assert(fftree_validate(root));
-    assert(strcmp(s,
-                  "0x200 (nil) 0x400 2 32 32\n"
-                  " (nil) (nil) (nil) 1 32 32\n"
-                  "  Empty tree\n"
-                  "  Empty tree\n"
-                  " 0x400 (nil) (nil) 1 32 32\n"
-                  "  Empty tree\n"
-                  "  Empty tree\n"
-                  ) == 0);
-    free(s);
+    assert(strcmp(s, expect) == 0);
   }
   assert(fftree_validate(root));
   FFTREE *n150 = (FFTREE *)(&data[0x150]);
   *n150 = (FFTREE){NULL, NULL, 1, 24, 24};
   fftree_insert(&root, n150);
-  char *s = fftree_sprint(root, data);
-  printf("s=\n%s\n", s);
+  //char *s = fftree_sprint(root, data);
+  //printf("s=\n%s\n", s);
   {
     FFTREE *n000a = fftree_find_and_remove_first_fit(&root, 32);
     printf("n000a=%p\n", (void*)(((char*)n000a) - data));
-    char *s = fftree_sprint(root, data);
-    printf("LINE %d s=\n%s\n", __LINE__, s);
     assert(n000a == n000);
     assert(!fftree_in(root, n000a));
   }
   {
     FFTREE *n200a = fftree_find_and_remove_first_fit(&root, 32);
-    {
-      char *s = fftree_sprint(root, data);
-      printf("LINE %d s=\n%s\n", __LINE__, s);
-      free(s);
-    }
-    {
-      char *s = fftree_sprint(n200a, data);
-      printf("removed\n%s\n", s);
-      free(s);
-    }
     assert(!fftree_in(root, n200));
     assert(root != n200);
     assert(n200a == n200);
-    {
-      char *s = fftree_sprint(root, data);
-      printf("LINE %d\n%s\n", __LINE__, s);
-      free(s);
-    }
   }
   // Make something where when we find the node we want, the left is not null and the right is null.
   FFTREE *n300 = (FFTREE *)(&data[0x300]);
@@ -532,30 +514,14 @@ static void test_fftree_insert(void) {
   fftree_insert(&root, n600);
   fftree_insert(&root, n300);
   fftree_insert(&root, n200);
-    {
-      char *s = fftree_sprint(root, data);
-      printf("LINE %d\n%s\n", __LINE__, s);
-      free(s);
-    }
   {
     FFTREE *n300b = fftree_find_and_remove_first_fit(&root, 48);
     assert(n300b == n300);
-  }
-  {
-    char *s = fftree_sprint(root, data);
-    printf("LINE %d s=\n%s\n", __LINE__, s);
-    free(s);
   }
   // Now finally n200 is the node we want, its left is non-null and its right is null.
   {
     FFTREE *n200b = fftree_find_and_remove_first_fit(&root, 32);
     assert(n200b == n200);
-  }
-
-  {
-    char *s = fftree_sprint(root, data);
-    printf("LINE %d s=\n%s\n", __LINE__, s);
-    free(s);
   }
   {
     FFTREE *n420 = (FFTREE *)&data[0x420];
@@ -563,18 +529,8 @@ static void test_fftree_insert(void) {
     {
       FFTREE *n400a = fftree_find_and_remove_prev_adjacent(&root, n420);
       assert(n400a == n400);
-      {
-        char *s = fftree_sprint(root, data);
-        printf("LINE %d s=\n%s\n", __LINE__, s);
-        free(s);
-      }
       n400a->size += 32; // add in the 420
       fftree_insert(&root, n400);
-      {
-        char *s = fftree_sprint(root, data);
-        printf("LINE %d s=\n%s\n", __LINE__, s);
-        free(s);
-      }
     }
   }
   {
@@ -586,11 +542,6 @@ static void test_fftree_insert(void) {
   }
   assert(fftree_find_prev(root, n000) == NULL);
   assert(fftree_find_and_remove_prev_adjacent(&root, n000) == NULL);
-  {
-    char *s = fftree_sprint(root, data);
-    printf("LINE %d s=\n%s\n", __LINE__, s);
-    free(s);
-  }
   {
     // Find a next item but it's not adjacent
     assert(fftree_find_next(root, n400) == n600);
@@ -607,7 +558,6 @@ static void test_fftree_insert(void) {
     assert(n400a != NULL);
     assert(n400a == n400);
   }
-
 }
 
 int main(void) {
