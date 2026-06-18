@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>  // use a known-working version of malloc to run these tests.
 #include <string.h>
 
@@ -204,7 +203,6 @@ static void test_fftree_validate(void) {
     tt.tree->right->depth = 2;
     tt.tree->left->right = NULL;
     tt.tree->left->depth = 1;
-    fprintf(stderr, "line %d\n", __LINE__);
     //fftree_print(tt.tree, 1);
     assert(!fftree_validate(tt.tree));;
     free_test_tree(tt);
@@ -252,7 +250,7 @@ static void test_fftree_update_augmentation(void) {
       "   Empty tree\n"
       "   Empty tree\n"
       "  Empty tree\n";
-  char s[sizeof(expect_print + 100)];
+  char s[sizeof(expect_print) + 200];
   {
     TEST_TREE tt = make_tree(
         desc(32, 0,
@@ -285,7 +283,7 @@ static void test_fftree_maybe_rebalance_internal(TEST_TREE tt) {
       " 0x40 (nil) (nil) 1 32 32\n"
       "  Empty tree\n"
       "  Empty tree\n";
-  char s[sizeof(expect + 100)];
+  char s[sizeof(expect) + 100];
   assert(!fftree_validate(tt.tree));
   fftree_print(tt.tree, 0);
   fftree_maybe_rebalance(&tt.tree);
@@ -393,7 +391,6 @@ static void test_fftree_insert(void) {
 
   {
     FFTREE *n400a = fftree_remove_rightmost(&root);
-    printf("n400a=%p\n", n400a);
     assert(n400a == n400);
     char expect[] =
         "0x200 (nil) (nil) 2 32 32\n"
@@ -492,11 +489,8 @@ static void test_fftree_insert(void) {
   FFTREE *n150 = (FFTREE *)(&data[0x150]);
   *n150 = (FFTREE){NULL, NULL, 1, 24, 24};
   fftree_insert(&root, n150);
-  //char *s = fftree_sprint(root, data);
-  //printf("s=\n%s\n", s);
   {
     FFTREE *n000a = fftree_find_and_remove_first_fit(&root, 32);
-    printf("n000a=%p\n", (void*)(((char*)n000a) - data));
     assert(n000a == n000);
     assert(!fftree_in(root, n000a));
   }

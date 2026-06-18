@@ -2,6 +2,7 @@
 #define TREE_TEST_HELPERS_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "tree.h"
 

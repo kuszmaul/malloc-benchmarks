@@ -1,8 +1,7 @@
 #include <assert.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h> // Need a working version of malloc to run tests.
 #include <string.h>
 #include <unistd.h>
 
@@ -78,42 +77,84 @@ typedef struct strbuf {
 } STRBUF;
 
 static void ensure_space(STRBUF *buf, size_t size) {
-  if (buf->capacity - buf->size < size) {
-    size_t new_capacity = 2 * buf->capacity + size;
-    buf->capacity = new_capacity;
-    buf->string = realloc(buf->string, new_capacity);
+  assert(buf->capacity - buf->size >= size);
+}
+
+static void writec_strbuf(STRBUF *buf, char c) {
+  ensure_space(buf, 1);
+  buf->string[buf->size++] = c;
+  buf->string[buf->size] = 0;
+}
+
+static void writespaces_strbuf(STRBUF *buf, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    writec_strbuf(buf, ' ');
+  }
+}
+
+static void writes_strbuf(STRBUF *buf, const char *str) {
+  char c;
+  while ((c = *str++)) {
+    writec_strbuf(buf, c);
+  }
+}
+
+static void writeul0_strbuf(STRBUF *buf, unsigned long v) {
+  if (v == 0) return;
+  writeul0_strbuf(buf, v / 10);
+  writec_strbuf(buf, (v % 10) + '0');
+}
+
+static void writeul_strbuf(STRBUF *buf, unsigned long v) {
+  if (v == 0) {
+    writec_strbuf(buf, '0');
+  } else {
+    writeul0_strbuf(buf, v);
+  }
+}
+
+static void writeux0_strbuf(STRBUF *buf, unsigned long v) {
+  if (v == 0) return;
+  writeux0_strbuf(buf, v / 16);
+  char nibble = v % 16;
+  writec_strbuf(buf, (nibble < 10) ? nibble + '0' : nibble + 'a' - 10);
+}
+
+static void writeux_strbuf(STRBUF *buf, unsigned long v) {
+  writes_strbuf(buf, "0x");
+  if (v == 0) {
+    writec_strbuf(buf, '0');
+  } else {
+    writeux0_strbuf(buf, v);
+  }
+}
+
+static void writep_strbuf(STRBUF *buf, void *p) {
+  if (p == NULL) {
+    writes_strbuf(buf, "(nil)");
+  } else {
+    writeux_strbuf(buf, (intptr_t)(p));
   }
 }
 
 static void* offset_from(FFTREE *tree, void *alloc) {
-  if (tree == NULL) return NULL;
+  if (tree == NULL) return 0;
   return (void*)((char*)tree - (char*)alloc);
 }
 
 static void fftree_sprint2(FFTREE *tree, int indent, STRBUF *buf, void *alloc) {
   if (tree == NULL) {
-    ensure_space(buf, indent + 16);
-    int added = snprintf(
-        buf->string + buf->size,
-        buf->capacity - buf->size,
-        "%*sEmpty tree\n", indent, "");
-    assert(added >= 0);
-    assert(((size_t)added) < buf->capacity - buf->size);
-    buf->size += added;
+    writespaces_strbuf(buf, indent);
+    writes_strbuf(buf, "Empty tree\n");
   } else {
-    ensure_space(buf, indent + 3 * 33 + 30);
-    int added = snprintf(
-        buf->string + buf->size,
-        buf->capacity - buf->size,
-        "%*s%p %p %p %u %u %u\n",
-        indent, "",
-        offset_from(tree, alloc),
-        offset_from(tree->left, alloc),
-        offset_from(tree->right, alloc),
-        tree->depth, tree->size, tree->max_size_in_subtree);
-    assert(added >= 0);
-    assert(((size_t)added) < buf->capacity - buf->size);
-    buf->size += added;
+    writespaces_strbuf(buf, indent);
+    writep_strbuf(buf, offset_from(tree, alloc));
+    writec_strbuf(buf, ' '); writep_strbuf(buf, offset_from(tree->left, alloc));
+    writec_strbuf(buf, ' '); writep_strbuf(buf, offset_from(tree->right, alloc));
+    writec_strbuf(buf, ' '); writeul_strbuf(buf, tree->depth);
+    writec_strbuf(buf, ' '); writeul_strbuf(buf, tree->size);
+    writec_strbuf(buf, ' '); writeul_strbuf(buf, tree->max_size_in_subtree);
+    writec_strbuf(buf, '\n');
     fftree_sprint2(tree->left, indent+1, buf, alloc);
     fftree_sprint2(tree->right, indent+1, buf, alloc);
   }
