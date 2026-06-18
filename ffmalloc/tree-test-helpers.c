@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 #include <unistd.h>
 
 #include "tree.h"
@@ -13,7 +12,10 @@ void writec(int fd, char c) {
 }
 
 void writes(int fd, char *str) {
-  write(fd, str, strlen(str));
+  char c;
+  while ((c=*str++)) {
+    writec(fd, c);
+  }
 }
 
 void writeux(int fd, unsigned long v) {

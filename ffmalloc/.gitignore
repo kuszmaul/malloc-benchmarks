@@ -1,7 +1,9 @@
 gcov/
 test/
+dylib/
 *.d
 *.iwyu
 *.runiwyu
 *.gcov
 check-include-guards
+dylib-test

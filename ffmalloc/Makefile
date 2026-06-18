@@ -7,6 +7,21 @@ tests: ffmalloc-test.run ffmalloc.c.gcov
 tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
 
+dylib-bump.run: dylib/libbump.so dylib-test
+	LD_PRELOAD=dylib/libbump.so ./dylib-test
+dylib/libbump.so: bumpmalloc.c | dylib/
+	cc --shared -fPIC $(CFLAGS) bumpmalloc.c -o $@
+
+dylib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | dylib/
+	cc --shared -fPIC $(CFLAGS) malloc-api.c ffmalloc.c tree.c -o $@
+dylib-test:
+
+dylib-libc.run: dylib-test
+	./dylib-test
+
+dylib-ffmalloc.run: dylib-test dylib/libffmalloc.so
+	LD_PRELOAD=dylib/libffmalloc.so ./dylib-test
+
 %.run: test/%
 	$<
 
@@ -18,7 +33,7 @@ run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 %.iwyu: %.c
 	iwyu $< 2>$@ ; echo ok # ignore the error produced by iwyu
 %.runiwyu: %.iwyu
-	! fgrep -q should $<
+	! fgrep -A 2 should $<
 	touch $@
 
 FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o
@@ -39,14 +54,12 @@ ffmalloc.c.gcov: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test
 	gcov ffmalloc.c -o gcov
 
 
-test:
-	mkdir test
+%/:
+	mkdir $@
 
-gcov:
-	mkdir gcov
 gcov/%: OPTFLAGS=-O0 -coverage
 gcov/%: LDFLAGS=-coverage
-gcov/%.o: %.c | gcov
+gcov/%.o: %.c | gcov/
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 gcov/tree-test: $(patsubst %,gcov/%,$(TREE_TEST_DEPS))
@@ -55,7 +68,7 @@ gcov/ffmalloc-test: $(patsubst %,gcov/%,$(FFMALLOC_TEST_DEPS))
 	$(CC) $(LDFLAGS) $^ -coverage -o $@
 gcov/ffmalloc-sbrk-test: $(patsubst %,gcov/%,$(FFMALLOC_SBRK_TEST_DEPS))
 
-test/%.o: %.c | test
+test/%.o: %.c | test/
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 test/tree-test: $(patsubst %,test/%,$(TREE_TEST_DEPS))
@@ -79,4 +92,4 @@ SOURCES = $(wildcard *.c)
 include $(SOURCES:.c=.d)
 
 clean:
-	rm -fr *.o tree-test test gcov *.gcov *.d.*
+	rm -fr *.o tree-test test gcov *.gcov *.d.* *.iwyu

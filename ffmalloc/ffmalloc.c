@@ -66,9 +66,16 @@
 #include "headers.h"
 #include "ffmalloc.h"
 #include "tree.h"
+#include "tree-test-helpers.h"
 
 FFTREE *arena = NULL;
 static size_t last_sbrk_size = 1;
+static void *sbrk_end = NULL;
+
+
+bool ffmalloc_owns_address(void *p) {
+  return (((void*)(arena)) <= p ) && (p < sbrk_end);
+}
 
 BOUNDARY_TAG* get_boundary_tag_pointer(void *p) {
   return ((BOUNDARY_TAG*)(p)) - 1;
@@ -187,6 +194,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
       assert(errno == ENOMEM);
       return errno;
     }
+    sbrk_end = (char*)p+n_to_sbrk;
     fftree_insert_and_merge(&arena, p, n_to_sbrk);
     assert(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
@@ -218,6 +226,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
 // posix_memalign uses.  It returns 0 on success (and stores the result in
 // *result) or returns an error code.
 int ff_malloc_e(void **result, size_t size) {
+  writes(2, "ff_malloc_e\n");
   fftree_print(arena, 0);
   if (size == 0) {
     *result = NULL;
