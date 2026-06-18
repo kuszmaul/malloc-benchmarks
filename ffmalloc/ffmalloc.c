@@ -63,14 +63,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-// Needed for tests
-#include <stdio.h>
-
 #include "headers.h"
 #include "ffmalloc.h"
 #include "tree.h"
-
-static const bool debug = false;
 
 FFTREE *arena = NULL;
 static size_t last_sbrk_size = 1;
@@ -126,7 +121,6 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
   size = alignup(size + sizeof(BOUNDARY_TAG), page_size);
   assert(size >= mmap_lower_bound);
   void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  if (debug) fprintf(stderr, "mmap(0, %lu, ...) => %p\n", size, p);
   if (p == (void*)-1) {
     assert(errno == ENOMEM);
     return ENOMEM;
@@ -179,10 +173,8 @@ static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_siz
 /* } */
 
 static int ff_malloc_firstfit_e(void **result, size_t size) {
-  fprintf(stderr, "%s(..., %lu)\n", __FUNCTION__, size);
   assert(size < mmap_lower_bound);
   FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
-  fprintf(stderr, " Got node=%p\n", node);
   if (node == NULL) {
     const size_t overhead_at_beginning = 8;
     // So we'll need a few extra bytes at the end to have a free block at the end.
@@ -200,9 +192,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     node = fftree_find_and_remove_first_fit(&arena, size);
   }
   assert(fftree_validate(arena));
-  fprintf(stderr, "Removed from tree, the node is\n");
   fftree_print(node, 0);
-  fprintf(stderr, "the tree is\n");
   fftree_print(arena, 0);
 
   size_t nsize = node->size;
@@ -215,13 +205,11 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     // Don't need to merge here, since there won't be any adjacent nodes.
     fftree_insert(&arena, here);
     assert(fftree_validate(arena));
-    fprintf(stderr, "Added tail block to arena to get\n");
     fftree_print(arena, 0);
   }
   BOUNDARY_TAG* tag = (BOUNDARY_TAG*)(node);
   tag->is_memaligned = false;
   tag->size = size + sizeof(BOUNDARY_TAG);
-  fprintf(stderr, "%d: tag->size=%lu\n", __LINE__, (size_t)(tag->size));
   *result = (void*)((char*)node + sizeof(BOUNDARY_TAG));
   return 0;
 }
@@ -246,7 +234,6 @@ int ff_malloc_e(void **result, size_t size) {
 ///////////////////////////////// tests ///////////////////////////////////////
 
 int ff_posix_memalign(void **result, size_t alignment, size_t size) {
-  if (debug) fprintf(stderr, "%s(..., %lu, %lu)\n", __FUNCTION__, alignment, size);
   if (!ispow2(alignment)) return EINVAL;
   assert(alignment % sizeof(void*) == 0);
   if (size == 0) {
@@ -262,26 +249,19 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   void *p;
   int r = ff_malloc_e(&p, amount_to_malloc);
   if (r != 0) {
-    fprintf(stderr, " => %d\n", r);
     return r;
   }
-  if (debug) fprintf(stderr, "ff_malloc returned %p\n", p);
   // We now have
   //   p[-8] the original boundary tag (which we won't use)
   //   p[0] space for the new boundary tag
   //   p[8 .. 8 + size + alignment -1]    space for an aligned block.
   BOUNDARY_TAG original_boundary_tag = get_boundary_tag(p);
   void *p_to_return = alignup_pointer((char*)p + sizeof(BOUNDARY_TAG), alignment);
-  if (debug) fprintf(stderr, "Got %p aligning to 0x%lx yields %p\n", p, alignment, p_to_return);
   BOUNDARY_TAG *new_tag_p = get_boundary_tag_pointer(p_to_return);
   *new_tag_p = (BOUNDARY_TAG){1, original_boundary_tag.size};
-  if (debug) fprintf(stderr, "new_tag_p=%p\n", new_tag_p);
-  if (debug) fprintf(stderr, "new_tag={%d %lu}\n", new_tag_p->is_memaligned, (size_t)(new_tag_p->size));
   void ** store_start_at = get_memaligned_original_stored_at_pointer(p_to_return);
-  if (debug) fprintf(stderr, "store_start_at=%p, storing %p\n",store_start_at, get_boundary_tag_pointer(p));
   *store_start_at = get_boundary_tag_pointer(p);
   *result = p_to_return;
-  if (debug) fprintf(stderr, "%s => 0 %p\n", __FUNCTION__, p_to_return);
   return 0;
 }
 
@@ -302,9 +282,7 @@ void ff_free(void *p) {
     // memalignment hacking.  (We could have overwritten the boundary tag with
     // the original_stored_at information.)
     BOUNDARY_TAG *original_tag_p = (BOUNDARY_TAG*)(*(get_memaligned_original_stored_at_pointer(p)));
-    if (debug) fprintf(stderr, "freeing original_tag_p=%p\n", original_tag_p);
     *original_tag_p = (BOUNDARY_TAG){0, bt.size};
-    if (debug) fprintf(stderr, "fixed up boundary tag={%lu %lu}\n", (size_t)(original_tag_p->is_memaligned), (size_t)(original_tag_p->size));
     ff_free(original_tag_p + 1);
   }
 }
