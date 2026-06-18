@@ -61,7 +61,7 @@ void *malloc(size_t n) {
 }
 
 void free(void*p __attribute__((__unused__))) {
-  write(2, "Freeing\n", 8);
+  // Do nothing
 }
 
 void *calloc(size_t nmemb __attribute__((unused)), size_t size __attribute__((unused))) {
