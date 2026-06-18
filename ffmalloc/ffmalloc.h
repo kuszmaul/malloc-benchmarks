@@ -7,7 +7,7 @@
 #include "headers.h"
 #include "tree.h"
 
-int ff_malloc_e(void **result, size_t size);
+int ff_malloc_e(void **result, size_t size, bool zero);
 void ff_free(void *p);
 int ff_posix_memalign(void **result, size_t alignment, size_t size);
 

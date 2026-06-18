@@ -73,7 +73,7 @@ static void test_little_malloc0(void) {
   fprintf(stderr, "\n%s\n", __FUNCTION__);
   {
     void *p;
-    int r = ff_malloc_e(&p, 0);
+    int r = ff_malloc_e(&p, 0, false);
     assert(r == 0);
     assert(p == NULL);
   }
@@ -89,7 +89,7 @@ static void test_little_malloc0(void) {
 static void test_little_malloc1(void) {
   fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p;
-  int r = ff_malloc_e(&p, 16);
+  int r = ff_malloc_e(&p, 16, false);
   assert(arena != NULL);
   assert(r == 0);
   fprintf(stderr, "allocated 16 got p=%p\n", p);
@@ -100,18 +100,18 @@ static void test_little_malloc1(void) {
   assert(fftree_validate(arena));
 
   void *p2;
-  r = ff_malloc_e(&p2, 16);
+  r = ff_malloc_e(&p2, 16, false);
   assert(r == 0);
   fprintf(stderr, "allocated 16 got %p\n", p2);
   assert(p2 == p); // first fit should always allocate the same thing again.
 
   void *p3;
-  r = ff_malloc_e(&p3, 1);
+  r = ff_malloc_e(&p3, 1, false);
   assert(r == 0);
   assert(ff_malloc_usable_size(p3) == sizeof(FFTREE) - sizeof(BOUNDARY_TAG));
 
   void *p4;
-  r = ff_malloc_e(&p4, 1);
+  r = ff_malloc_e(&p4, 1, false);
   assert(r == 0);
   assert((char*)p4 - (char*)p3 == sizeof(FFTREE));
 
@@ -125,11 +125,11 @@ static void test_little_malloc2(void) {
   fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p1, *p2;
   {
-    int r = ff_malloc_e(&p1, 24);
+    int r = ff_malloc_e(&p1, 24, false);
     assert(r == 0);
   }
   {
-    int r = ff_malloc_e(&p2, 64);
+    int r = ff_malloc_e(&p2, 64, false);
     assert(r == 0);
   }
   fprintf(stderr, " p1=%p\n p2=%p\n", p1, p2);
@@ -148,13 +148,13 @@ static void test_little_malloc2(void) {
   // Now free them in the other order
   {
     void *p1a = p1;
-    int r = ff_malloc_e(&p1, 24);
+    int r = ff_malloc_e(&p1, 24, false);
     assert(r == 0);
     assert(p1 == p1a);
   }
   {
     void *p2a = p2;
-    int r = ff_malloc_e(&p2, 64);
+    int r = ff_malloc_e(&p2, 64, false);
     assert(r == 0);
     assert(p2 == p2a);
   }
@@ -176,7 +176,7 @@ static void test_little_malloc(void) {
 static void test_big_malloc(void) {
   fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p;
-  int r = ff_malloc_e(&p, 2*mmap_lower_bound);
+  int r = ff_malloc_e(&p, 2*mmap_lower_bound, false);
   assert(r==0);
   assert(((uintptr_t)p) % page_size == 8);
   BOUNDARY_TAG bt = ((BOUNDARY_TAG*)(p))[-1];

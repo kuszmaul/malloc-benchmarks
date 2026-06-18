@@ -59,6 +59,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -203,16 +204,21 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
 // `ff_malloc_e` is like malloc except that it uses the calling interface that
 // posix_memalign uses.  It returns 0 on success (and stores the result in
 // *result) or returns an error code.
-int ff_malloc_e(void **result, size_t size) {
+int ff_malloc_e(void **result, size_t size, bool zero) {
   if (size == 0) {
     *result = NULL;
     return 0;
   }
   size = alignup(size, 8);
   if (size >= mmap_lower_bound) {
+    // mmap doesn't need the zero argument, since it always zeros.
     return ff_malloc_mmap_e(result, size);
   } else {
-    return ff_malloc_firstfit_e(result, size);
+    int r = ff_malloc_firstfit_e(result, size);
+    if (r == 0 && zero) {
+      memset(result, 0, size);
+    }
+    return r;
   }
 }
 
@@ -227,12 +233,12 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   }
   if (alignment <= sizeof(BOUNDARY_TAG)) {
     // small alignments don't need anything
-    int r = ff_malloc_e(result, size);
+    int r = ff_malloc_e(result, size, false);
     return r;
   }
   size_t amount_to_malloc = sizeof(BOUNDARY_TAG) + size + alignment - 1;
   void *p;
-  int r = ff_malloc_e(&p, amount_to_malloc);
+  int r = ff_malloc_e(&p, amount_to_malloc, false);
   if (r != 0) {
     return r;
   }

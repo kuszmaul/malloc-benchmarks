@@ -1,5 +1,7 @@
 #include <errno.h>
 #include <malloc.h>
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -12,7 +14,7 @@ static void writes(int fd, char *str) {
 
 void *malloc(size_t size) {
   void *result;
-  int e = ff_malloc_e(&result, size);
+  int e = ff_malloc_e(&result, size, false);
   if (e != 0) {
     errno = e;
     return NULL;
@@ -30,9 +32,19 @@ void free(void *p) {
   ff_free(p);
 }
 
-void *calloc(size_t nmemb __attribute__((unused)), size_t size __attribute__((unused))) {
-  write(1, "calloc\n", 7);
-  abort();
+void *calloc(size_t nmemb, size_t size) {
+  void *result;
+  ptrdiff_t n;
+  if (__builtin_mul_overflow(nmemb, size, &n)) {
+    errno = ENOMEM;
+    return NULL;
+  }
+  int e = ff_malloc_e(&result, n, true);
+  if (e != 0) {
+    errno = e;
+    return NULL;
+  }
+  return result;
 }
 
 void *realloc(void *p __attribute__((unused)), size_t size __attribute__((unused))) {

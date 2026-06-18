@@ -8,6 +8,12 @@ tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
 tests: dylib-ffmalloc.run dylib-libc.run dylib-bump.run
 
+hoard-tests: hoard-cache-scratch-test
+hoard-cache-scratch-test: lib/libffmalloc.so
+	../../Hoard/benchmarks/cache-scratch/cache-scratch 1 100 8 1000000
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 100 8 1000000
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 100 8 1000000
+
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test
 lib/libbump.so: bumpmalloc.c | lib/
