@@ -6,6 +6,7 @@ tests: tree-test.run tree.c.gcov
 tests: ffmalloc-test.run ffmalloc.c.gcov
 tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
+tests: dylib-ffmalloc.run dylib-libc.run dylib-bump.run
 
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test

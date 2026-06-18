@@ -1,3 +1,4 @@
+#include <malloc.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -49,10 +50,14 @@ static void ensure_space(size_t n) {
 
 void *malloc(size_t n) {
   if (n == 0) return NULL;
-  ensure_space(n);
-  char *result = data+free_index;
-  free_index += n;
-  return result;
+  // Round up to 8-alignment.
+  n = n + 7;
+  n &= ~7;
+  ensure_space(n + 8);
+  char *result = data+free_index + 8;
+  free_index += n + 8;
+  *((size_t*)result) = n + 8;
+  return result + 8;
 }
 
 void free(void*p __attribute__((__unused__))) {
@@ -87,4 +92,8 @@ void *aligned_alloc(size_t alignment __attribute__((unused)), size_t size __attr
 void *valloc(size_t size __attribute__((unused))) {
   write(1, "valloc\n", 7);
   abort();
+}
+
+size_t malloc_usable_size(void *p) {
+  return *((size_t*)(((char*)p)-8)) - 8;
 }
