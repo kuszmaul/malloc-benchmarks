@@ -1,12 +1,16 @@
 OPTFLAGS = -O0
 CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes -Wmissing-prototypes
 
+GCOV_FILES = tree.c.gcov ffmalloc.c
+
 tests: run-iwyu
-tests: tree-test.run tree.c.gcov
-tests: ffmalloc-test.run ffmalloc.c.gcov
+tests: tree-test.run
+tests: ffmalloc-test.run
+#tests: malloc-api.c.gcov
 tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
 tests: dylib-ffmalloc.run dylib-libc.run dylib-bump.run
+tests: $(GCOV_FILES)
 
 hoard-tests: \
  hoard-cache-scratch-test \
@@ -81,14 +85,11 @@ FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpe
 
 TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o
 
-tree.c.gcov: gcov/tree-test
-	$< 2> /dev/null
-	gcov tree.c -o gcov
-ffmalloc.c.gcov: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test
+$(GCOV_FILES) &: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test gcov/tree-test
 	gcov/ffmalloc-test
 	gcov/ffmalloc-sbrk-test
-	gcov ffmalloc.c -o gcov
-
+	gcov/tree-test 2> /dev/null
+	gcov $(GCOV_FILES) -o gcov
 
 %/:
 	mkdir $@
