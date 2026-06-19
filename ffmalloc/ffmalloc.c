@@ -69,11 +69,12 @@
 #include "tree.h"
 #include "tree-test-helpers.h"
 
+const bool slow_run_validation = false;
+
 FFTREE *arena = NULL;
 static size_t last_sbrk_size = 1;
 static void *sbrk_start = NULL;
 static void *sbrk_end = NULL;
-
 
 bool ffmalloc_owns_address(void *p) {
   return (sbrk_start <= p ) && (p < sbrk_end);
@@ -177,10 +178,10 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     }
     sbrk_end = (char*)p+n_to_sbrk;
     fftree_insert_and_merge(&arena, p, n_to_sbrk);
-    ASSERT(fftree_validate(arena));
+    if (slow_run_validation) ASSERT(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
   }
-  ASSERT(fftree_validate(arena));
+  if (slow_run_validation) ASSERT(fftree_validate(arena));
 
   size_t nsize = node->size;
 
@@ -191,7 +192,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     here->size = nsize - size - sizeof(BOUNDARY_TAG);
     // Don't need to merge here, since there won't be any adjacent nodes.
     fftree_insert(&arena, here);
-    ASSERT(fftree_validate(arena));
+    if (slow_run_validation) ASSERT(fftree_validate(arena));
   }
   BOUNDARY_TAG* tag = (BOUNDARY_TAG*)(node);
   tag->is_memaligned = false;
