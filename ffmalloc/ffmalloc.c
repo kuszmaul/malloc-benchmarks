@@ -90,7 +90,6 @@ static void** get_memaligned_original_stored_at_pointer(void *p) {
 BOUNDARY_TAG get_boundary_tag(void *p) {
   return *(get_boundary_tag_pointer(p));
 }
-
 void* get_memaligned_original(void *p) {
   return *get_memaligned_original_stored_at_pointer(p);
 }
@@ -233,7 +232,7 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
     return 0;
   }
   if (alignment <= sizeof(BOUNDARY_TAG)) {
-    // small alignments don't need anything
+    // Very small alignments don't need anything.
     int r = ff_malloc_e(result, size, false);
     return r;
   }
@@ -284,6 +283,7 @@ size_t ff_malloc_usable_size(void *p) {
   if (!bt.is_memaligned) {
     return bt.size - sizeof(BOUNDARY_TAG);
   } else {
-    return bt.size + ((char*)p - (char*)(get_memaligned_original_stored_at_pointer(p)));
+    ptrdiff_t unusable = ((char*)p - (char*)(get_memaligned_original(p)));
+    return bt.size - unusable;
   }
 }

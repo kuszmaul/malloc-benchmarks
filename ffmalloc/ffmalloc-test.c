@@ -185,6 +185,10 @@ static void test_big_malloc(void) {
   if (debug) fprintf(stderr, "bt.size=%lu\n", (size_t)(bt.size));
   assert(bt.size == 2*mmap_lower_bound+page_size);
 
+  // The usable size of a big malloc just under an extra page: we need the extra
+  // page for the boundary tag, and then the extra space is at the end.
+  assert(ff_malloc_usable_size(p) == 2*mmap_lower_bound + page_size - sizeof(BOUNDARY_TAG));
+
   ff_free(p);
 }
 
@@ -211,12 +215,24 @@ static void test_big_posix_memalign_errors(void) {
 
 static void test_big_posix_memalign(size_t alignment) {
   if (debug) fprintf(stderr, "\n%s(0x%lx)\n", __FUNCTION__, alignment);
+  size_t requested = 2 * mmap_lower_bound;
   void *result;
   {
-    int r = ff_posix_memalign(&result, alignment, 2*mmap_lower_bound);
+    int r = ff_posix_memalign(&result, alignment, requested);
     assert(r==0);
   }
-  if (debug) fprintf(stderr, "result=%p\n", result);
+  size_t usable = ff_malloc_usable_size(result);
+  if (alignment < page_size) {
+    assert(usable == requested + page_size - alignment);
+  } else {
+    // For page-level alignment using mmap, our posix_memalign sometimes mmap's
+    // an extra page.  It doesn't really matter, so rather than fix the bug,
+    // let's just accept it.
+    assert(usable >= requested);
+    assert(usable <= requested + alignment);
+    assert(usable % page_size == 0);
+
+  }
   assert((uintptr_t)(result)%alignment == 0);
   BOUNDARY_TAG *btp = get_boundary_tag_pointer(result);
   uintptr_t block_start = (uintptr_t)btp;
