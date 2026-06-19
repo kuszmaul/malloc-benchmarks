@@ -1,12 +1,12 @@
 OPTFLAGS = -O0
 CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes -Wmissing-prototypes
 
-GCOV_FILES = tree.c.gcov ffmalloc.c
+GCOV_FILES = tree.c.gcov ffmalloc.c.gcov malloc-api.c.gcov
 
 tests: run-iwyu
 tests: tree-test.run
 tests: ffmalloc-test.run
-#tests: malloc-api.c.gcov
+tests: malloc-api-test.run
 tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
 tests: dylib-ffmalloc.run dylib-libc.run dylib-bump.run
@@ -78,6 +78,8 @@ run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 
 FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o
 FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpers.o
+MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o malloc-api.o
+
 
 #gcov/tree.o: $(patsubst %,gcov/%,$(TREE_O_DEPS))
 
@@ -85,11 +87,12 @@ FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpe
 
 TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o
 
-$(GCOV_FILES) &: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test gcov/tree-test
+$(GCOV_FILES) &: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test gcov/tree-test gcov/malloc-api-test
 	gcov/ffmalloc-test
 	gcov/ffmalloc-sbrk-test
 	gcov/tree-test 2> /dev/null
-	gcov $(GCOV_FILES) -o gcov
+	gcov/malloc-api-test
+	gcov $(patsubst %.gcov,%, $(GCOV_FILES)) -o gcov
 
 %/:
 	mkdir $@
@@ -100,10 +103,9 @@ gcov/%.o: %.c | gcov/
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 gcov/tree-test: $(patsubst %,gcov/%,$(TREE_TEST_DEPS))
-	$(CC) $(LDFLAGS) $^ -coverage -o $@
 gcov/ffmalloc-test: $(patsubst %,gcov/%,$(FFMALLOC_TEST_DEPS))
-	$(CC) $(LDFLAGS) $^ -coverage -o $@
 gcov/ffmalloc-sbrk-test: $(patsubst %,gcov/%,$(FFMALLOC_SBRK_TEST_DEPS))
+gcov/malloc-api-test: $(patsubst %,gcov/%,$(MALLOC_API_TEST_DEPS))
 
 test/%.o: %.c | test/
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -113,6 +115,8 @@ test/tree-test: $(patsubst %,test/%,$(TREE_TEST_DEPS))
 test/ffmalloc-test: $(patsubst %,test/%,$(FFMALLOC_TEST_DEPS))
 	$(CC) $(LDFLAGS) $^ -coverage -o $@
 test/ffmalloc-sbrk-test: $(patsubst %,test/%,$(FFMALLOC_SBRK_TEST_DEPS))
+	$(CC) $(LDFLAGS) $^ -coverage -o $@
+test/malloc-api-test: $(patsubst %,test/%,$(MALLOC_API_TEST_DEPS))
 	$(CC) $(LDFLAGS) $^ -coverage -o $@
 
 .PRECIOUS: %.iwyu
