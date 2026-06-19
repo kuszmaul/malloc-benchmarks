@@ -16,21 +16,37 @@ hoard-tests: \
  hoard-cache-scratch-test \
  hoard-cache-thrash-test \
  hoard-larson-test
+HOARD_CACHE_BENCHMARK_PARMS = 100 8 1000000
 hoard-cache-scratch-test: lib/libffmalloc.so
-	../../Hoard/benchmarks/cache-scratch/cache-scratch 1 100 8 1000000
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 100 8 1000000
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 100 8 1000000
+	echo singlethreaded
+	../../Hoard/benchmarks/cache-scratch/cache-scratch 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+	echo multithreaded
+	../../Hoard/benchmarks/cache-scratch/cache-scratch 4 $(HOARD_CACHE_BENCHMARK_PARMS)
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 4 $(HOARD_CACHE_BENCHMARK_PARMS)
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 4 $(HOARD_CACHE_BENCHMARK_PARMS)
 
 hoard-cache-thrash-test: lib/libffmalloc.so
-	../../Hoard/benchmarks/cache-thrash/cache-thrash 1 100 8 1000000
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 100 8 1000000
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 100 8 1000000
+	echo singlethreaded
+	../../Hoard/benchmarks/cache-thrash/cache-thrash 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+	echo multithreaded
+	../../Hoard/benchmarks/cache-thrash/cache-thrash 4 $(HOARD_CACHE_BENCHMARK_PARMS)
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 4 $(HOARD_CACHE_BENCHMARK_PARMS)
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 4 $(HOARD_CACHE_BENCHMARK_PARMS)
 
-LARSON_PARMS = 10 7 8 1000 10000 1 1
+LARSON_PARMS = 10 7 8 1000 10000 1
 hoard-larson-test: lib/libffmalloc.so
-	../../Hoard/benchmarks/larson/larson $(LARSON_PARMS)
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS)
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS)
+	echo singlethreaded
+	../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 1
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 1
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 1
+	echo multithreaded
+	../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 4
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 4
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 4
 
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test

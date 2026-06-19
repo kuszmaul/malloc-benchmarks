@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <malloc.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -9,9 +10,33 @@
 #include "max.h"
 #include "tree-test-helpers.h"
 
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Even with only one thread, the lock does cost something (especially for
+// larson, which creates a thread that doesn't conflit with anything...)  But
+// even with only thread ffmalloc is quite a bit slower on larson (5mM ops/s
+// instead of 30M ops/s).
+
+const bool do_lock = true;
+
+static inline void my_lock(void) {
+  if (do_lock) {
+    int r = pthread_mutex_lock(&mutex);
+    ASSERT(r == 0);
+  }
+}
+static inline void my_unlock(void) {
+  if (do_lock) {
+    int r = pthread_mutex_unlock(&mutex);
+    ASSERT(r == 0);
+  }
+}
+
 void *malloc(size_t size) {
+  my_lock();
   void *result;
   int e = ff_malloc_e(&result, size, false);
+  my_unlock();
   if (e != 0) {
     errno = e;
     return NULL;
@@ -20,7 +45,6 @@ void *malloc(size_t size) {
 }
 
 void free(void *p) {
-  //writes(2, "free\n");
   if (p == NULL) return;
 #if 0
   if (!ffmalloc_owns_address(p)) {
@@ -32,18 +56,21 @@ void free(void *p) {
     return;
   }
 #endif
-  //ff_free(p);
+  my_lock();
+  ff_free(p);
+  my_unlock();
 }
 
 void *calloc(size_t nmemb, size_t size) {
-  writes(2, "calloc\n");
   void *result;
   ptrdiff_t n;
   if (__builtin_mul_overflow(nmemb, size, &n)) {
     errno = ENOMEM;
     return NULL;
   }
+  my_lock();
   int e = ff_malloc_e(&result, n, true);
+  my_unlock();
   if (e != 0) {
     errno = e;
     return NULL;
@@ -65,8 +92,6 @@ void *reallocarray(void *p, size_t nmemb, size_t size) {
     return NULL;
   }
   return realloc(p, n);
-  writes(2, "reallocarray\n");
-  abort();
 }
 
 size_t malloc_usable_size(void *p) {
