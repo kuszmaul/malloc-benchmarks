@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include "max.h"
+#include "tree-test-helpers.h"
 
 char *data = NULL;
 size_t free_index = 0;
@@ -18,7 +19,7 @@ static void do_sbrk(size_t n) {
     size_t m = max(max_single_sbrk_size, n);
     void *r = sbrk(m);
     if (r == (void*)-1) {
-      write(2, "sbrk failed\n", 12);
+      writes(2, "sbrk failed\n");
       abort();
     }
     data_size += m;
@@ -33,7 +34,7 @@ static void ensure_space(size_t n) {
   if (data == NULL) {
     data = sbrk(0);
     if (data == (void*)-1) {
-      write(2, "sbrk(0) failed\n", 12);
+      writes(2, "sbrk(0) failed\n");
       abort();
     }
     free_index = 0;
@@ -44,7 +45,7 @@ static void ensure_space(size_t n) {
   data_size += last_sbrk_size;
 
   if (n > data_size - free_index) {
-    write(2, "data size not good\n", 19);
+    writes(2, "data size not good\n");
     abort();
   }
 }
@@ -66,34 +67,34 @@ void free(void*p __attribute__((__unused__))) {
 }
 
 void *calloc(size_t nmemb, size_t size) {
-  write(1, "calloc\n", 7);
+  writes(1, "calloc\n");
   void *p = malloc(nmemb * size);
   memset(p, 0, nmemb * size);
   return p;
 }
 
 void *realloc(void *p __attribute__((unused)), size_t size __attribute__((unused))) {
-  write(1, "realloc\n", 8);
+  writes(1, "realloc\n");
   abort();
 }
 
 void *reallocarray(void *p __attribute__((unused)), size_t nmemb __attribute__((unused)), size_t size __attribute__((unused))) {
-  write(1, "reallocarray\n", 13);
+  writes(1, "reallocarray\n");
   abort();
 }
 
 int posix_memalign(void **memptr __attribute__((unused)), size_t alignment __attribute__((unused)), size_t size __attribute__((unused))) {
-  write(1, "posix_memalign\n", 15);
+  writes(1, "posix_memalign\n");
   abort();
 }
 
 void *aligned_alloc(size_t alignment __attribute__((unused)), size_t size __attribute__((unused))) {
-  write(1, "aligned_alloc\n", 14);
+  writes(1, "aligned_alloc\n");
   abort();
 }
 
 void *valloc(size_t size __attribute__((unused))) {
-  write(1, "valloc\n", 7);
+  writes(1, "valloc\n");
   abort();
 }
 

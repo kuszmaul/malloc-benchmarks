@@ -57,7 +57,8 @@ lib/libbump.so: bumpmalloc.c | lib/
 slib/libffmalloc.a: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | slib/
 	cc $(CFLAGS) $^ -o $@
 
-lib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | lib/
+lib/%.so: OPTFLAGS=-O3
+lib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c | lib/
 	cc --shared -fPIC $(CFLAGS) $^ -o $@
 
 dylib-libc.run: dylib-test
