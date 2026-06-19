@@ -70,7 +70,7 @@ static void my_mincore_test_one_then_all_zeros(void *addr, size_t length) {
 }
 
 static void test_little_malloc0(void) {
-  fprintf(stderr, "\n%s\n", __FUNCTION__);
+  if (debug) fprintf(stderr, "\n%s\n", __FUNCTION__);
   {
     void *p;
     int r = ff_malloc_e(&p, 0, false);
@@ -87,14 +87,14 @@ static void test_little_malloc0(void) {
 }
 
 static void test_little_malloc1(void) {
-  fprintf(stderr, "\n%s\n", __FUNCTION__);
+  if (debug) fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p;
   int r = ff_malloc_e(&p, 16, false);
   assert(arena != NULL);
   assert(r == 0);
-  fprintf(stderr, "allocated 16 got p=%p\n", p);
+  if (debug) fprintf(stderr, "allocated 16 got p=%p\n", p);
   assert(sizeof(FFTREE) == 24);
-  fprintf(stderr, "boundary tag: size=%lu\n", (size_t)(get_boundary_tag(p).size));
+  if (debug) fprintf(stderr, "boundary tag: size=%lu\n", (size_t)(get_boundary_tag(p).size));
   assert(get_boundary_tag(p).size == 24);
   ff_free(p);
   assert(fftree_validate(arena));
@@ -102,7 +102,7 @@ static void test_little_malloc1(void) {
   void *p2;
   r = ff_malloc_e(&p2, 16, false);
   assert(r == 0);
-  fprintf(stderr, "allocated 16 got %p\n", p2);
+  if (debug) fprintf(stderr, "allocated 16 got %p\n", p2);
   assert(p2 == p); // first fit should always allocate the same thing again.
 
   void *p3;
@@ -122,7 +122,7 @@ static void test_little_malloc1(void) {
 }
 
 static void test_little_malloc2(void) {
-  fprintf(stderr, "\n%s\n", __FUNCTION__);
+  if (debug) fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p1, *p2;
   {
     int r = ff_malloc_e(&p1, 24, false);
@@ -132,9 +132,9 @@ static void test_little_malloc2(void) {
     int r = ff_malloc_e(&p2, 64, false);
     assert(r == 0);
   }
-  fprintf(stderr, " p1=%p\n p2=%p\n", p1, p2);
+  if (debug) fprintf(stderr, " p1=%p\n p2=%p\n", p1, p2);
   assert(fftree_validate(arena));
-  fftree_print(arena, 1);
+  if (debug) fftree_print(arena, 1);
   assert(get_boundary_tag(p1).size == 24 + sizeof(BOUNDARY_TAG));
   assert(get_boundary_tag(p2).size == 64 + sizeof(BOUNDARY_TAG));
   assert(((char*)p2) - ((char*)p1) == get_boundary_tag(p1).size);
@@ -162,8 +162,8 @@ static void test_little_malloc2(void) {
   assert(fftree_validate(arena));
   ff_free(p2);
   assert(fftree_validate(arena));
-  fprintf(stderr, " after returning both\n");
-  fftree_print(arena, 1);
+  if (debug) fprintf(stderr, " after returning both\n");
+  if (debug) fftree_print(arena, 1);
 }
 
 static void test_little_malloc(void) {
@@ -174,15 +174,15 @@ static void test_little_malloc(void) {
 }
 
 static void test_big_malloc(void) {
-  fprintf(stderr, "\n%s\n", __FUNCTION__);
+  if (debug) fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p;
   int r = ff_malloc_e(&p, 2*mmap_lower_bound, false);
   assert(r==0);
   assert(((uintptr_t)p) % page_size == 8);
   BOUNDARY_TAG bt = ((BOUNDARY_TAG*)(p))[-1];
   assert(!bt.is_memaligned);
-  fprintf(stderr, "requested size = %d\n", 2*mmap_lower_bound);
-  fprintf(stderr, "bt.size=%lu\n", (size_t)(bt.size));
+  if (debug) fprintf(stderr, "requested size = %d\n", 2*mmap_lower_bound);
+  if (debug) fprintf(stderr, "bt.size=%lu\n", (size_t)(bt.size));
   assert(bt.size == 2*mmap_lower_bound+page_size);
 
   ff_free(p);
@@ -210,7 +210,7 @@ static void test_big_posix_memalign_errors(void) {
 }
 
 static void test_big_posix_memalign(size_t alignment) {
-  fprintf(stderr, "\n%s(0x%lx)\n", __FUNCTION__, alignment);
+  if (debug) fprintf(stderr, "\n%s(0x%lx)\n", __FUNCTION__, alignment);
   void *result;
   {
     int r = ff_posix_memalign(&result, alignment, 2*mmap_lower_bound);

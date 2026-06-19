@@ -22,14 +22,15 @@ hoard-cache-thrash-test: lib/libffmalloc.so
 	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 100 8 1000000
 	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 100 8 1000000
 
+LARSON_PARMS = 10 7 8 1000 10000 1 1
 hoard-larson-test: lib/libffmalloc.so
-	../../Hoard/benchmarks/larson/larson 10 7 8 1000 10000 1 1
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/larson/larson  10 7 8 1000 10000 1 1
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson 1 100 8 1000000
-
+	../../Hoard/benchmarks/larson/larson $(LARSON_PARMS)
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS)
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS)
 
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test
+	touch $@
 lib/libbump.so: bumpmalloc.c | lib/
 	cc --shared -fPIC $(CFLAGS) bumpmalloc.c -o $@
 
@@ -38,20 +39,31 @@ slib/libffmalloc.a: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | slib/
 
 lib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | lib/
 	cc --shared -fPIC $(CFLAGS) $^ -o $@
-dylib-test: test/tree-test-helpers.o
 
 dylib-libc.run: dylib-test
 	./dylib-test
+	touch $@
 
 dylib-ffmalloc.run: dylib-test lib/libffmalloc.so
 	LD_PRELOAD=lib/libffmalloc.so ./dylib-test
+	touch $@
 
 %.run: test/%
 	$<
+	touch $@
 
-check-include-guards.run: $(patsubst %, check-include-guards-%, $(wildcard *.h))
-check-include-guards-%.h: %.h ./check-include-guards
+tree-test.run: test/tree-test
+	$< 2> /dev/null
+	touch $@
+
+check-include-guards.run: $(patsubst %.h, check-include-guards.%.run, $(wildcard *.h))
+#check-include-guards.ffmalloc.run: ffmalloc.h check-include-guards
+#	./check-include-guards $<
+check-include-guards.%.run: %.h check-include-guards
 	./check-include-guards $<
+	touch $@
+
+check-include-guards: check-include-guards.c
 
 run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 %.iwyu: %.c
@@ -70,7 +82,7 @@ FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpe
 TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o
 
 tree.c.gcov: gcov/tree-test
-	$<
+	$< 2> /dev/null
 	gcov tree.c -o gcov
 ffmalloc.c.gcov: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test
 	gcov/ffmalloc-test
@@ -114,4 +126,6 @@ SOURCES = $(wildcard *.c)
 include $(SOURCES:.c=.d)
 
 clean:
-	rm -fr *.o tree-test test gcov *.gcov *.d.* *.iwyu lib
+	rm -f *.o *.gcov *.d.* *.iwyu *.run *.runiwyu
+	rm -fr test/ gcov/ lib/
+	rm -f check-include-guards dylib-test tree-test

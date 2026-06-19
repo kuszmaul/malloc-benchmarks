@@ -4,6 +4,7 @@ lib/
 *.d
 *.iwyu
 *.runiwyu
+*.run
 *.gcov
 check-include-guards
 dylib-test

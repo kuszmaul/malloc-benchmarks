@@ -1,4 +1,4 @@
-// make sure that a header file has an include guard in it.
+// Make sure that a header file has an include guard in it.
 
 #include <assert.h>
 #include <ctype.h>
