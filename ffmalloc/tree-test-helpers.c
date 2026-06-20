@@ -7,7 +7,9 @@
 #include "tree-test-helpers.h"
 
 void writec(int fd, char c) {
-  write(fd, &c, 1);
+  // If this write fails, there's really not much to do, since we typicaly use
+  // this function while printing an assertion failure.
+  int r __attribute__((unused)) = write(fd, &c, 1);
 }
 
 void writes(int fd, char *str) {
@@ -18,7 +20,7 @@ void writes(int fd, char *str) {
 }
 
 void writeux(int fd, unsigned long v) {
-  write(fd, "0x", 2);
+  writes(fd, "0x");
   for (size_t i = 0; i < 16; i++) {
     size_t nibble = (v >> (15-i)) & 0xf;
     writec(fd, (nibble < 10) ? nibble + '0' : nibble + 'a' - 10);
