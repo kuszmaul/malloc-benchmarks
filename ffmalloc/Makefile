@@ -15,7 +15,8 @@ tests: $(GCOV_FILES)
 hoard-tests: \
  hoard-cache-scratch-test \
  hoard-cache-thrash-test \
- hoard-larson-test
+ hoard-larson-test \
+ hoard-threadtest-test
 HOARD_CACHE_BENCHMARK_PARMS = 100 8 1000000
 hoard-cache-scratch-test: lib/libffmalloc.so
 	echo singlethreaded
