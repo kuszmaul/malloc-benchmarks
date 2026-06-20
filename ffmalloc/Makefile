@@ -48,6 +48,18 @@ hoard-larson-test: lib/libffmalloc.so
 	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 4
 	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 4
 
+THREADTEST_PARMS = 1000 10000 0 8
+hoard-threadtest-test: lib/libffmalloc.so
+	echo singlethreaded
+	../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
+	echo multithreaded
+	../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
+	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
+	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
+
+
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test
 	touch $@
@@ -58,7 +70,7 @@ slib/libffmalloc.a: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | slib/
 	cc $(CFLAGS) $^ -o $@
 
 lib/%.so: OPTFLAGS=-O3
-lib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c | lib/
+lib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | lib/
 	cc --shared -fPIC $(CFLAGS) $^ -o $@
 
 dylib-libc.run: dylib-test
