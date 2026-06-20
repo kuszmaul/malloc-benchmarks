@@ -189,8 +189,8 @@ FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
     return root;
   }
   FFTREE *result = fftree_remove_rightmost(&root->right);
-  int r = fftree_validate_local(root);
-  ASSERT(r == true);
+  fftree_update_augmentation(root);
+  ASSERT(fftree_validate_local(root));
   fftree_maybe_rebalance(rootp);
   return result;
 }
@@ -204,7 +204,9 @@ void fftree_delete(FFTREE **rootp, FFTREE *node) {
     } else if (root->right == NULL) {
       *rootp = root->left;
     } else {
-      FFTREE *new_root = fftree_remove_rightmost(&root->left);
+      FFTREE *new_root = fftree_remove_rightmost(&root->right);
+      fftree_update_augmentation(root);
+      ASSERT(fftree_validate_local(root));
       set_both(new_root, root->left, root->right);
       *rootp = new_root;
     }

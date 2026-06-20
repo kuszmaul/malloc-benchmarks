@@ -554,6 +554,32 @@ static void test_fftree_insert(void) {
   }
 }
 
+static void test_fftree_remove_rightmost_of_child(void) {
+  TEST_TREE tt = make_tree(
+      desc(32, 0,
+           NULL,
+           desc(40, 0,
+                desc(48, 0, NULL, NULL),
+                NULL)));
+  FFTREE *removed = fftree_remove_rightmost(&tt.tree);
+  assert(removed->size == 40);
+  assert(fftree_validate(tt.tree));
+  free_test_tree(tt);
+}
+
+static void test_fftree_delete1(void) {
+  TEST_TREE tt = make_tree(
+      desc(40, 0,
+           desc(32, 0, NULL, NULL),
+           desc(48, 0,
+                desc(56, 0, NULL, NULL),
+                desc(64, 0, NULL, NULL))));
+  FFTREE *delete_me = tt.tree->right;
+  fftree_delete(&tt.tree, delete_me);
+  assert(fftree_validate(tt.tree));
+  free_test_tree(tt);
+}
+
 int main(void) {
   test_fftree_depth();
   test_max_size_in_subtree();
@@ -561,5 +587,7 @@ int main(void) {
   test_fftree_update_augmentation();
   test_fftree_maybe_rebalance();
   test_fftree_insert();
+  test_fftree_remove_rightmost_of_child();
+  test_fftree_delete1();
   return 0;
 }
