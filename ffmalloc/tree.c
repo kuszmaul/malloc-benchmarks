@@ -21,18 +21,9 @@ size_t fftree_max_size_in_subtree(const FFTREE *t) {
   }
 }
 
-static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
-  // Effect: Do the work for `fftree_validate`, where we have the additional
-  // requirement that the address every node in `tree` must be strictly between
-  // `lower_bound` and `upper_bound`.
+bool __attribute__((warn_unused_result)) fftree_validate_local(FFTREE *tree) {
   if (tree == NULL) {
     return true;
-  }
-  if (lower_bound != NULL) {
-    VASSERT(lower_bound < tree);
-  }
-  if (upper_bound != NULL) {
-    VASSERT(tree < upper_bound);
   }
   size_t expect_depth = 1;
   size_t expect_max_size = tree->size;
@@ -40,29 +31,16 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
   size_t right_depth = 0;
   if (tree->left != NULL) {
     VASSERT((char*)(tree->left) + tree->left->size <= (char*)tree);
-    if (!fftree_validate_2(tree->left, lower_bound, tree)) {
-      writes(2, "Failure at tree.c:");
-      writeul(2, __LINE__);
-      writec(2, '\n');
-      return false;
-    }
     left_depth = tree->left->depth;
     maxf(&expect_depth, 1 + left_depth);
     maxf(&expect_max_size, tree->left->max_size_in_subtree);
   }
-  if (tree->right != NULL) {
+  if (tree -> right != NULL) {
     VASSERT((char*)(tree) + tree->size <= (char*)(tree->right));
-    if (!fftree_validate_2(tree->right, tree, upper_bound)) {
-      writes(2, "Failure at tree.c:");
-      writeul(2, __LINE__);
-      writec(2, '\n');
-      return false;
-    }
     right_depth = tree->right->depth;
     maxf(&expect_depth, 1 + right_depth);
     maxf(&expect_max_size, tree->right->max_size_in_subtree);
   }
-
   // Verify the augmentations are correct.
   VASSERT(expect_depth == tree->depth);
   VASSERT(expect_max_size == tree->max_size_in_subtree);
@@ -73,6 +51,41 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
   } else if (right_depth < left_depth) {
     VASSERT(right_depth + 1 == left_depth);
   }
+  return true;
+}
+
+static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, FFTREE *lower_bound, FFTREE *upper_bound) {
+  // Effect: Do the work for `fftree_validate`, where we have the additional
+  // requirement that the address every node in `tree` must be strictly between
+  // `lower_bound` and `upper_bound`.
+  if (tree == NULL) {
+    return true;
+  }
+  if (!fftree_validate_local(tree)) {
+    writes(2, "Failure at tree.c:");
+    writeul(2, __LINE__);
+    writec(2, '\n');
+    return false;
+  }
+  if (lower_bound != NULL) {
+    VASSERT(lower_bound < tree);
+  }
+  if (upper_bound != NULL) {
+    VASSERT(tree < upper_bound);
+  }
+  if (!fftree_validate_2(tree->left, lower_bound, tree)) {
+    writes(2, "Failure at tree.c:");
+    writeul(2, __LINE__);
+    writec(2, '\n');
+    return false;
+  }
+  if (!fftree_validate_2(tree->right, tree, upper_bound)) {
+    writes(2, "Failure at tree.c:");
+    writeul(2, __LINE__);
+    writec(2, '\n');
+    return false;
+  }
+
   return true;
 }
 
@@ -176,6 +189,8 @@ FFTREE *fftree_remove_rightmost(FFTREE **rootp) {
     return root;
   }
   FFTREE *result = fftree_remove_rightmost(&root->right);
+  int r = fftree_validate_local(root);
+  ASSERT(r == true);
   fftree_maybe_rebalance(rootp);
   return result;
 }

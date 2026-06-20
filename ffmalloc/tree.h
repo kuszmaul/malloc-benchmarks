@@ -64,8 +64,15 @@ bool __attribute__((warn_unused_result)) fftree_validate(FFTREE *tree);
 //  3) The tree is balanced.  (That is, the `depth` of the left subtree is
 //  within one of the `depth` of the right subtree.)
 //
-// Returns true if the validation passes, else prints at least some message
+// Returns: true if the validation passes, else prints at least some message
 // (where?, and how can we test it?)  and returns false.
+//
+// Runtime: O(n) where n is the tree size.
+
+bool __attribute__((warn_unused_result)) fftree_validate_local(FFTREE *tree);
+// Effect: Does the non-recursive part of fftree_validate.
+//
+// Runtime: O(1).
 
 void fftree_print(FFTREE *tree, int indent);
 // Effect: Prints `tree`, indented by `indent`.
