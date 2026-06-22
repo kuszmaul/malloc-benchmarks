@@ -64,8 +64,7 @@ void fftree_print(FFTREE *tree, int indent) {
   writespaces(2, indent+1); writep(2, tree);
   writec(2, ' '); writep(2, tree->left);
   writec(2, ' '); writep(2, tree->right);
-  writec(2, ' '); writep(2, tree->right);
-  writec(2, ' '); writeul(2, tree->depth);
+  writec(2, ' '); writeul(2, tree->rand);
   writec(2, ' '); writeul(2, tree->size);
   writec(2, ' '); writeul(2, tree->max_size_in_subtree);
   // fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_size_in_subtree);
@@ -154,7 +153,7 @@ static void fftree_sprint2(FFTREE *tree, int indent, STRBUF *buf, void *alloc) {
     writep_strbuf(buf, offset_from(tree, alloc));
     writec_strbuf(buf, ' '); writep_strbuf(buf, offset_from(tree->left, alloc));
     writec_strbuf(buf, ' '); writep_strbuf(buf, offset_from(tree->right, alloc));
-    writec_strbuf(buf, ' '); writeul_strbuf(buf, tree->depth);
+    writec_strbuf(buf, ' '); writeul_strbuf(buf, tree->rand);
     writec_strbuf(buf, ' '); writeul_strbuf(buf, tree->size);
     writec_strbuf(buf, ' '); writeul_strbuf(buf, tree->max_size_in_subtree);
     writec_strbuf(buf, '\n');

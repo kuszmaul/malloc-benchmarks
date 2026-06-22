@@ -6,6 +6,10 @@ enum {
   mmap_log_lower_bound = 18,
  // Blocks this big or larger are mapped directly with mmap.
   mmap_lower_bound = 1ul<<mmap_log_lower_bound,
+  //
+  log_hash_mod = 8,
+  hash_mod = 1ul<<8,
+  phi = 0x9e3779b97f4a7c13ul,
 };
 
 typedef struct boundary_tag {

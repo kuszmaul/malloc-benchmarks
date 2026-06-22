@@ -20,13 +20,7 @@
 // the size of the block being managed.  It must be the case that the size is at
 // least `sizeof(FFTREE)`.
 //
-// Each node is augmented with a `depth`, which the longest distance from the
-// node to NULL.  By convention the depth of NULL is 0.  So for example, a node
-// with no children has depth 1.  We maintain the depth incrementally by
-// maintaining the invarant that the depth equals 1+max(depth(left),
-// depth(right)).
-//
-// The tree is further augmented with a `max_size_in_subtree`, which is the
+// The tree is augmented with a `max_size_in_subtree`, which is the
 // maximum `size` over the entire subtree.  By contention the maximum size in
 // the NULL subtree is zero.  We maintain the `max_size_in_subtree`
 // incrementally by maintaining the invariant that
@@ -34,18 +28,22 @@
 // max_size_in_subtree(right)).
 //
 // The blocks of memory being managed by the tree are nonoverlapping.
+//
+// The tree is a treap, and with the property that for each node n->rand is >=
+// the n->right->rand (if n->right exists) and >= n->left->rand (if n->left
+// exists).
 
 typedef struct fftree {
   struct fftree *left, *right;
-  size_t depth : 8; // depth includes the current node, so depth >= 1
+  size_t rand : log_hash_mod; // rand used for depth
   size_t size : mmap_log_lower_bound;
   // The maximum over the subtree of the size.  That is, the size of the biggest
   // node in the subtree.
   size_t max_size_in_subtree : mmap_log_lower_bound;
 } FFTREE;
 
-size_t fftree_depth(const FFTREE *t);
-// Effect: Returns the depth of the tree (0 for t==NULL).
+size_t fftree_rand(const FFTREE *t);
+// Effect: Returns the random number used for determining the depth of the tree (0 for t==NULL).
 
 size_t fftree_max_size_in_subtree(const FFTREE *t);
 // Effect: Returns the size of the biggest node in the subtree.
