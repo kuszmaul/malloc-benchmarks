@@ -3,6 +3,7 @@
 #include <stdlib.h>  // use a known-working version of malloc to run these tests.
 #include <string.h>
 
+#include "headers.h"
 #include "max.h"
 #include "tree.h"
 #include "tree-test-helpers.h"
