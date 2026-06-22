@@ -279,6 +279,84 @@ static void test_find_first_fit_4(void) {
   free_test_tree(tt);
 }
 
+static void test_find_prev_0(void) {
+  FFTREE *n = fftree_find_prev(NULL, NULL);
+  assert(n == NULL);
+}
+
+static void test_find_prev_1(void) {
+  TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
+  FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(tt.alloc));
+  assert(n == NULL);
+  free_test_tree(tt);
+}
+
+static void test_find_prev_2(void) {
+  TEST_TREE tt = make_tree(desc(40, 40, desc(40, 40, NULL, NULL), NULL));
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(80+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(tt.alloc));
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(40+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(tt.alloc));
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(0+(char*)(tt.alloc)));
+    assert(n == NULL);
+  }
+  free_test_tree(tt);
+}
+
+static void test_find_prev_3(void) {
+  TEST_TREE tt = make_tree(desc(40, 40, NULL, desc(40, 40, NULL, NULL)));
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(80+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(tt.alloc));
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(40+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(tt.alloc));
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(0+(char*)(tt.alloc)));
+    assert(n == NULL);
+  }
+  free_test_tree(tt);
+}
+
+#include <stdio.h>
+
+static void test_find_prev_4(void) {
+  TEST_TREE tt = make_tree(desc(40, 40,
+                                desc(40, 40, NULL, NULL),
+                                desc(40, 40, NULL, NULL)));
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(0+(char*)(tt.alloc)));
+    assert(n == NULL);
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(64+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(0+(char*)(tt.alloc)));
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(80+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(0+(char*)(tt.alloc)));
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(144+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(80+(char*)(tt.alloc)));
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(160+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(80+(char*)(tt.alloc)));
+  }
+  {
+    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(204+(char*)(tt.alloc)));
+    assert(n == (FFTREE*)(160+(char*)(tt.alloc)));
+  }
+}
+
 static void test_find_prev_adj_0(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
   FFTREE *t = fftree_find_and_remove_prev_adjacent(&tt.tree, (FFTREE*)((char*)(tt.alloc) + 0));
@@ -286,7 +364,6 @@ static void test_find_prev_adj_0(void) {
   assert(tt.tree != NULL);
   free_test_tree(tt);
 }
-
 
 static void test_find_prev_adj_1(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
@@ -363,6 +440,12 @@ int main(void) {
   test_find_first_fit_2();
   test_find_first_fit_3();
   test_find_first_fit_4();
+
+  test_find_prev_0();
+  test_find_prev_1();
+  test_find_prev_2();
+  test_find_prev_3();
+  test_find_prev_4();
 
   return 0;
 

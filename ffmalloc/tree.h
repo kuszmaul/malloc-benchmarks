@@ -101,7 +101,8 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size);
 
 FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node);
 // Effect: Find and return the maximal `n in tree` such that `n < node`.  Return
-// NULL if there is no such node.
+// NULL if there is no such node.  There is no requirement that `node` is in the
+// tree.
 
 FFTREE* fftree_find_next(FFTREE *tree, const FFTREE *node);
 // Effect: Find and return the minimal `n in tree` such that `n > node`.  Return
