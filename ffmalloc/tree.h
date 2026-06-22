@@ -108,6 +108,16 @@ FFTREE* fftree_find_next(FFTREE *tree, const FFTREE *node);
 // Effect: Find and return the minimal `n in tree` such that `n > node`.  Return
 // NULL if there is no such node.
 
+size_t fftree_hash(FFTREE *tree);
+// Effect: Return a hash of `tree`. The hash depends only on the address of
+// `tree` and is in the range 0 (inclusive) to `hash_mod` (exclusive).
+
+typedef struct tpair {
+  FFTREE *left, *right;
+} TPAIR;
+
+TPAIR fftree_split(FFTREE *tree, FFTREE *pivot);
+
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
 
 FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node);

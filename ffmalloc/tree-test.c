@@ -86,6 +86,10 @@ static TEST_TREE make_tree(NODE_DESC *desc) {
   return (TEST_TREE){desc, make_nodes(data, desc), data};
 }
 
+static FFTREE* tree_at(TEST_TREE *tt, size_t off) {
+  return (FFTREE*)(off+((char*)tt->alloc));
+}
+
 static void free_test_tree(TEST_TREE tt) {
   free(tt.alloc);
   free_desc(tt.desc);
@@ -247,8 +251,7 @@ static void test_find_first_fit_0(void) {
 
 static void test_find_first_fit_1(void) {
   TEST_TREE tt = make_tree(desc(80, 80, NULL, NULL));
-  FFTREE *n = fftree_find_first_fit(tt.tree, 40);
-  assert(n == (FFTREE*)(tt.alloc));
+  assert(fftree_find_first_fit(tt.tree, 40) == tree_at(&tt, 0));
   free_test_tree(tt);
 }
 
@@ -256,8 +259,7 @@ static void test_find_first_fit_2(void) {
   TEST_TREE tt = make_tree(desc(80, 80,
                                 desc(80, 80, NULL, NULL),
                                 NULL));
-  FFTREE *n = fftree_find_first_fit(tt.tree, 40);
-  assert(n == (FFTREE*)(tt.alloc));
+  assert(fftree_find_first_fit(tt.tree, 40) == tree_at(&tt, 0));
   free_test_tree(tt);
 }
 
@@ -265,8 +267,7 @@ static void test_find_first_fit_3(void) {
   TEST_TREE tt = make_tree(desc(80, 80,
                                 desc(32, 32, NULL, NULL),
                                 NULL));
-  FFTREE *n = fftree_find_first_fit(tt.tree, 40);
-  assert(n == (FFTREE*)(64+(char*)(tt.alloc)));
+  assert(fftree_find_first_fit(tt.tree, 40) == tree_at(&tt, 64));
   free_test_tree(tt);
 }
 
@@ -274,90 +275,131 @@ static void test_find_first_fit_4(void) {
   TEST_TREE tt = make_tree(desc(40, 40,
                                 desc(32, 32, NULL, NULL),
                                 desc(80, 80, NULL, NULL)));
-  FFTREE *n = fftree_find_first_fit(tt.tree, 48);
-  assert(n == (FFTREE*)(144+(char*)(tt.alloc)));
+  assert(fftree_find_first_fit(tt.tree, 48) == tree_at(&tt, 144));
   free_test_tree(tt);
 }
 
-static void test_find_prev_0(void) {
-  FFTREE *n = fftree_find_prev(NULL, NULL);
-  assert(n == NULL);
+static void test_find_0(void) {
+  assert(fftree_find_prev(NULL, NULL) == NULL);
+  assert(fftree_find_next(NULL, NULL) == NULL);
 }
 
-static void test_find_prev_1(void) {
+static void test_find_1(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
-  FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(tt.alloc));
-  assert(n == NULL);
+  assert(fftree_find_prev(tt.tree, (FFTREE*)(tt.alloc)) == NULL);
+  assert(fftree_find_next(tt.tree, (FFTREE*)(tt.alloc)) == NULL);
   free_test_tree(tt);
 }
 
-static void test_find_prev_2(void) {
+static void test_find_2(void) {
   TEST_TREE tt = make_tree(desc(40, 40, desc(40, 40, NULL, NULL), NULL));
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(80+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(tt.alloc));
-  }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(40+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(tt.alloc));
-  }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(0+(char*)(tt.alloc)));
-    assert(n == NULL);
-  }
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 104)) == tree_at(&tt, 80));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 80)) == tree_at(&tt, 0));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 64)) == tree_at(&tt, 0));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 40)) == tree_at(&tt, 0));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 0)) == NULL);
+
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 0)) == tree_at(&tt, 80));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 40)) == tree_at(&tt, 80));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 64)) == tree_at(&tt, 80));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 80)) == NULL);
+
   free_test_tree(tt);
 }
 
-static void test_find_prev_3(void) {
+static void test_find_3(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, desc(40, 40, NULL, NULL)));
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(80+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(tt.alloc));
-  }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(40+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(tt.alloc));
-  }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(0+(char*)(tt.alloc)));
-    assert(n == NULL);
-  }
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 80)) == tree_at(&tt, 0));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 40)) == tree_at(&tt, 0));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 0)) == NULL);
+
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 0)) == tree_at(&tt, 80));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 40)) == tree_at(&tt, 80));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 80)) == NULL);
   free_test_tree(tt);
 }
 
-#include <stdio.h>
-
-static void test_find_prev_4(void) {
+static void test_find_4(void) {
   TEST_TREE tt = make_tree(desc(40, 40,
                                 desc(40, 40, NULL, NULL),
                                 desc(40, 40, NULL, NULL)));
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(0+(char*)(tt.alloc)));
-    assert(n == NULL);
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 0)) == NULL);
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 64)) == tree_at(&tt, 0));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 80)) == tree_at(&tt, 0));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 144)) == tree_at(&tt, 80));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 160)) == tree_at(&tt, 80));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 204)) == tree_at(&tt, 160));
+
+  // This first case isn't portable, since it constructs a pointer that is before alloc.
+  // We need to be able to construct at tree where we skip the first few bytes.
+  assert(fftree_find_next(tt.tree, tree_at(&tt, -32)) == tree_at(&tt, 0));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 0)) == tree_at(&tt, 80));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 64)) == tree_at(&tt, 80));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 80)) == tree_at(&tt, 160));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 144)) == tree_at(&tt, 160));
+  assert(fftree_find_next(tt.tree, tree_at(&tt, 160)) == NULL);
+
+  free_test_tree(tt);
+}
+
+static void test_hash(void) {
+  const size_t n = 100;
+  FFTREE x[n];
+  size_t counts[hash_mod];
+  for (size_t i = 0; i < hash_mod; i++) {
+    counts[i] = 0;
   }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(64+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(0+(char*)(tt.alloc)));
+  for (size_t i = 0; i < n; i++) {
+    size_t h = fftree_hash(&x[i]);
+    assert(h < hash_mod);
+    counts[h]++;
   }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(80+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(0+(char*)(tt.alloc)));
-  }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(144+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(80+(char*)(tt.alloc)));
-  }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(160+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(80+(char*)(tt.alloc)));
-  }
-  {
-    FFTREE *n = fftree_find_prev(tt.tree, (FFTREE*)(204+(char*)(tt.alloc)));
-    assert(n == (FFTREE*)(160+(char*)(tt.alloc)));
+  for (size_t i = 0; i < hash_mod; i++) {
+    // The odds that a particular hash is used 20 times is extremely small.
+    assert(counts[i] < 20);
   }
 }
 
-static void test_find_prev_adj_0(void) {
+static void test_split_0(void) {
+  FFTREE pivot;
+  TPAIR p = fftree_split(NULL, &pivot);
+  assert(p.left == NULL);
+  assert(p.right == NULL);
+}
+
+static void test_split_1(void) {
+  TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
+  TPAIR p = fftree_split(tt.tree, tree_at(&tt, 120));
+  assert(p.left == tree_at(&tt, 0));
+  assert(p.right == NULL);
+  free_test_tree(tt);
+}
+
+static void test_split_2(void) {
+  TEST_TREE tt = make_tree(desc(40, 40, desc(40, 40, NULL, NULL), NULL));
+  assert(tt.tree->left != NULL);
+  tt.tree->left = NULL;
+  TPAIR p = fftree_split(tt.tree, tree_at(&tt, 0));
+  assert(p.left == NULL);
+  assert(p.right == tree_at(&tt, 80));
+  free_test_tree(tt);
+}
+
+static void test_split_3(void) {
+  TEST_TREE tt = make_tree(desc(40, 120,
+                                desc(40, 40, NULL, NULL),
+                                desc(40, 40, NULL, NULL)));
+  FFTREE *a = tt.tree->left;
+  FFTREE *b = tt.tree;
+  FFTREE *c = tt.tree->right;
+  TPAIR p = fftree_split(tt.tree, tree_at(&tt, 160));
+  assert(p.left == b);
+  assert(p.left->left == a);
+  assert(p.left->right == NULL);
+  assert(p.right == c);
+}
+
+static void test_find_remove_prev_adj_0(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
   FFTREE *t = fftree_find_and_remove_prev_adjacent(&tt.tree, (FFTREE*)((char*)(tt.alloc) + 0));
   assert(t == NULL);
@@ -365,7 +407,7 @@ static void test_find_prev_adj_0(void) {
   free_test_tree(tt);
 }
 
-static void test_find_prev_adj_1(void) {
+static void test_find_remove_prev_adj_1(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
   FFTREE *t = fftree_find_and_remove_prev_adjacent(&tt.tree, (FFTREE*)((char*)(tt.alloc) + 40));
   assert(t == (FFTREE*)((char*)(tt.alloc)));
@@ -373,7 +415,7 @@ static void test_find_prev_adj_1(void) {
   free_test_tree(tt);
 }
 
-static void test_find_prev_adj_2(void) {
+static void test_find_remove_prev_adj_2(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
   FFTREE *t = fftree_find_and_remove_prev_adjacent(&tt.tree, (FFTREE*)((char*)(tt.alloc) + 60));
   assert(t == NULL);
@@ -381,7 +423,7 @@ static void test_find_prev_adj_2(void) {
   free_test_tree(tt);
 }
 
-static void test_find_next_adj_0(void) {
+static void test_find_remove_next_adj_0(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
   FFTREE *t = fftree_find_and_remove_next_adjacent(&tt.tree, (FFTREE*)((char*)(tt.alloc)));
   assert(t == NULL);
@@ -389,7 +431,7 @@ static void test_find_next_adj_0(void) {
   free_test_tree(tt);
 }
 
-static void test_find_next_adj_1(void) {
+static void test_find_remove_next_adj_1(void) {
   TEST_TREE tt = make_tree(
       desc(40, 40,
            NULL,
@@ -400,7 +442,7 @@ static void test_find_next_adj_1(void) {
   free_test_tree(tt);
 }
 
-static void test_find_next_adj_2(void) {
+static void test_find_remove_next_adj_2(void) {
   TEST_TREE tt = make_tree(
       desc(40, 40,
            NULL,
@@ -441,21 +483,28 @@ int main(void) {
   test_find_first_fit_3();
   test_find_first_fit_4();
 
-  test_find_prev_0();
-  test_find_prev_1();
-  test_find_prev_2();
-  test_find_prev_3();
-  test_find_prev_4();
+  test_find_0();
+  test_find_1();
+  test_find_2();
+  test_find_3();
+  test_find_4();
+
+  test_hash();
+
+  test_split_0();
+  test_split_1();
+  test_split_2();
+  test_split_3();
 
   return 0;
 
-  test_find_prev_adj_0();
-  test_find_prev_adj_1();
-  test_find_prev_adj_2();
+  test_find_remove_prev_adj_0();
+  test_find_remove_prev_adj_1();
+  test_find_remove_prev_adj_2();
 
-  test_find_next_adj_0();
-  test_find_next_adj_1();
-  test_find_next_adj_2();
+  test_find_remove_next_adj_0();
+  test_find_remove_next_adj_1();
+  test_find_remove_next_adj_2();
   return 0;
 
   test_delete1();

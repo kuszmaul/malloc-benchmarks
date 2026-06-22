@@ -5,6 +5,10 @@
 #include "tree.h"
 #include "tree-test-helpers.h"
 
+// The functions are sorted in this file in the order in which they can be
+// tested.  For example, first we test the validate functions, then the search
+// functions, then the functions for inserting and deleting.
+
 size_t fftree_rand(const FFTREE *t) {
   // Specification: see header file
   if (t == NULL) {
@@ -91,15 +95,52 @@ void fftree_update_augmentation(FFTREE *tree) {
                                       fftree_max_size_in_subtree(tree->right)));
 }
 
-static size_t hash(FFTREE *node) {
+FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node) {
+  if (tree == NULL) return NULL;
+  else if (tree < node) {
+    FFTREE *p = fftree_find_prev(tree->right, node);
+    // If there's nothing useful in tree->right, then `node` is the answer.
+    if (p == NULL) {
+      return tree;
+    }
+    return p;
+  } else { // (tree > node)
+    return fftree_find_prev(tree->left, node);
+  }
+}
+
+FFTREE* fftree_find_next(FFTREE *tree, const FFTREE *node) {
+  if (tree == NULL) return NULL;
+  else if (tree > node) {
+    FFTREE *p = fftree_find_next(tree->left, node);
+    // If there's nothing useful in tree->left, then `node` is the answer.
+    if (p == NULL) {
+      return tree;
+    }
+    return p;
+  } else { // (tree < node)
+    return fftree_find_next(tree->right, node);
+  }
+}
+
+FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
+  // Specification: See header file.
+  if (fftree_max_size_in_subtree(root) < size) {
+    return NULL; // covers root=NULL
+  } else if (fftree_max_size_in_subtree(root->left) >= size) {
+    return fftree_find_first_fit(root->left, size);
+  } else if (root->size >= size) {
+    return root;
+  } else {
+    return fftree_find_first_fit(root->right, size);
+  }
+}
+
+size_t fftree_hash(FFTREE *node) {
   return ((uintptr_t)(node) * phi) % hash_mod;
 }
 
-typedef struct tpair {
-  FFTREE *left, *right;
-} TPAIR;
-
-static TPAIR fftree_split(FFTREE *tree, FFTREE *pivot) {
+TPAIR fftree_split(FFTREE *tree, FFTREE *pivot) {
   // Effect: split `tree` into two trees, one with nodes <= `pivot`, and one
   // with nodes > `pivot`.  Return the two trees as a `TPAIR`.
   //
@@ -143,7 +184,7 @@ static FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node) {
 
 void fftree_insert(FFTREE **tree_p, FFTREE *node) {
   ASSERT(tree_p != NULL);
-  node->rand = hash(node);
+  node->rand = fftree_hash(node);
   node->left = node->right = NULL;
   node->max_size_in_subtree = node->size;
   *tree_p = fftree_insert2(*tree_p, node);
@@ -188,53 +229,12 @@ void fftree_delete(FFTREE **tree_p, FFTREE *node) {
   *tree_p = fftree_delete2(*tree_p, node);
 }
 
-FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
-  // Specification: See header file.
-  if (fftree_max_size_in_subtree(root) < size) {
-    return NULL; // covers root=NULL
-  } else if (fftree_max_size_in_subtree(root->left) >= size) {
-    return fftree_find_first_fit(root->left, size);
-  } else if (root->size >= size) {
-    return root;
-  } else {
-    return fftree_find_first_fit(root->right, size);
-  }
-}
-
 /* Should go into the ffmalloc code? */
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size) {
   FFTREE *result = fftree_find_first_fit(*rootp, size);
   if (result == NULL) return NULL;
   fftree_delete(rootp, result);
   return result;
-}
-
-FFTREE* fftree_find_prev(FFTREE *tree, const FFTREE *node) {
-  if (tree == NULL) return NULL;
-  else if (tree < node) {
-    FFTREE *p = fftree_find_prev(tree->right, node);
-    // If there's nothing useful in tree->right, then `node` is the answer.
-    if (p == NULL) {
-      return tree;
-    }
-    return p;
-  } else { // (tree > node)
-    return fftree_find_prev(tree->left, node);
-  }
-}
-
-FFTREE* fftree_find_next(FFTREE *tree, const FFTREE *node) {
-  if (tree == NULL) return NULL;
-  else if (tree > node) {
-    FFTREE *p = fftree_find_next(tree->left, node);
-    // If there's nothing useful in tree->left, then `node` is the answer.
-    if (p == NULL) {
-      return tree;
-    }
-    return p;
-  } else { // (tree < node)
-    return fftree_find_next(tree->right, node);
-  }
 }
 
 /* Should this go into the ffmalloc code? */
