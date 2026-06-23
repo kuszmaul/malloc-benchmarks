@@ -77,21 +77,6 @@ void fftree_print(FFTREE *tree, int indent);
 //
 // Usage note: Useful for debugging.
 
-void fftree_insert(FFTREE **tree_p, FFTREE *node);
-// Effect: Insert `node` into `*tree_p`.  After running `ff_insert` the new root
-// of the tree is stored in `*tree_p`.
-//
-// Requires: `node` isn't in tree and doesn't overlap the tree.  `node->size`
-// must be have been initialized, but the other fields need not have been
-// initialized.
-
-FFTREE* fftree_remove_rightmost(FFTREE **rootp);
-
-void fftree_delete(FFTREE **tree_p, FFTREE*node);
-// Effect: Remove `node` from `*tree_p`.  The new root is stored in `*troee_p`.
-//
-// Requires: `node` is in the tree.
-
 FFTREE* fftree_find_first_fit(FFTREE *root, size_t size);
 // Effect: Find and return the leftmost node which has size >= `size`.  If no
 // such node exists, run `NULL`.
@@ -117,6 +102,26 @@ typedef struct tpair {
 } TPAIR;
 
 TPAIR fftree_split(FFTREE *tree, FFTREE *pivot);
+
+FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node);
+// Effect: Insert `node` into `*tree` returning the new root.  The `rand` and
+// `size` fields must have been initialized, but `left`, `right` and
+// `max_size_in_subtree` need not have been initialized.
+
+void fftree_insert(FFTREE **tree_p, FFTREE *node);
+// Effect: Insert `node` into `*tree_p`.  After running `ff_insert` the new root
+// of the tree is stored in `*tree_p`.
+//
+// Requires: `node` isn't in tree and doesn't overlap the tree.  `node->size`
+// must be have been initialized, but the other fields need not have been
+// initialized.
+
+FFTREE* fftree_remove_rightmost(FFTREE **rootp);
+
+void fftree_delete(FFTREE **tree_p, FFTREE*node);
+// Effect: Remove `node` from `*tree_p`.  The new root is stored in `*troee_p`.
+//
+// Requires: `node` is in the tree.
 
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
 
