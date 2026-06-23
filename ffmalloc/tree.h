@@ -132,6 +132,9 @@ void fftree_delete(FFTREE **tree_p, FFTREE*node);
 // Requires: `node` is in the tree.
 
 FFTREE* fftree_find_and_remove_first_fit(FFTREE **rootp, size_t size);
+// Effect: Find the leftmost block with total size (including headers) is at
+// least size.  Remove the block from the tree and return it.  If no such block
+// exists, the tree is left unchanged and NULL is returned.
 
 FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node);
 // Effect: If the previous node to `node` is adjacent to `node`, then find it
