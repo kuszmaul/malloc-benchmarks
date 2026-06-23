@@ -65,7 +65,6 @@
 
 #include "headers.h"
 #include "ffmalloc.h"
-#include "max.h"
 #include "tree.h"
 #include "tree-test-helpers.h"
 
@@ -109,14 +108,13 @@ static void* alignup_pointer(void* p, size_t alignment) {
 }
 
 static size_t compute_next_sbrk_size(size_t size) {
-  size_t prev = last_sbrk_size;
-  if (prev < size) {
-    size = alignup(size, page_size);
-  } else {
-    size *= 2;
+  // We want to at least double the amount that we sbrk.
+  size_t result = 2 * last_sbrk_size;
+  if (result < size) {
+    result = alignup(size, page_size);
   }
-  last_sbrk_size = size;
-  return size;
+  last_sbrk_size = result;
+  return result;
 }
 
 // Handle the case for mallocing a large (mmapped) block.
@@ -157,7 +155,13 @@ static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_siz
 }
 
 static int ff_malloc_firstfit_e(void **result, size_t size) {
-  maxf(&size, sizeof(FFTREE) - sizeof(BOUNDARY_TAG));
+  // We need a block that's big enough for an FFTREE and also big enough to hold
+  // size + boundary tag.
+  if (size <= sizeof(FFTREE) - sizeof(BOUNDARY_TAG)) {
+    size = sizeof(FFTREE);
+  } else {
+    size += sizeof(BOUNDARY_TAG);
+  }
   ASSERT(size < mmap_lower_bound);
   FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
   if (node == NULL) {
@@ -176,7 +180,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     if (sbrk_start == NULL) {
       sbrk_start = p;
     }
-    sbrk_end = (char*)p+n_to_sbrk;
+    sbrk_end = ((char*)p)+n_to_sbrk;
     fftree_insert_and_merge(&arena, p, n_to_sbrk);
     if (slow_run_validation) ASSERT(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
@@ -185,18 +189,18 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
 
   size_t nsize = node->size;
 
-  if (nsize >= size + sizeof(FFTREE) + sizeof(BOUNDARY_TAG)) {
+  if (nsize >= size + sizeof(FFTREE)) {
     // We can break the node in two.  There's enough space for the boundary tag
     // and for the cut off piece to hold an FFTREE.
-    FFTREE *here = (FFTREE*)((char*)node + size + sizeof(BOUNDARY_TAG));
-    here->size = nsize - size - sizeof(BOUNDARY_TAG);
+    FFTREE *here = (FFTREE*)((char*)node + size);
+    here->size = nsize - size;
     // Don't need to merge here, since there won't be any adjacent nodes.
     fftree_insert(&arena, here);
     if (slow_run_validation) ASSERT(fftree_validate(arena));
   }
   BOUNDARY_TAG* tag = (BOUNDARY_TAG*)(node);
   tag->is_memaligned = false;
-  tag->size = size + sizeof(BOUNDARY_TAG);
+  tag->size = size;
   *result = (void*)((char*)node + sizeof(BOUNDARY_TAG));
   return 0;
 }
@@ -211,7 +215,7 @@ int ff_malloc_e(void **result, size_t size, bool zero) {
     return 0;
   }
   size = alignup(size, 8);
-  if (size >= mmap_lower_bound) {
+  if (size + sizeof(BOUNDARY_TAG) >= mmap_lower_bound) {
     // mmap doesn't need the zero argument, since it always zeros.
     return ff_malloc_mmap_e(result, size);
   } else {

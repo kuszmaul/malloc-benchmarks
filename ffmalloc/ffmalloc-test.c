@@ -96,6 +96,7 @@ static void test_little_malloc1(void) {
   assert(sizeof(FFTREE) == 24);
   if (debug) fprintf(stderr, "boundary tag: size=%lu\n", (size_t)(get_boundary_tag(p).size));
   assert(get_boundary_tag(p).size == 24);
+  assert(fftree_validate(arena));
   ff_free(p);
   assert(fftree_validate(arena));
 
