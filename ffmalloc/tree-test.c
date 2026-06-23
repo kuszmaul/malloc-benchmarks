@@ -600,6 +600,21 @@ static void test_delete_4(void) {
   assert(fftree_eq(tree, NULL, NULL, 1, 48, 48));
 }
 
+static void test_find_and_remove_first_fit_0(void) {
+  FFTREE *tree = NULL;
+  FFTREE *result = fftree_find_and_remove_first_fit(&tree, 24);
+  assert(result == NULL);
+}
+
+static void test_find_and_remove_first_fit_1(void) {
+  TEST_TREE tt = make_tree(desc(40, 40,
+                                desc(32, 32, NULL, NULL),
+                                desc(80, 80, NULL, NULL)));
+  FFTREE *tree = tt.tree;
+  FFTREE *result = fftree_find_and_remove_first_fit(&tree, 48);
+  assert(result == tree_at(&tt, 144));
+  assert(!member(result, tree));
+}
 
 static void test_find_remove_prev_adj_0(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
@@ -712,6 +727,9 @@ int main(void) {
   test_delete_2();
   test_delete_3();
   test_delete_4();
+
+  test_find_and_remove_first_fit_0();
+  test_find_and_remove_first_fit_1();
 
   return 0;
 
