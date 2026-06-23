@@ -485,12 +485,8 @@ static void test_insert_2(void) {
       assert(member(tree, tree_at(&tt, k*160+80)));
     }
     FFTREE *node = tree_at(&tt, i*160+40);
-    writes(2, "\ninserting "); writep(2, node); writes(2, "\n");
-    fftree_print(tree, 1);
     node->size = 40;
     fftree_insert(&tree, node);
-    writes(2, "\n");
-    fftree_print(tree, 1);
     for (size_t k = 0; k < 10; k++) {
       if (!member(tree, tree_at(&tt, k*160+80))) {
         writes(2, "didn't find "); writep(2, tree_at(&tt, k*160+80)); writes(2, "\n");

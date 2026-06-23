@@ -137,7 +137,12 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
 }
 
 size_t fftree_hash(FFTREE *node) {
-  return ((uintptr_t)(node) * phi) % hash_mod;
+  return (((uintptr_t)(node) * (__uint128_t)(phi)) >> 64) % hash_mod;
+}
+
+size_t fftree_count(FFTREE *tree) {
+  if (tree == NULL) return 0;
+  return 1 + fftree_count(tree->left) + fftree_count(tree->right);
 }
 
 TPAIR fftree_split(FFTREE *tree, FFTREE *pivot) {
@@ -155,15 +160,20 @@ TPAIR fftree_split(FFTREE *tree, FFTREE *pivot) {
     fftree_update_augmentation(tree);
     return (TPAIR){tree, t2.right};
   } else {
-    TPAIR t2 = fftree_split(tree->right, pivot);
+    TPAIR t2 = fftree_split(tree->left, pivot);
     tree->left = t2.right;
     fftree_update_augmentation(tree);
     return (TPAIR){t2.left, tree};
   }
 }
 
-static FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node) {
-  if (tree == NULL) return node;
+FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node) {
+  if (tree == NULL) {
+    node->left = NULL;
+    node->right = NULL;
+    fftree_update_augmentation(node);
+    return node;
+  }
   if (tree->rand >= node->rand) {
     ASSERT(tree != node);
     if (tree < node) {
@@ -178,14 +188,13 @@ static FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node) {
   TPAIR pair = fftree_split(tree, node);
   node->left = pair.left;
   node->right = pair.right;
-  fftree_update_augmentation(tree);
+  fftree_update_augmentation(node);
   return node;
 }
 
 void fftree_insert(FFTREE **tree_p, FFTREE *node) {
   ASSERT(tree_p != NULL);
   node->rand = fftree_hash(node);
-  node->left = node->right = NULL;
   node->max_size_in_subtree = node->size;
   *tree_p = fftree_insert2(*tree_p, node);
 }

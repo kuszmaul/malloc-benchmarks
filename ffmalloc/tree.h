@@ -77,6 +77,9 @@ void fftree_print(FFTREE *tree, int indent);
 //
 // Usage note: Useful for debugging.
 
+size_t fftree_count(FFTREE *tree);
+// Effect: Returns the number of nodes in `tree`.
+
 FFTREE* fftree_find_first_fit(FFTREE *root, size_t size);
 // Effect: Find and return the leftmost node which has size >= `size`.  If no
 // such node exists, run `NULL`.
