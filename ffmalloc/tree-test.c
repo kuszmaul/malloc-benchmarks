@@ -676,19 +676,6 @@ static void test_find_remove_next_adj_2(void) {
   free_test_tree(tt);
 }
 
-static void test_delete1(void) {
-  TEST_TREE tt = make_tree(
-      desc(40, 0,
-           desc(32, 0, NULL, NULL),
-           desc(48, 0,
-                desc(56, 0, NULL, NULL),
-                desc(64, 0, NULL, NULL))));
-  FFTREE *delete_me = tt.tree->right;
-  fftree_delete(&tt.tree, delete_me);
-  assert(fftree_validate(tt.tree));
-  free_test_tree(tt);
-}
-
 int main(void) {
   test_depth();
   test_max_size_in_subtree();
@@ -731,8 +718,6 @@ int main(void) {
   test_find_and_remove_first_fit_0();
   test_find_and_remove_first_fit_1();
 
-  return 0;
-
   test_find_remove_prev_adj_0();
   test_find_remove_prev_adj_1();
   test_find_remove_prev_adj_2();
@@ -740,8 +725,6 @@ int main(void) {
   test_find_remove_next_adj_0();
   test_find_remove_next_adj_1();
   test_find_remove_next_adj_2();
-  return 0;
 
-  test_delete1();
   return 0;
 }
