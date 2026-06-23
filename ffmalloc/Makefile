@@ -64,15 +64,18 @@ hoard-threadtest-test: lib/libffmalloc.so
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test
 	touch $@
-lib/libbump.so: bumpmalloc.c | lib/
+lib/libbump.so: bumpmalloc.c tree-test-helpers.h | lib/
 	cc --shared -fPIC $(CFLAGS) bumpmalloc.c -o $@
 
-slib/libffmalloc.a: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | slib/
+LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c
+
+slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 	cc $(CFLAGS) $^ -o $@
 
-lib/%.so: OPTFLAGS=-O3
-lib/libffmalloc.so: malloc-api.c ffmalloc.c tree.c tree-test-helpers.c | lib/
-	cc --shared -fPIC $(CFLAGS) $^ -o $@
+# lib/%.so: OPTFLAGS=-O3
+lib/libffmalloc.so: tree-test-helpers.h
+lib/libffmalloc.so: $(LIBFFMALLOC_C_SOURCES) | lib/
+	cc --shared -fPIC $(CFLAGS) $(LIBFFMALLOC_C_SOURCES) -o $@
 
 dylib-libc.run: dylib-test
 	./dylib-test
@@ -109,7 +112,6 @@ run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o
 FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpers.o
 MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o malloc-api.o
-
 
 #gcov/tree.o: $(patsubst %,gcov/%,$(TREE_O_DEPS))
 
