@@ -140,10 +140,6 @@ static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_siz
   FFTREE *here = (FFTREE*)node;
   *here = (FFTREE){NULL, NULL, 0, 0, 0, node_size};
   set_fftree_node_size(here, node_size);
-  if (node_size > 4096) {
-    writes(2, " insert and merge of "); writep(2, node); writes(2, " size="); writeul(2, node_size); writes(2, "\n");
-    writes(2, " here->size="); writeul(2, fftree_node_size(here)); writes(2, "\n");
-  }
   {
     FFTREE *prev = fftree_find_and_remove_prev_adjacent(tree_p, here);
     if (prev != NULL) {
@@ -171,7 +167,6 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
   ASSERT(size < mmap_lower_bound);
   FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
   if (node == NULL) {
-    writes(2, "Trying some sbrk\n");
     const size_t overhead_at_beginning = 8;
     // So we'll need a few extra bytes at the end to have a free block at the end.
     const size_t overhead_at_end = sizeof(FFTREE);
@@ -188,10 +183,8 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
       sbrk_start = p;
     }
     sbrk_end = ((char*)p)+n_to_sbrk;
-    writes(2, "inserting to arena:"); writep(2, p); writes(2, " n_to_sbrk="); writeul(2, n_to_sbrk); writes(2, "\n");
     fftree_insert_and_merge(&arena, p, n_to_sbrk);
     if (true) ASSERT(fftree_validate(arena));
-    writes(2, "arena max="); writeul(2, arena->max_size_in_subtree); writes(2, "\n");
     node = fftree_find_and_remove_first_fit(&arena, size);
     if (node == NULL) {
       writes(2, "Still null\n");
