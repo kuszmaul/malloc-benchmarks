@@ -4,8 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "headers.h"
-
 // A FFTree is a binary search tree that can be used to implement a first-fit
 // allocator.
 //
@@ -32,6 +30,17 @@
 // The tree is a treap, and with the property that for each node n->rand is >=
 // the n->right->rand (if n->right exists) and >= n->left->rand (if n->left
 // exists).
+
+enum {
+  log_small_size_limit = 7,
+  small_size_limit = (1ul<<log_small_size_limit),
+
+  log_hash_mod = 8,
+  hash_mod = 1ul<<log_hash_mod,
+
+  // The fractional part of `phi` (the golden ratio) multiplied by 2**64.
+  phi = 0x9e3779b97f4a7c16ul,
+};
 
 typedef struct fftree {
   struct fftree *left, *right;

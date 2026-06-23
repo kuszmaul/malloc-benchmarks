@@ -5,7 +5,7 @@
 //   Small blocks: b locks that are managed with first fit.
 //
 //   Large blocks: are memory-mapped rather than managed with first fit.
-//    "large" maens >= `mmap_lower_bound`, which is tentatively, `1<<18`.
+//    "large" maens >= `first_fit_size_limit`, which is tentatively, `1<<18`.
 //
 //   Word: 8 bytes.
 //
@@ -24,7 +24,7 @@
 //    The meaning is this:
 //
 //      If `is_memaligned` is `false` then `size` is the number of bytes in the
-//        block.  if `size` is >= `mmap_lower_bound` then the block is mmapped.
+//        block.  if `size` is >= `first_fit_size_limit` then the block is mmapped.
 //        The size must be a multiple of `page_size`.
 //
 //      If `is_memaligned` is `true` then we this block is the result of a call
@@ -36,7 +36,7 @@
 //        `a`.  For a memaligned block we need a 2-word header: The first is
 //        a pointer to the actual beginning of the block, and the second is our
 //        header with `is_memaligned==true`.  The `size` is the size of the
-//        originally allocated block.  (And if `size >= mmap_lower_bound` then
+//        originally allocated block.  (And if `size >= first_fit_size_limit` then
 //        the originally allocated block is allocated via mmap and the size is a
 //        multiple of `page_size`.)
 //
@@ -64,7 +64,6 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "headers.h"
 #include "ffmalloc.h"
 #include "tree.h"
 #include "tree-test-helpers.h"
@@ -122,7 +121,7 @@ static size_t compute_next_sbrk_size(size_t size) {
 // Returns 0 on success (and sets *result) or an error code.
 static int ff_malloc_mmap_e(void** result, size_t size) {
   size = alignup(size + sizeof(BOUNDARY_TAG), page_size);
-  ASSERT(size >= mmap_lower_bound);
+  ASSERT(size >= first_fit_size_limit);
   void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (p == (void*)-1) {
     ASSERT(errno == ENOMEM);
@@ -164,7 +163,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
   } else {
     size += sizeof(BOUNDARY_TAG);
   }
-  ASSERT(size < mmap_lower_bound);
+  ASSERT(size < first_fit_size_limit);
   FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
   if (node == NULL) {
     const size_t overhead_at_beginning = 8;
@@ -221,7 +220,7 @@ int ff_malloc_e(void **result, size_t size, bool zero) {
     return 0;
   }
   size = alignup(size, 8);
-  if (size + sizeof(BOUNDARY_TAG) >= mmap_lower_bound) {
+  if (size + sizeof(BOUNDARY_TAG) >= first_fit_size_limit) {
     // mmap doesn't need the zero argument, since it always zeros.
     return ff_malloc_mmap_e(result, size);
   } else {
@@ -270,7 +269,7 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
 void ff_free(void *p) {
   BOUNDARY_TAG bt = get_boundary_tag(p);
   if (!bt.is_memaligned) {
-    if (bt.size >= mmap_lower_bound) {
+    if (bt.size >= first_fit_size_limit) {
       BOUNDARY_TAG* btp = get_boundary_tag_pointer(p);
       ASSERT(((uintptr_t)(btp)) % page_size == 0);
       int r = munmap(btp, bt.size);

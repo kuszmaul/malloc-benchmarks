@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "ffmalloc.h"
-#include "headers.h"
 
 int main(void) {
   struct rlimit v;
@@ -28,12 +27,12 @@ int main(void) {
   assert(p2 == (void*)-1);
   {
     void *p;
-    int r = ff_malloc_e(&p, mmap_lower_bound/2, false);
+    int r = ff_malloc_e(&p, first_fit_size_limit/2, false);
     assert(r == 0);
   }
   {
     void *p;
-    int r = ff_malloc_e(&p, mmap_lower_bound/2, false);
+    int r = ff_malloc_e(&p, first_fit_size_limit/2, false);
     assert(r == ENOMEM);
   }
   v.rlim_cur = -1;

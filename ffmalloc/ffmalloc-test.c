@@ -6,7 +6,6 @@
 #include <string.h>
 #include <sys/mman.h>
 
-#include "headers.h"
 #include "ffmalloc.h"
 #include "tree.h"
 
@@ -177,25 +176,25 @@ static void test_little_malloc(void) {
 static void test_big_malloc(void) {
   if (debug) fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p;
-  int r = ff_malloc_e(&p, 2*mmap_lower_bound, false);
+  int r = ff_malloc_e(&p, 2*first_fit_size_limit, false);
   assert(r==0);
   assert(((uintptr_t)p) % page_size == 8);
   BOUNDARY_TAG bt = ((BOUNDARY_TAG*)(p))[-1];
   assert(!bt.is_memaligned);
-  if (debug) fprintf(stderr, "requested size = %d\n", 2*mmap_lower_bound);
+  if (debug) fprintf(stderr, "requested size = %d\n", 2*first_fit_size_limit);
   if (debug) fprintf(stderr, "bt.size=%lu\n", (size_t)(bt.size));
-  assert(bt.size == 2*mmap_lower_bound+page_size);
+  assert(bt.size == 2*first_fit_size_limit+page_size);
 
   // The usable size of a big malloc just under an extra page: we need the extra
   // page for the boundary tag, and then the extra space is at the end.
-  assert(ff_malloc_usable_size(p) == 2*mmap_lower_bound + page_size - sizeof(BOUNDARY_TAG));
+  assert(ff_malloc_usable_size(p) == 2*first_fit_size_limit + page_size - sizeof(BOUNDARY_TAG));
 
   ff_free(p);
 }
 
 static void test_big_posix_memalign_errors(void) {
   errno = 0;
-  size_t size = 2*mmap_lower_bound;
+  size_t size = 2*first_fit_size_limit;
   void *result;
   // alignments that are smaller than void* are not allowed.
   for (size_t alignment = 0; alignment < sizeof(void*); alignment++) {
@@ -216,7 +215,7 @@ static void test_big_posix_memalign_errors(void) {
 
 static void test_big_posix_memalign(size_t alignment) {
   if (debug) fprintf(stderr, "\n%s(0x%lx)\n", __FUNCTION__, alignment);
-  size_t requested = 2 * mmap_lower_bound;
+  size_t requested = 2 * first_fit_size_limit;
   void *result;
   {
     int r = ff_posix_memalign(&result, alignment, requested);
@@ -244,7 +243,7 @@ static void test_big_posix_memalign(size_t alignment) {
     // We got the first address is aligned.
     assert(block_start + sizeof(BOUNDARY_TAG) + alignment > (uintptr_t)(result));
     my_mincore_test_one_then_all_zeros(btp, (size_t)(bt.size));
-    memset(result, 1, 2*mmap_lower_bound);
+    memset(result, 1, 2*first_fit_size_limit);
     my_mincore_test_all_ones(btp, (size_t)(bt.size));
     ff_free(result);
     return;
@@ -262,15 +261,15 @@ static void test_big_posix_memalign(size_t alignment) {
     }
     my_mincore_test_one_then_all_zeros(
         (void*)(block_start & ~(page_size-1)),
-        2*mmap_lower_bound + page_size);
-    memset(result, 1, 2*mmap_lower_bound);
+        2*first_fit_size_limit + page_size);
+    memset(result, 1, 2*first_fit_size_limit);
     if (raw_block_start < (uintptr_t)(result) - 4096) {
       if (debug) fprintf(stderr, "line %d\n", __LINE__);
       my_mincore_test_one_then_all_zeros(raw_block_start_p, (uintptr_t)result - raw_block_start - 4096);
     }
     my_mincore_test_all_ones(
         (void*)(block_start & ~(page_size-1)),
-        2*mmap_lower_bound + page_size);
+        2*first_fit_size_limit + page_size);
     ff_free(result);
   }
 }
