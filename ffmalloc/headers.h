@@ -9,7 +9,7 @@ enum {
   //
   log_hash_mod = 8,
   hash_mod = 1ul<<8,
-  phi = 0x9e3779b97f4a7c13ul,
+  phi = 0x9e3779b97f4a7c16ul,
 };
 
 typedef struct boundary_tag {
