@@ -1,5 +1,5 @@
 #include <assert.h>
-#include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>  // use a known-working version of malloc to run these tests.
 #include <string.h>
 
@@ -88,6 +88,7 @@ static TEST_TREE make_tree(NODE_DESC *desc) {
 }
 
 static FFTREE* tree_at(TEST_TREE *tt, size_t off) {
+  assert(off % 8 == 0);
   return (FFTREE*)(off+((char*)tt->alloc));
 }
 
@@ -329,7 +330,7 @@ static void test_find_4(void) {
   assert(fftree_find_prev(tt.tree, tree_at(&tt, 80)) == tree_at(&tt, 0));
   assert(fftree_find_prev(tt.tree, tree_at(&tt, 144)) == tree_at(&tt, 80));
   assert(fftree_find_prev(tt.tree, tree_at(&tt, 160)) == tree_at(&tt, 80));
-  assert(fftree_find_prev(tt.tree, tree_at(&tt, 204)) == tree_at(&tt, 160));
+  assert(fftree_find_prev(tt.tree, tree_at(&tt, 208)) == tree_at(&tt, 160));
 
   // This first case isn't portable, since it constructs a pointer that is before alloc.
   // We need to be able to construct at tree where we skip the first few bytes.
@@ -399,6 +400,107 @@ static void test_split_3(void) {
   assert(p.left->right == NULL);
   assert(p.right == c);
 }
+
+static bool fftree_eq(FFTREE *a, FFTREE *left, FFTREE *right, size_t rand, size_t size, size_t max) {
+  return (a->left == left) &&
+      (a->right == right) &&
+      (a->rand == rand) &&
+      (a->size == size) &&
+      (a->max_size_in_subtree == max);
+}
+
+static FFTREE* set_node(FFTREE *n, FFTREE *l, FFTREE *r, size_t rand, size_t size, size_t max_size) {
+  memset(n, 0, sizeof(*n));
+  n->left = l;
+  n->right = r;
+  n->rand = rand;
+  n->size = size;
+  n->max_size_in_subtree = max_size;
+  return n;
+}
+
+static void test_insert_0(void) {
+  TEST_TREE tt = make_tree(NULL);
+  assert(tt.tree == NULL);
+  FFTREE *junk = (FFTREE*)(0xFFFFFFFFFFFFFFFF);
+  FFTREE *n1 = set_node(tree_at(&tt, 40), junk, junk, 1, 40, 90);
+  FFTREE *tmp = fftree_insert2(tt.tree, n1);
+  assert(tmp == n1);
+  tt.tree = tmp;
+  assert(tt.tree == n1);
+  assert(fftree_eq(n1, NULL, NULL, 1, 40, 40));
+  assert(fftree_validate(tt.tree));
+
+  FFTREE *n2 = set_node(tree_at(&tt, 104), junk, junk, 2, 32, 90);
+  assert(fftree_eq(n2, junk, junk, 2, 32, 90));
+  assert(fftree_eq(n1, NULL, NULL, 1, 40, 40));
+  tt.tree = fftree_insert2(tt.tree, n2);
+  assert(tt.tree == n2);
+  assert(fftree_eq(n2, n1, NULL, 2, 32, 40));
+  assert(fftree_eq(n2, n1, NULL, 2, 32, 40));
+  assert(fftree_eq(n1, NULL, NULL, 1, 40, 40));
+  free_test_tree(tt);
+}
+
+static void test_insert_1(void) {
+  TEST_TREE tt = make_tree(NULL);
+  assert(tt.tree == NULL);
+  FFTREE *junk = (FFTREE*)(0xFFFFFFFFFFFFFFFF);
+  FFTREE *n1 = set_node(tree_at(&tt, 40), junk, junk, 2, 40, 90);
+  FFTREE *tmp = fftree_insert2(tt.tree, n1);
+  assert(tmp == n1);
+  tt.tree = tmp;
+  assert(tt.tree == n1);
+  assert(fftree_eq(n1, NULL, NULL, 2, 40, 40));
+  assert(fftree_validate(tt.tree));
+
+  FFTREE *n2 = set_node(tree_at(&tt, 104), junk, junk, 1, 32, 90);
+  assert(fftree_eq(n2, junk, junk, 1, 32, 90));
+  assert(fftree_eq(n1, NULL, NULL, 2, 40, 40));
+  tt.tree = fftree_insert2(tt.tree, n2);
+  assert(tt.tree == n1);
+  assert(fftree_eq(n1, NULL, n2, 2, 40, 40));
+  assert(fftree_eq(n2, NULL, NULL, 1, 32, 32));
+  free_test_tree(tt);
+}
+
+static bool member(FFTREE *t, FFTREE *n) {
+  if (t == NULL) return false;
+  if (t == n) return true;
+  if (t < n) return member(t->right, n);
+  return member(t->left, n);
+}
+
+static void test_insert_2(void) {
+  TEST_TREE tt = {NULL, NULL, malloc(16000)};
+  for (size_t i = 0; i < 10; i++) {
+    FFTREE *tree = NULL;
+    for (size_t j = 0; j < 10; j++) {
+      FFTREE *node = tree_at(&tt, j*160+80);
+      node->size = 40;
+      fftree_insert(&tree, node);
+      assert(fftree_validate(tree));
+    }
+    for (size_t k = 0; k < 10; k++) {
+      assert(member(tree, tree_at(&tt, k*160+80)));
+    }
+    FFTREE *node = tree_at(&tt, i*160+40);
+    writes(2, "\ninserting "); writep(2, node); writes(2, "\n");
+    fftree_print(tree, 1);
+    node->size = 40;
+    fftree_insert(&tree, node);
+    writes(2, "\n");
+    fftree_print(tree, 1);
+    for (size_t k = 0; k < 10; k++) {
+      if (!member(tree, tree_at(&tt, k*160+80))) {
+        writes(2, "didn't find "); writep(2, tree_at(&tt, k*160+80)); writes(2, "\n");
+        assert(false);
+      }
+    }
+    assert(member(tree, tree_at(&tt, i*160+40)));
+  }
+}
+
 
 static void test_find_remove_prev_adj_0(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
@@ -496,6 +598,10 @@ int main(void) {
   test_split_1();
   test_split_2();
   test_split_3();
+
+  test_insert_0();
+  test_insert_1();
+  test_insert_2();
 
   return 0;
 
