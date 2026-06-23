@@ -61,12 +61,13 @@ void fftree_print(FFTREE *tree, int indent) {
     writespaces(2, indent); writes(2, "Empty tree\n");
     return;
   }
-  writespaces(2, indent+1); writep(2, tree);
+  writespaces(2, indent); writep(2, tree);
   writec(2, ' '); writep(2, tree->left);
   writec(2, ' '); writep(2, tree->right);
   writec(2, ' '); writeul(2, tree->rand);
   writec(2, ' '); writeul(2, tree->size);
   writec(2, ' '); writeul(2, tree->max_size_in_subtree);
+  writec(2, '\n');
   // fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_size_in_subtree);
   fftree_print(tree->left, indent+1);
   fftree_print(tree->right, indent+1);
