@@ -10,6 +10,9 @@ enum {
   log_hash_mod = 8,
   hash_mod = 1ul<<8,
   phi = 0x9e3779b97f4a7c16ul,
+  log_small_size_limit = 7,
+  // TODO: make the other bound be a limit.  The "limit" terminology is borrowed from the common lisp spec, where limits are strict bounds.
+  small_size_limit = (1ul<<log_small_size_limit),
 };
 
 typedef struct boundary_tag {

@@ -8,23 +8,30 @@
 #include "tree.h"
 #include "tree-test-helpers.h"
 
+static FFTREE make_small_node(size_t rand, size_t size, size_t max) {
+  FFTREE t = {NULL, NULL, rand, 1, size, max};
+  assert(t.small_size == size);
+  assert(t.max_size_in_subtree == max);
+  return t;
+}
+
 static void test_depth(void) {
   assert(fftree_rand(NULL) == 0);
 
-  FFTREE t = {NULL, NULL, 42, 18, 19};
+  FFTREE t = make_small_node(42, 18, 19);
   assert(fftree_rand(&t) == 42);
 }
 
 static void test_max_size_in_subtree(void) {
   assert(fftree_max_size_in_subtree(NULL) == 0);
 
-  FFTREE t = {NULL, NULL, 42, 18, 19};
+  FFTREE t = make_small_node(42, 18, 19);
   assert(fftree_max_size_in_subtree(&t) == 19);
-  assert(t.size == 18);
+  assert(fftree_node_size(&t) == 18);
 }
 
 typedef struct node_desc {
-  size_t size, gap;
+  size_t rand, size, gap;
   struct node_desc *left, *right;
 } NODE_DESC;
 
@@ -32,10 +39,16 @@ static NODE_DESC *desc(size_t size, size_t gap, NODE_DESC *left, NODE_DESC *righ
   assert(size >= 24 && size % 8 == 0);
   assert(gap % 8 == 0);
   NODE_DESC *r = malloc(sizeof(NODE_DESC));
-  *r = (NODE_DESC){size, gap, left, right};
+  *r = (NODE_DESC){-1, size, gap, left, right};
   return r;
 }
-
+#if 0
+static NODE_DESC *descr(size_t rand, size_t size, size_t gap, NODE_DESC *left, NODE_DESC *right) {
+  NODE_DESC *r = desc(size, gap, left, right);
+  r->rand = rand;
+  return r;
+}
+#endif
 typedef struct desc_size_info {
   size_t n_nodes;
   size_t total_size;
@@ -64,14 +77,13 @@ static FFTREE* make_nodes(char *data, NODE_DESC *desc) {
       data + lsinfo.total_size + desc->size + desc->gap,
       desc->right);
   FFTREE *this_node = (FFTREE*)(data + lsinfo.total_size);
-  *this_node = (FFTREE){
-    ln,
-    rn,
-    // Make the random numbers be valid for heap ordering.
-    2+max(fftree_rand(ln), fftree_rand(rn)),
-    desc->size,
-    max(desc->size, max(fftree_max_size_in_subtree(ln), fftree_max_size_in_subtree(rn))),
-  };
+  // Make the random numbers be valid for heap ordering.
+  size_t rand = 2+max(fftree_rand(ln), fftree_rand(rn));
+  size_t max_size = max(
+      desc->size,
+      max(fftree_max_size_in_subtree(ln), fftree_max_size_in_subtree(rn)));
+  *this_node = (FFTREE){ln, rn, rand, 0, 0, max_size};
+  set_fftree_node_size(this_node, desc->size);
   return this_node;
 }
 
@@ -101,26 +113,26 @@ static void test_validate(void) {
   assert(fftree_validate_local(NULL));
   assert(fftree_validate(NULL));
   {
-    FFTREE t = {NULL, NULL, 1, 18, 18};
+    FFTREE t = make_small_node(1, 18, 18);
     assert(fftree_validate(&t));
     assert(fftree_count(&t) == 1);
   }
   {
-    FFTREE t = {NULL, NULL, 2, 18, 18};
+    FFTREE t = make_small_node(2, 18, 18);
     assert(fftree_validate(&t));
   }
   {
-    FFTREE t = {NULL, NULL, 1, 19, 18};
+    FFTREE t = make_small_node(1, 19, 18);
     assert(!fftree_validate(&t));
   }
   {
-    FFTREE t = {NULL, NULL, 1, 18, 19};
+    FFTREE t = make_small_node(1, 18, 19);
     assert(!fftree_validate(&t));
   }
   // A good tree with two nodes and a left child
   {
-    FFTREE a[] = {{NULL, NULL, 1, 19, 19},
-                   {&a[0], NULL, 2, 18, 19}};
+    FFTREE a[] = {{NULL, NULL, 1, 1, 19, 19},
+                  {&a[0], NULL, 2, 1, 18, 19}};
     assert(fftree_validate(&a[1]));
     assert(fftree_count(&a[1]) == 2);
   }
@@ -409,7 +421,7 @@ static bool fftree_eq(FFTREE *a, FFTREE *left, FFTREE *right, size_t rand, size_
   return (a->left == left) &&
       (a->right == right) &&
       (a->rand == rand) &&
-      (a->size == size) &&
+      (fftree_node_size(a) == size) &&
       (a->max_size_in_subtree == max);
 }
 
@@ -418,7 +430,14 @@ static FFTREE* set_node(FFTREE *n, FFTREE *l, FFTREE *r, size_t rand, size_t siz
   n->left = l;
   n->right = r;
   n->rand = rand;
-  n->size = size;
+  if (size < small_size_limit) {
+    n->is_small = true;
+    n->small_size = size;
+  } else {
+    n->is_small = false;
+    n->small_size = 0;
+    *((size_t*)(n+1)) = size;
+  }
   n->max_size_in_subtree = max_size;
   return n;
 }
@@ -481,7 +500,8 @@ static void test_insert_2(void) {
     FFTREE *tree = NULL;
     for (size_t j = 0; j < 10; j++) {
       FFTREE *node = tree_at(&tt, j*160+80);
-      node->size = 40;
+      node->is_small = 1;
+      node->small_size = 40;
       fftree_insert(&tree, node);
       assert(fftree_validate(tree));
     }
@@ -489,7 +509,8 @@ static void test_insert_2(void) {
       assert(member(tree, tree_at(&tt, k*160+80)));
     }
     FFTREE *node = tree_at(&tt, i*160+40);
-    node->size = 40;
+    node->is_small = 1;
+    node->small_size = 40;
     fftree_insert(&tree, node);
     for (size_t k = 0; k < 10; k++) {
       if (!member(tree, tree_at(&tt, k*160+80))) {
@@ -506,7 +527,7 @@ static void test_merge_0(void) {
 }
 
 static void test_merge_1(void) {
-  FFTREE a[] = {{NULL, NULL, 1, 19, 19}};
+  FFTREE a[] = {{NULL, NULL, 1, 1, 19, 19}};
   assert(fftree_merge(&a[0], NULL) == &a[0]);
   assert(fftree_count(&a[0]) == 1);
   assert(fftree_validate(&a[0]));
@@ -516,28 +537,30 @@ static void test_merge_1(void) {
 }
 
 static void test_merge_2(void) {
-  FFTREE a[] = {
-    {NULL, NULL, 1, 32, 32},
-    {NULL, NULL, 2, 24, 24},
-  };
-  assert(fftree_merge(&a[0], &a[1]) == &a[1]);
-  assert(fftree_eq(&a[0], NULL, NULL, 1, 32, 32));
-  assert(fftree_eq(&a[1], &a[0], NULL, 2, 24, 32));
+  char data[100];
+  FFTREE *t0 = ((FFTREE*)(&data[0]));
+  FFTREE *t1 = ((FFTREE*)(&data[64]));
+  *t0 = (FFTREE){NULL, NULL, 1, 1, 32, 32};
+  *t1 = (FFTREE){NULL, NULL, 2, 1, 24, 24};
+  assert(fftree_merge(t0, t1) == t1);
+  assert(fftree_eq(t0, NULL, NULL, 1, 32, 32));
+  assert(fftree_eq(t1, t0, NULL, 2, 24, 32));
 }
 
 static void test_merge_3(void) {
-  FFTREE a[] = {
-    {NULL, NULL, 2, 24, 24},
-    {NULL, NULL, 1, 32, 32},
-  };
-  assert(fftree_merge(&a[0], &a[1]) == &a[0]);
-  assert(fftree_eq(&a[0], NULL, &a[1], 2, 24, 32));
-  assert(fftree_eq(&a[1], NULL, NULL, 1, 32, 32));
+  char data[100];
+  FFTREE *t0 = ((FFTREE*)(&data[0]));
+  FFTREE *t1 = ((FFTREE*)(&data[64]));
+  *t0 = (FFTREE){NULL, NULL, 2, 1, 24, 24};
+  *t1 = (FFTREE){NULL, NULL, 1, 1, 32, 32};
+  assert(fftree_merge(t0, t1) == t0);
+  assert(fftree_eq(t0, NULL, t1, 2, 24, 32));
+  assert(fftree_eq(t1, NULL, NULL, 1, 32, 32));
 }
 
 static void test_delete_0(void) {
   FFTREE a[] = {
-    {NULL, NULL, 2, 24, 24},
+    {NULL, NULL, 2, 1, 24, 24},
   };
   FFTREE *tree = &a[0];
   assert(fftree_validate(tree));
@@ -548,13 +571,14 @@ static void test_delete_0(void) {
 
 typedef struct fftree_wrapped {
   FFTREE n;
+  size_t actual_size;
   char pad[200]; // need some space so that the tree validation will be happy
 } FFTREEW;
 
 static void test_delete_1(void) {
   FFTREEW a[] = {
-    {{NULL, &a[1].n, 2, 24, 48}, {}},
-    {{NULL, NULL, 1, 48, 48}, {}},
+    {{NULL, &a[1].n, 2, 1, 24, 48}, 0, {}},
+    {{NULL, NULL, 1, 1, 48, 48}, 0, {}},
   };
   FFTREE *tree = &a[0].n;
   assert(fftree_validate(tree));
@@ -566,8 +590,8 @@ static void test_delete_1(void) {
 
 static void test_delete_2(void) {
   FFTREEW a[] = {
-    {{NULL, &a[1].n, 2, 24, 48}, {}},
-    {{NULL, NULL, 1, 48, 48}, {}},
+    {{NULL, &a[1].n, 2, 1, 24, 48}, 0, {}},
+    {{NULL, NULL, 1, 0, 0, 48}, 48, {}},
   };
   FFTREE *tree = &a[0].n;
   assert(fftree_validate(tree));
@@ -579,8 +603,8 @@ static void test_delete_2(void) {
 
 static void test_delete_3(void) {
   FFTREEW a[] = {
-    {{NULL, NULL, 1, 48, 48}, {}},
-    {{&a[0].n, NULL, 2, 24, 48}, {}},
+    {{NULL, NULL, 1, 0, 0, 48}, 48, {}},
+    {{&a[0].n, NULL, 2, 1, 24, 48}, 0, {}},
   };
   FFTREE *tree = &a[1].n;
   assert(fftree_validate(tree));
@@ -592,8 +616,8 @@ static void test_delete_3(void) {
 
 static void test_delete_4(void) {
   FFTREEW a[] = {
-    {{NULL, NULL, 1, 48, 48}, {}},
-    {{&a[0].n, NULL, 2, 24, 48}, {}},
+    {{NULL, NULL, 1, 0, 0, 48}, 48, {}},
+    {{&a[0].n, NULL, 2, 1, 24, 48}, 0, {}},
   };
   FFTREE *tree = &a[1].n;
   assert(fftree_validate(tree));
@@ -668,7 +692,8 @@ static void test_find_remove_next_adj_2(void) {
            NULL,
            desc(40, 40, NULL, NULL)));
   FFTREE *freeblock = (FFTREE*)(40+(char*)(tt.alloc));
-  freeblock->size = 40;
+  freeblock->is_small = 0;
+  *((size_t*)(freeblock+1)) = 40;
   assert(tt.tree->left == NULL);
   assert(tt.tree->right != NULL);
   FFTREE *t = fftree_find_and_remove_next_adjacent(&tt.tree, freeblock);

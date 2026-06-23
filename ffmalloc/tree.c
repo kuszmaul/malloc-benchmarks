@@ -26,18 +26,34 @@ size_t fftree_max_size_in_subtree(const FFTREE *t) {
   }
 }
 
+size_t fftree_node_size(const FFTREE *t) {
+  if (t->is_small) return t->small_size;
+  return *((size_t*)(t+1));
+}
+
+void set_fftree_node_size(FFTREE *t, size_t size) {
+  if (size < small_size_limit) {
+    t->is_small = 1;
+    t->small_size = size;
+  } else {
+    t->is_small = 0;
+    t->small_size = 0;
+    *((size_t*)(t+1)) = size;
+  }
+}
+
 bool __attribute__((warn_unused_result)) fftree_validate_local(FFTREE *tree) {
   if (tree == NULL) {
     return true;
   }
-  size_t expect_max_size = tree->size;
+  size_t expect_max_size = fftree_node_size(tree);
   if (tree->left != NULL) {
-    VASSERT((char*)(tree->left) + tree->left->size < (char*)tree);
+    VASSERT((char*)(tree->left) + fftree_node_size(tree->left) < (char*)tree);
     VASSERT(tree->rand >= tree->left->rand);
     maxf(&expect_max_size, tree->left->max_size_in_subtree);
   }
   if (tree -> right != NULL) {
-    VASSERT((char*)(tree) + tree->size < (char*)(tree->right));
+    VASSERT((char*)(tree) + fftree_node_size(tree) < (char*)(tree->right));
     VASSERT(tree->rand >= tree->right->rand);
     maxf(&expect_max_size, tree->right->max_size_in_subtree);
   }
@@ -90,7 +106,7 @@ bool __attribute__((warn_unused_result)) fftree_validate(FFTREE *tree) {
 void fftree_update_augmentation(FFTREE *tree) {
   // Specification: See header file
   ASSERT(tree);
-  tree->max_size_in_subtree = max(tree->size,
+  tree->max_size_in_subtree = max(fftree_node_size(tree),
                                   max(fftree_max_size_in_subtree(tree->left),
                                       fftree_max_size_in_subtree(tree->right)));
 }
@@ -129,7 +145,7 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
     return NULL; // covers root=NULL
   } else if (fftree_max_size_in_subtree(root->left) >= size) {
     return fftree_find_first_fit(root->left, size);
-  } else if (root->size >= size) {
+  } else if (fftree_node_size(root) >= size) {
     return root;
   } else {
     return fftree_find_first_fit(root->right, size);
@@ -196,7 +212,7 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node) {
   // Effect: see header
   ASSERT(tree_p != NULL);
   node->rand = fftree_hash(node);
-  node->max_size_in_subtree = node->size;
+  node->max_size_in_subtree = fftree_node_size(node);
   *tree_p = fftree_insert2(*tree_p, node);
 }
 
@@ -252,7 +268,7 @@ FFTREE* fftree_find_and_remove_prev_adjacent(FFTREE **rootp, const FFTREE *node)
   if (result == NULL) {
     return NULL;
   }
-  if (((char*)(result)) + result->size != (char*)(node)) {
+  if (((char*)(result)) + fftree_node_size(result) != (char*)(node)) {
     return NULL;
   }
   fftree_delete(rootp, result);
@@ -265,7 +281,7 @@ FFTREE* fftree_find_and_remove_next_adjacent(FFTREE **rootp, const FFTREE *node)
   if (result == NULL) {
     return NULL;
   }
-  if (((char*)(node)) + node->size != (char*)(result)) {
+  if (((char*)(node)) + fftree_node_size(node) != (char*)(result)) {
     return NULL;
   }
   fftree_delete(rootp, result);

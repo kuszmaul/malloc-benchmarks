@@ -36,14 +36,21 @@
 typedef struct fftree {
   struct fftree *left, *right;
   size_t rand : log_hash_mod; // rand used for depth
-  size_t size : mmap_log_lower_bound;
+  size_t is_small : 1;        // if size can be stored in small_size then small_size contains the size
+  size_t small_size : log_small_size_limit;  // else the size is in the next word.
   // The maximum over the subtree of the size.  That is, the size of the biggest
   // node in the subtree.
-  size_t max_size_in_subtree : mmap_log_lower_bound;
+  size_t max_size_in_subtree : 48; // this is a limitation to how much data we can keep in the heap.
 } FFTREE;
 
 size_t fftree_rand(const FFTREE *t);
 // Effect: Returns the random number used for determining the depth of the tree (0 for t==NULL).
+
+size_t fftree_node_size(const FFTREE *t);
+// Effect: Returns the size of the node (including the FFTREE header overhead).
+
+void set_fftree_node_size(FFTREE *t, size_t size);
+// Effect: Set the size of the node (including the FFTRE header overhead).
 
 size_t fftree_max_size_in_subtree(const FFTREE *t);
 // Effect: Returns the size of the biggest node in the subtree.
