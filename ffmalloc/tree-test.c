@@ -127,7 +127,7 @@ static void test_validate(void) {
   {
     TEST_TREE tt = make_tree(
         desc(24, 0,
-             desc(24, 0, NULL, NULL),
+             desc(24, 8, NULL, NULL),
              NULL));
     assert(fftree_validate(tt.tree));
     assert(fftree_count(tt.tree) == 2);
@@ -145,7 +145,7 @@ static void test_validate(void) {
   }
   // A good tree with two nodes and a right child
   {
-    TEST_TREE tt = make_tree(desc(24, 0,
+    TEST_TREE tt = make_tree(desc(24, 8,
                                   NULL,
                                   desc(24, 0, NULL, NULL)));
     assert(fftree_validate(tt.tree));
@@ -164,9 +164,9 @@ static void test_validate(void) {
   // A good tree with depth 3.
   {
     TEST_TREE tt = make_tree(
-        desc(32, 0,
-             desc(48, 0,
-                  desc(40, 0, NULL, NULL),
+        desc(32, 8,
+             desc(48, 8,
+                  desc(40, 8, NULL, NULL),
                   NULL),
              desc(24, 0, NULL, NULL)));
     assert(fftree_validate(tt.tree));;
@@ -190,10 +190,10 @@ static void test_validate(void) {
     //      /     //
     //     3      //
     TEST_TREE tt = make_tree(
-        desc(32, 0,
-             desc(32, 0, NULL, NULL),
-             desc(32, 0,
-                  desc(32, 0, NULL, NULL),
+        desc(32, 8,
+             desc(32, 8, NULL, NULL),
+             desc(32, 8,
+                  desc(32, 8, NULL, NULL),
                   NULL)));
     assert(fftree_validate(tt.tree));;
     assert(tt.tree->left->right == NULL);
@@ -205,11 +205,11 @@ static void test_validate(void) {
   // Same thing only the other way around (with the grandchild too far to the left)
   {
     TEST_TREE tt = make_tree(
-        desc(32, 0,
-             desc(32, 0,
+        desc(32, 8,
+             desc(32, 8,
                   NULL,
-                  desc(32, 0, NULL, NULL)),
-             desc(32, 0, NULL, NULL)));
+                  desc(32, 8, NULL, NULL)),
+             desc(32, 8, NULL, NULL)));
     assert(fftree_validate(tt.tree));;
     assert(tt.tree->right->left == NULL);
     tt.tree->right->left = tt.tree->left->right;
@@ -546,57 +546,60 @@ static void test_delete_0(void) {
   assert(tree == NULL);
 }
 
+typedef struct fftree_wrapped {
+  FFTREE n;
+  char pad[200]; // need some space so that the tree validation will be happy
+} FFTREEW;
+
 static void test_delete_1(void) {
-  FFTREE a[] = {
-    {NULL, &a[1], 2, 24, 48},
-    {NULL, NULL, 1, 48, 48},
+  FFTREEW a[] = {
+    {{NULL, &a[1].n, 2, 24, 48}, {}},
+    {{NULL, NULL, 1, 48, 48}, {}},
   };
-  FFTREE *tree = &a[0];
+  FFTREE *tree = &a[0].n;
   assert(fftree_validate(tree));
-  fftree_delete(&tree, &a[1]);
+  fftree_delete(&tree, &a[1].n);
   assert(fftree_validate(tree));
-  assert(tree == &a[0]);
+  assert(tree == &a[0].n);
   assert(fftree_eq(tree, NULL, NULL, 2, 24, 24));
 }
 
 static void test_delete_2(void) {
-  FFTREE a[] = {
-    {NULL, &a[1], 2, 24, 48},
-    {NULL, NULL, 1, 48, 48},
+  FFTREEW a[] = {
+    {{NULL, &a[1].n, 2, 24, 48}, {}},
+    {{NULL, NULL, 1, 48, 48}, {}},
   };
-  FFTREE *tree = &a[0];
+  FFTREE *tree = &a[0].n;
   assert(fftree_validate(tree));
-  fftree_delete(&tree, &a[0]);
+  fftree_delete(&tree, &a[0].n);
   assert(fftree_validate(tree));
-  assert(tree == &a[1]);
+  assert(tree == &a[1].n);
   assert(fftree_eq(tree, NULL, NULL, 1, 48, 48));
 }
 
 static void test_delete_3(void) {
-  FFTREE a[] = {
-    {NULL, NULL, 1, 48, 48},
-    {NULL, NULL, 0, 0, 0},
-    {&a[0], NULL, 2, 24, 48},
+  FFTREEW a[] = {
+    {{NULL, NULL, 1, 48, 48}, {}},
+    {{&a[0].n, NULL, 2, 24, 48}, {}},
   };
-  FFTREE *tree = &a[2];
+  FFTREE *tree = &a[1].n;
   assert(fftree_validate(tree));
-  fftree_delete(&tree, &a[0]);
+  fftree_delete(&tree, &a[0].n);
   assert(fftree_validate(tree));
-  assert(tree == &a[2]);
+  assert(tree == &a[1].n);
   assert(fftree_eq(tree, NULL, NULL, 2, 24, 24));
 }
 
 static void test_delete_4(void) {
-  FFTREE a[] = {
-    {NULL, NULL, 1, 48, 48},
-    {NULL, NULL, 0, 0, 0},
-    {&a[0], NULL, 2, 24, 48},
+  FFTREEW a[] = {
+    {{NULL, NULL, 1, 48, 48}, {}},
+    {{&a[0].n, NULL, 2, 24, 48}, {}},
   };
-  FFTREE *tree = &a[2];
+  FFTREE *tree = &a[1].n;
   assert(fftree_validate(tree));
-  fftree_delete(&tree, &a[2]);
+  fftree_delete(&tree, &a[1].n);
   assert(fftree_validate(tree));
-  assert(tree == &a[0]);
+  assert(tree == &a[0].n);
   assert(fftree_eq(tree, NULL, NULL, 1, 48, 48));
 }
 

@@ -22,7 +22,7 @@ void writes(int fd, char *str) {
 void writeux(int fd, unsigned long v) {
   writes(fd, "0x");
   for (size_t i = 0; i < 16; i++) {
-    size_t nibble = (v >> (15-i)) & 0xf;
+    size_t nibble = (v >> (4*(15-i))) & 0xf;
     writec(fd, (nibble < 10) ? nibble + '0' : nibble + 'a' - 10);
   }
 }

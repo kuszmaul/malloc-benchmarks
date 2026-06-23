@@ -32,12 +32,12 @@ bool __attribute__((warn_unused_result)) fftree_validate_local(FFTREE *tree) {
   }
   size_t expect_max_size = tree->size;
   if (tree->left != NULL) {
-    VASSERT((char*)(tree->left) + tree->left->size <= (char*)tree);
+    VASSERT((char*)(tree->left) + tree->left->size < (char*)tree);
     VASSERT(tree->rand >= tree->left->rand);
     maxf(&expect_max_size, tree->left->max_size_in_subtree);
   }
   if (tree -> right != NULL) {
-    VASSERT((char*)(tree) + tree->size <= (char*)(tree->right));
+    VASSERT((char*)(tree) + tree->size < (char*)(tree->right));
     VASSERT(tree->rand >= tree->right->rand);
     maxf(&expect_max_size, tree->right->max_size_in_subtree);
   }
