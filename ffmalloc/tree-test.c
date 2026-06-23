@@ -103,6 +103,7 @@ static void test_validate(void) {
   {
     FFTREE t = {NULL, NULL, 1, 18, 18};
     assert(fftree_validate(&t));
+    assert(fftree_count(&t) == 1);
   }
   {
     FFTREE t = {NULL, NULL, 2, 18, 18};
@@ -121,6 +122,7 @@ static void test_validate(void) {
     FFTREE a[] = {{NULL, NULL, 1, 19, 19},
                    {&a[0], NULL, 2, 18, 19}};
     assert(fftree_validate(&a[1]));
+    assert(fftree_count(&a[1]) == 2);
   }
   {
     TEST_TREE tt = make_tree(
@@ -128,6 +130,7 @@ static void test_validate(void) {
              desc(24, 0, NULL, NULL),
              NULL));
     assert(fftree_validate(tt.tree));
+    assert(fftree_count(tt.tree) == 2);
     free_test_tree(tt);
   }
   // Not a search tree (wrong order with a right child)
@@ -167,6 +170,7 @@ static void test_validate(void) {
                   NULL),
              desc(24, 0, NULL, NULL)));
     assert(fftree_validate(tt.tree));;
+    assert(fftree_count(tt.tree) == 4);
     free_test_tree(tt);
   }
   // Not a search tree (locally each node is ordered, but the grandchild is out
