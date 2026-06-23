@@ -533,8 +533,73 @@ static void test_merge_3(void) {
   assert(fftree_merge(&a[0], &a[1]) == &a[0]);
   assert(fftree_eq(&a[0], NULL, &a[1], 2, 24, 32));
   assert(fftree_eq(&a[1], NULL, NULL, 1, 32, 32));
-
 }
+
+static void test_delete_0(void) {
+  FFTREE a[] = {
+    {NULL, NULL, 2, 24, 24},
+  };
+  FFTREE *tree = &a[0];
+  assert(fftree_validate(tree));
+  fftree_delete(&tree, tree);
+  assert(fftree_validate(tree));
+  assert(tree == NULL);
+}
+
+static void test_delete_1(void) {
+  FFTREE a[] = {
+    {NULL, &a[1], 2, 24, 48},
+    {NULL, NULL, 1, 48, 48},
+  };
+  FFTREE *tree = &a[0];
+  assert(fftree_validate(tree));
+  fftree_delete(&tree, &a[1]);
+  assert(fftree_validate(tree));
+  assert(tree == &a[0]);
+  assert(fftree_eq(tree, NULL, NULL, 2, 24, 24));
+}
+
+static void test_delete_2(void) {
+  FFTREE a[] = {
+    {NULL, &a[1], 2, 24, 48},
+    {NULL, NULL, 1, 48, 48},
+  };
+  FFTREE *tree = &a[0];
+  assert(fftree_validate(tree));
+  fftree_delete(&tree, &a[0]);
+  assert(fftree_validate(tree));
+  assert(tree == &a[1]);
+  assert(fftree_eq(tree, NULL, NULL, 1, 48, 48));
+}
+
+static void test_delete_3(void) {
+  FFTREE a[] = {
+    {NULL, NULL, 1, 48, 48},
+    {NULL, NULL, 0, 0, 0},
+    {&a[0], NULL, 2, 24, 48},
+  };
+  FFTREE *tree = &a[2];
+  assert(fftree_validate(tree));
+  fftree_delete(&tree, &a[0]);
+  assert(fftree_validate(tree));
+  assert(tree == &a[2]);
+  assert(fftree_eq(tree, NULL, NULL, 2, 24, 24));
+}
+
+static void test_delete_4(void) {
+  FFTREE a[] = {
+    {NULL, NULL, 1, 48, 48},
+    {NULL, NULL, 0, 0, 0},
+    {&a[0], NULL, 2, 24, 48},
+  };
+  FFTREE *tree = &a[2];
+  assert(fftree_validate(tree));
+  fftree_delete(&tree, &a[2]);
+  assert(fftree_validate(tree));
+  assert(tree == &a[0]);
+  assert(fftree_eq(tree, NULL, NULL, 1, 48, 48));
+}
+
 
 static void test_find_remove_prev_adj_0(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
@@ -641,6 +706,12 @@ int main(void) {
   test_merge_1();
   test_merge_2();
   test_merge_3();
+
+  test_delete_0();
+  test_delete_1();
+  test_delete_2();
+  test_delete_3();
+  test_delete_4();
 
   return 0;
 
