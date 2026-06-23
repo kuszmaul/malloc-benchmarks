@@ -119,6 +119,11 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node);
 // must be have been initialized, but the other fields need not have been
 // initialized.
 
+FFTREE* fftree_merge(FFTREE *a, FFTREE *b);
+// Effect: Merge `a' and `b` into a single tree, and return the new tree.
+//
+// Requires: Everything in `a` < everything in `b`.
+
 FFTREE* fftree_remove_rightmost(FFTREE **rootp);
 
 void fftree_delete(FFTREE **tree_p, FFTREE*node);

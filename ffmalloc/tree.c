@@ -193,15 +193,15 @@ FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node) {
 }
 
 void fftree_insert(FFTREE **tree_p, FFTREE *node) {
+  // Effect: see header
   ASSERT(tree_p != NULL);
   node->rand = fftree_hash(node);
   node->max_size_in_subtree = node->size;
   *tree_p = fftree_insert2(*tree_p, node);
 }
 
-static FFTREE* fftree_merge(FFTREE *a, FFTREE *b) {
-  // Merge `a' and `b` into a single tree.  We have everything in `a` <
-  // everything in `b`.
+FFTREE* fftree_merge(FFTREE *a, FFTREE *b) {
+  // Effect: see header
   if (a == NULL) return b;
   if (b == NULL) return a;
   if (a->rand >= b->rand) {

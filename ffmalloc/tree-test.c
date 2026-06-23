@@ -501,6 +501,40 @@ static void test_insert_2(void) {
   }
 }
 
+static void test_merge_0(void) {
+  assert(fftree_merge(NULL, NULL) == NULL);
+}
+
+static void test_merge_1(void) {
+  FFTREE a[] = {{NULL, NULL, 1, 19, 19}};
+  assert(fftree_merge(&a[0], NULL) == &a[0]);
+  assert(fftree_count(&a[0]) == 1);
+  assert(fftree_validate(&a[0]));
+  assert(fftree_merge(NULL, &a[0]) == &a[0]);
+  assert(fftree_count(&a[0]) == 1);
+  assert(fftree_validate(&a[0]));
+}
+
+static void test_merge_2(void) {
+  FFTREE a[] = {
+    {NULL, NULL, 1, 32, 32},
+    {NULL, NULL, 2, 24, 24},
+  };
+  assert(fftree_merge(&a[0], &a[1]) == &a[1]);
+  assert(fftree_eq(&a[0], NULL, NULL, 1, 32, 32));
+  assert(fftree_eq(&a[1], &a[0], NULL, 2, 24, 32));
+}
+
+static void test_merge_3(void) {
+  FFTREE a[] = {
+    {NULL, NULL, 2, 24, 24},
+    {NULL, NULL, 1, 32, 32},
+  };
+  assert(fftree_merge(&a[0], &a[1]) == &a[0]);
+  assert(fftree_eq(&a[0], NULL, &a[1], 2, 24, 32));
+  assert(fftree_eq(&a[1], NULL, NULL, 1, 32, 32));
+
+}
 
 static void test_find_remove_prev_adj_0(void) {
   TEST_TREE tt = make_tree(desc(40, 40, NULL, NULL));
@@ -602,6 +636,11 @@ int main(void) {
   test_insert_0();
   test_insert_1();
   test_insert_2();
+
+  test_merge_0();
+  test_merge_1();
+  test_merge_2();
+  test_merge_3();
 
   return 0;
 
