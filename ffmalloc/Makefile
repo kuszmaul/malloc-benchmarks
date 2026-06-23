@@ -1,5 +1,5 @@
 OPTFLAGS = -O0
-CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes -Wmissing-prototypes
+CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes -Wmissing-prototypes -Wstrict-aliasing
 
 GCOV_FILES = tree.c.gcov ffmalloc.c.gcov malloc-api.c.gcov
 
