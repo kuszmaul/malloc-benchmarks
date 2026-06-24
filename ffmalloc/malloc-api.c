@@ -94,6 +94,40 @@ void *reallocarray(void *p, size_t nmemb, size_t size) {
   return realloc(p, n);
 }
 
+int posix_memalign(void** memptr, size_t alignment, size_t size) {
+  memptr = memptr;
+  alignment = alignment;
+  size = size;
+  writes(2, "posix_memalign not ready\n");
+  abort();
+}
+
+void *aligned_alloc(size_t alignment, size_t size) {
+  alignment = alignment;
+  size = size;
+  writes(2, "aligned_alloc not ready\n");
+  abort();
+}
+
+void *valloc(size_t size) {
+  size = size;
+  writes(2, "valloc not ready\n");
+  abort();
+}
+
+void *memalign(size_t alignment, size_t size) {
+  alignment = alignment;
+  size = size;
+  writes(2, "memalign not ready\n");
+  abort();
+}
+
+void *pvalloc(size_t size) {
+  size = size;
+  writes(2, "memalign not ready\n");
+  abort();
+}
+
 size_t malloc_usable_size(void *p) {
   return ff_malloc_usable_size(p);
 }
