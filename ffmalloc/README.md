@@ -32,9 +32,10 @@ For realloc:
    
    Maybe that's a bad idea and we should shave it.
 
+DONE: build the library with only the exported API
+
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
-TODO: build the library with only the exported API
 TODO: madvise-dontneed free the interior of freed blocks
 TODO: test calloc overflow
 TODO: the other memalign functions

@@ -62,7 +62,7 @@ hoard-threadtest-test: lib/libffmalloc.so
 
 
 # `-Wl,-z,defs` warns if you have undefined references in your library
-BUILD_SHARED_FLAGS = -shared -fPIC -Wl,-z,defs
+BUILD_SHARED_FLAGS = -shared -fPIC -Wl,-z,defs -fvisibility=hidden -lpthread
 
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test

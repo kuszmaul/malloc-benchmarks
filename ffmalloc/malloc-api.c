@@ -33,6 +33,7 @@ static inline void my_unlock(void) {
   }
 }
 
+__attribute__((visibility("default")))
 void *malloc(size_t size) {
   my_lock();
   void *result;
@@ -46,6 +47,7 @@ void *malloc(size_t size) {
   return result;
 }
 
+__attribute__((visibility("default")))
 void free(void *p) {
   if (p == NULL) return;
 #if 0
@@ -63,6 +65,7 @@ void free(void *p) {
   my_unlock();
 }
 
+__attribute__((visibility("default")))
 void *calloc(size_t nmemb, size_t size) {
   void *result;
   ptrdiff_t n;
@@ -80,6 +83,7 @@ void *calloc(size_t nmemb, size_t size) {
   return result;
 }
 
+__attribute__((visibility("default")))
 void *realloc(void *p, size_t size) {
   // This is the simplest version.
   void *result = malloc(size);
@@ -87,6 +91,7 @@ void *realloc(void *p, size_t size) {
   return result;
 }
 
+__attribute__((visibility("default")))
 void *reallocarray(void *p, size_t nmemb, size_t size) {
   ptrdiff_t n;
   if (__builtin_mul_overflow(nmemb, size, &n)) {
@@ -96,6 +101,7 @@ void *reallocarray(void *p, size_t nmemb, size_t size) {
   return realloc(p, n);
 }
 
+__attribute__((visibility("default")))
 int posix_memalign(void** memptr, size_t alignment, size_t size) {
   memptr = memptr;
   alignment = alignment;
@@ -104,6 +110,7 @@ int posix_memalign(void** memptr, size_t alignment, size_t size) {
   abort();
 }
 
+__attribute__((visibility("default")))
 void *aligned_alloc(size_t alignment, size_t size) {
   alignment = alignment;
   size = size;
@@ -111,12 +118,14 @@ void *aligned_alloc(size_t alignment, size_t size) {
   abort();
 }
 
+__attribute__((visibility("default")))
 void *valloc(size_t size) {
   size = size;
   ewrites("valloc not ready\n");
   abort();
 }
 
+__attribute__((visibility("default")))
 void *memalign(size_t alignment, size_t size) {
   alignment = alignment;
   size = size;
@@ -124,12 +133,14 @@ void *memalign(size_t alignment, size_t size) {
   abort();
 }
 
+__attribute__((visibility("default")))
 void *pvalloc(size_t size) {
   size = size;
   ewrites("memalign not ready\n");
   abort();
 }
 
+__attribute__((visibility("default")))
 size_t malloc_usable_size(void *p) {
   return ff_malloc_usable_size(p);
 }
