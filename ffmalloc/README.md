@@ -38,3 +38,11 @@ TODO: build the library with only the exported API
 TODO: madvise-dontneed free the interior of freed blocks
 TODO: test calloc overflow
 TODO: the other memalign functions
+TODO: see how hoard does the linking at wrapper.cpp
+   1) define __libc_malloc which calls our function.
+      (glibc uses a strong alias to make malloc be __libc_malloc)
+   2) define vers.map
+   3) add to the link
+     -Wl,--version-script=/home/bradley/github/Hoard/build/vers.map
+   4) maybe also add -fvisibility=hidden -fno-builtin-malloc -fno-builtin-free -fno-fat-lto-objects -Wl,-soname,libhoard.so -o libhoard.so -lpthread -dl
+      (change "libhoard" to "libffmalloc" and Do we need -ldl?)
