@@ -72,9 +72,9 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
     return true;
   }
   if (!fftree_validate_local(tree)) {
-    writes(2, "Failure at tree.c:");
-    writeul(2, __LINE__);
-    writec(2, '\n');
+    ewrites("Failure at tree.c:");
+    ewriteul(__LINE__);
+    ewritenl();
     return false;
   }
   if (lower_bound != NULL) {
@@ -84,15 +84,15 @@ static bool __attribute__((warn_unused_result)) fftree_validate_2(FFTREE *tree, 
     VASSERT(tree < upper_bound);
   }
   if (!fftree_validate_2(tree->left, lower_bound, tree)) {
-    writes(2, "Failure at tree.c:");
-    writeul(2, __LINE__);
-    writec(2, '\n');
+    ewrites("Failure at tree.c:");
+    ewriteul(__LINE__);
+    ewritenl();
     return false;
   }
   if (!fftree_validate_2(tree->right, tree, upper_bound)) {
-    writes(2, "Failure at tree.c:");
-    writeul(2, __LINE__);
-    writec(2, '\n');
+    ewrites("Failure at tree.c:");
+    ewriteul(__LINE__);
+    ewritenl();
     return false;
   }
 

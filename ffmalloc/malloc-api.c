@@ -40,7 +40,7 @@ void *malloc(size_t size) {
   my_unlock();
   if (e != 0) {
     errno = e;
-    writes(2, "malloc failed on size "); writeul(2, size); writes(2, "\n");
+    ewrites("malloc failed on size "); ewriteul(size); ewritenl();
     return NULL;
   }
   return result;
@@ -52,9 +52,9 @@ void free(void *p) {
   if (!ffmalloc_owns_address(p)) {
     // When using LD_PRELOAD some malloc operations seem to use the old malloc.
     // Just don't free those.
-    writes(1, " ffmalloc doesn't own that address\n p=");
-    writep(1, p);
-    writes(1, "\n");
+    ewrites(" ffmalloc doesn't own that address\n p=");
+    ewritep(p);
+    ewritenl();
     return;
   }
 #endif
@@ -100,33 +100,33 @@ int posix_memalign(void** memptr, size_t alignment, size_t size) {
   memptr = memptr;
   alignment = alignment;
   size = size;
-  writes(2, "posix_memalign not ready\n");
+  ewrites("posix_memalign not ready\n");
   abort();
 }
 
 void *aligned_alloc(size_t alignment, size_t size) {
   alignment = alignment;
   size = size;
-  writes(2, "aligned_alloc not ready\n");
+  ewrites("aligned_alloc not ready\n");
   abort();
 }
 
 void *valloc(size_t size) {
   size = size;
-  writes(2, "valloc not ready\n");
+  ewrites("valloc not ready\n");
   abort();
 }
 
 void *memalign(size_t alignment, size_t size) {
   alignment = alignment;
   size = size;
-  writes(2, "memalign not ready\n");
+  ewrites("memalign not ready\n");
   abort();
 }
 
 void *pvalloc(size_t size) {
   size = size;
-  writes(2, "memalign not ready\n");
+  ewrites("memalign not ready\n");
   abort();
 }
 

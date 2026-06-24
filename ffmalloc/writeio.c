@@ -3,52 +3,58 @@
 
 #include "writeio.h"
 
-void writec(int fd, char c) {
+const int STDERR = 2;
+
+void ewritec(char c) {
   // If this write fails, there's really not much to do, since we typicaly use
   // this function while printing an assertion failure.
-  int r __attribute__((unused)) = write(fd, &c, 1);
+  int r __attribute__((unused)) = write(STDERR, &c, 1);
 }
 
-void writes(int fd, char *str) {
+void ewritenl(void) {
+  ewritec('\n');
+}
+
+void ewrites(char *str) {
   char c;
   while ((c=*str++)) {
-    writec(fd, c);
+    ewritec(c);
   }
 }
 
-void writeux(int fd, unsigned long v) {
-  writes(fd, "0x");
+void ewriteux(unsigned long v) {
+  ewrites("0x");
   for (size_t i = 0; i < 16; i++) {
     size_t nibble = (v >> (4*(15-i))) & 0xf;
-    writec(fd, (nibble < 10) ? nibble + '0' : nibble + 'a' - 10);
+    ewritec((nibble < 10) ? nibble + '0' : nibble + 'a' - 10);
   }
 }
 
-static void writeul0(int fd, unsigned long v) {
+static void ewriteul0(unsigned long v) {
   if (v == 0) return;
-  writeul0(fd, v / 10);
-  writec(fd, (v % 10) + '0');
+  ewriteul0(v / 10);
+  ewritec((v % 10) + '0');
 }
 
-void writeul(int fd, unsigned long v) {
+void ewriteul(unsigned long v) {
   if (v == 0) {
-    writec(fd, '0');
+    ewritec('0');
   } else {
-    writeul0(fd, v);
+    ewriteul0(v);
   }
 }
 
-void writep(int fd, void*p) {
+void ewritep(void*p) {
   if (p == NULL) {
-    writes(fd, "(nil)");
+    ewrites("(nil)");
   } else {
     uintptr_t v = (uintptr_t)p;
-    writeux(fd, v);
+    ewriteux(v);
   }
 }
 
-void writespaces(int fd, size_t n) {
+void ewritespaces(size_t n) {
   for (size_t i = 0; i < n; i++) {
-    writec(fd, ' ');
+    ewritec(' ');
   }
 }

@@ -2,20 +2,28 @@
 #define WRITEIO_H
 #include <stddef.h>
 
-void writec(int fd, char c);
+void ewritec(char c);
+// Effect: Write `c` to standard error.
 
-void writes(int fd, char *str);
-// Effect: Write `str` to `fd`.
+void ewritenl(void);
+// Effect: Write `\n` to standard error.
 
-void writeul(int fd, unsigned long v);
-// Effect: Write `v` in decimal to `fd`, as for printf("%lu", v);
+void ewrites(char *str);
+// Effect: Write `str` to standard error.
 
-void writeux(int fd, unsigned long v);
-// Effect: Write `v` in hex to `fd`, as for printf("%lx", v);
+void ewriteul(unsigned long v);
+// Effect: Write `v` in decimal to standard error, as if by `printf(stderr,
+// "%lu", v)` (but to stderr and directly with `write`).
 
-void writep(int fd, void*p);
-// Effect: Write `p` in hex to `fd`, as for printf("%p", p);
+void ewriteux(unsigned long v);
+// Effect: Write `v` in hex to standard error, as if by `printf("%lx", v)` (but
+// to stderr and directly with `write`).
 
-void writespaces(int fd, size_t n);
-// Effect: Write `n` spaces to `fd`.
+void ewritep(void*p);
+// Effect: Write `p` in hex to standard error, as if by `printf("%p", p)` (but
+// to stderr and directly with `write`).
+
+void ewritespaces(size_t n);
+// Effect: Write `n` spaces to stderr.
+
 #endif

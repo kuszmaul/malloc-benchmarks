@@ -187,7 +187,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     if (true) ASSERT(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
     if (node == NULL) {
-      writes(2, "Still null\n");
+      ewrites("Still null\n");
       abort();
     }
   }

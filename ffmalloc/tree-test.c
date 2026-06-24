@@ -514,7 +514,7 @@ static void test_insert_2(void) {
     fftree_insert(&tree, node);
     for (size_t k = 0; k < 10; k++) {
       if (!member(tree, tree_at(&tt, k*160+80))) {
-        writes(2, "didn't find "); writep(2, tree_at(&tt, k*160+80)); writes(2, "\n");
+        ewrites("didn't find "); ewritep(tree_at(&tt, k*160+80)); ewritenl();
         assert(false);
       }
     }
