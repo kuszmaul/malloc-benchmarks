@@ -289,6 +289,9 @@ void ff_free(void *p) {
 }
 
 size_t ff_malloc_usable_size(void *p) {
+  if (p == NULL) {
+    return 0;
+  }
   BOUNDARY_TAG bt = get_boundary_tag(p);
   if (!bt.is_memaligned) {
     return bt.size - sizeof(BOUNDARY_TAG);

@@ -87,6 +87,9 @@ static void test_little_malloc0(void) {
 
 static void test_little_malloc1(void) {
   if (debug) fprintf(stderr, "\n%s\n", __FUNCTION__);
+
+  assert(ff_malloc_usable_size(NULL) == 0);
+
   void *p;
   int r = ff_malloc_e(&p, 16, false);
   assert(arena != NULL);
