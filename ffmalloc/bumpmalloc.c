@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 #include "max.h"
-#include "tree-test-helpers.h"
+#include "writeio.h"
 
 char *data = NULL;
 size_t free_index = 0;

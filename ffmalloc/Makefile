@@ -61,13 +61,16 @@ hoard-threadtest-test: lib/libffmalloc.so
 	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
 
 
+# `-Wl,-z,defs` warns if you have undefined references in your library
+BUILD_SHARED_FLAGS = -shared -fPIC -Wl,-z,defs
+
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test
 	touch $@
-lib/libbump.so: bumpmalloc.c tree-test-helpers.h | lib/
-	cc --shared -fPIC $(CFLAGS) bumpmalloc.c -o $@
+lib/libbump.so: bumpmalloc.c writeio.c max.h writeio.h | lib/
+	cc $(BUILD_SHARED_FLAGS) $(CFLAGS) bumpmalloc.c writeio.c -o $@
 
-LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c
+LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c writeio.c
 
 slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 	cc $(CFLAGS) $^ -o $@
@@ -75,7 +78,7 @@ slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 lib/%.so: OPTFLAGS=-O3
 lib/libffmalloc.so: tree-test-helpers.h
 lib/libffmalloc.so: $(LIBFFMALLOC_C_SOURCES) | lib/
-	cc --shared -fPIC $(CFLAGS) $(LIBFFMALLOC_C_SOURCES) -o $@
+	cc $(BUILD_SHARED_FLAGS) $(CFLAGS) $(LIBFFMALLOC_C_SOURCES) -o $@
 
 dylib-libc.run: dylib-test
 	./dylib-test
@@ -109,15 +112,15 @@ run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 	! fgrep -A 2 should $<
 	touch $@
 
-FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o
-FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpers.o
-MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o malloc-api.o
+FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o
+FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o
+MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o malloc-api.o writeio.o
 
 #gcov/tree.o: $(patsubst %,gcov/%,$(TREE_O_DEPS))
 
 #gcov/tree-test.o: $(patsubst %,gcov/%,$(TREE_TEST_O_DEPS))
 
-TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o
+TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o writeio.o
 
 $(GCOV_FILES) &: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test gcov/tree-test gcov/malloc-api-test
 	gcov/ffmalloc-test

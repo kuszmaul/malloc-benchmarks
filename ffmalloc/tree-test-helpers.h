@@ -6,20 +6,7 @@
 #include <stdlib.h>
 
 #include "tree.h"
-
-void writec(int fd, char c);
-
-void writes(int fd, char *str);
-// Effect: Write `str` to `fd`.
-
-void writeul(int fd, unsigned long v);
-// Effect: Write `v` in decimal to `fd`, as for printf("%lu", v);
-
-void writeux(int fd, unsigned long v);
-// Effect: Write `v` in hex to `fd`, as for printf("%lx", v);
-
-void writep(int fd, void*p);
-// Effect: Write `p` in hex to `fd`, as for printf("%p", p);
+#include "writeio.h"
 
 // Print a version of the tree to a string.  All non-null pointers are expressed
 // as an offsets are from `alloc`.  (Null pointers are printed as `(nil)`, the

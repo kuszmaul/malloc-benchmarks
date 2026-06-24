@@ -9,6 +9,7 @@
 #include "ffmalloc.h"
 #include "max.h"
 #include "tree-test-helpers.h"
+#include "writeio.h"
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -39,6 +40,7 @@ void *malloc(size_t size) {
   my_unlock();
   if (e != 0) {
     errno = e;
+    writes(2, "malloc failed on size "); writeul(2, size); writes(2, "\n");
     return NULL;
   }
   return result;

@@ -67,6 +67,7 @@
 #include "ffmalloc.h"
 #include "tree.h"
 #include "tree-test-helpers.h"
+#include "writeio.h"
 
 const bool slow_run_validation = false;
 

@@ -6,6 +6,7 @@
 #include "max.h"
 #include "tree.h"
 #include "tree-test-helpers.h"
+#include "writeio.h"
 
 static FFTREE make_small_node(size_t rand, size_t size, size_t max) {
   FFTREE t = {NULL, NULL, rand, 1, size, max};

@@ -4,6 +4,7 @@
 #include "max.h"
 #include "tree.h"
 #include "tree-test-helpers.h"
+#include "writeio.h"
 
 // The functions are sorted in this file in the order in which they can be
 // tested.  For example, first we test the validate functions, then the search
