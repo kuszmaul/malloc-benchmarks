@@ -74,11 +74,6 @@ static void ensure_space(size_t n) {
   }
 }
 
-# define strong_alias(name, aliasname) _strong_alias(name, aliasname)
-# define _strong_alias(name, aliasname) \
-  extern __typeof (name) aliasname __attribute__ ((alias (#name))) \
-    __attribute_copy__ (name);
-
 __asm__(".symver my_malloc,__libc_malloc@GLIBC_2.2.5");
 __asm__(".symver my_malloc,malloc@GLIBC_2.2.5");
 
@@ -86,9 +81,8 @@ static char empty[1];
 
 __attribute__((visibility("default")))
 void *my_malloc(size_t n) {
-  if (1) { ewrites(__FUNCTION__); ewrites("("); ewriteul(n); ewrites(")\n"); }
+  if (0) { ewrites(__FUNCTION__); ewrites("("); ewriteul(n); ewrites(")\n"); }
   if (n == 0) {
-    ewrites(" returns NULL\n");
     return empty;
   }
   // Round up to 8-alignment.
@@ -106,7 +100,7 @@ void *my_malloc(size_t n) {
   }
   size_t header_content = n + 8;
   memcpy(header, &header_content, sizeof(size_t));
-  ewrites(__FUNCTION__); ewrites(" returns "); ewritep(return_result); ewritenl();
+  if (0) { ewrites(__FUNCTION__); ewrites(" returns "); ewritep(return_result); ewritenl(); }
   return return_result;
 }
 

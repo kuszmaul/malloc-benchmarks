@@ -1,7 +1,6 @@
 #ifndef WRITEIO_H
 #define WRITEIO_H
 #include <stddef.h>
-#include <stdlib.h>
 
 void ewritec(char c);
 // Effect: Write `c` to standard error.
@@ -38,6 +37,12 @@ void ewritespaces(size_t n);
     }                         \
 })
 
+void my_abort(void);
+// Effect: call abort().
+//
+// Rationale: Since the abort is called in a macro, iwyu gets confused.  So
+// instead we'll call my_abort and define it in writeio.c.
+
 #define ASSERT(a) ({          \
     if (!(a)) {               \
       ewrites("Failure at "); \
@@ -45,7 +50,7 @@ void ewritespaces(size_t n);
       ewritec(':');           \
       ewriteul(__LINE__);     \
       ewritenl();             \
-      abort();                \
+      my_abort();             \
     }                         \
 })
 

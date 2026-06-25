@@ -2,11 +2,9 @@
 #define TREE_TEST_HELPERS_H
 
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdlib.h>
 
 #include "tree.h"
-#include "writeio.h"
 
 // Print a version of the tree to a string.  All non-null pointers are expressed
 // as an offsets are from `alloc`.  (Null pointers are printed as `(nil)`, the

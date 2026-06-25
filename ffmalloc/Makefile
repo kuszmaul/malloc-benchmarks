@@ -11,6 +11,7 @@ tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
 tests: dylib-ffmalloc.run dylib-libc.run dylib-bump.run
 tests: check-vers-map
+tests: empty-malloc-test.run empty-malloc-test-bump.run empty-malloc-test-ffmalloc.run empty-malloc-test-hoard.run 
 tests: $(GCOV_FILES)
 
 hoard-tests: \
@@ -107,6 +108,15 @@ check-include-guards.%.run: %.h check-include-guards
 	touch $@
 
 check-include-guards: check-include-guards.c
+
+empty-malloc-test.run: empty-malloc-test
+	./$<
+empty-malloc-test-bump.run: empty-malloc-test lib/libbump.so
+	LD_PRELOAD=lib/libbump.so ./$<
+empty-malloc-test-ffmalloc.run: empty-malloc-test lib/libffmalloc.so
+	LD_PRELOAD=lib/libffmalloc.so ./$<
+empty-malloc-test-hoard.run: empty-malloc-test
+	LD_PRELOAD=../../Hoard/build/libhoard.so ./$<
 
 run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 %.iwyu: %.c

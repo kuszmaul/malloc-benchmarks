@@ -1,7 +1,12 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "writeio.h"
+
+void my_abort(void) {
+  abort();
+}
 
 const int STDERR = 2;
 
