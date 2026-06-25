@@ -66,7 +66,6 @@
 
 #include "ffmalloc.h"
 #include "tree.h"
-#include "tree-test-helpers.h"
 #include "writeio.h"
 
 const bool slow_run_validation = false;
@@ -93,15 +92,6 @@ BOUNDARY_TAG get_boundary_tag(void *p) {
 }
 void* get_memaligned_original(void *p) {
   return *get_memaligned_original_stored_at_pointer(p);
-}
-
-static bool ispow2(size_t n) {
-  return n > 0 && (n & (n-1)) == 0;
-}
-
-static size_t alignup(size_t n, size_t alignment) {
-  ASSERT(ispow2(alignment));
-  return (n + alignment - 1) & ~(alignment -1);
 }
 
 static void* alignup_pointer(void* p, size_t alignment) {
@@ -237,7 +227,7 @@ int ff_malloc_e(void **result, size_t size, bool zero) {
 
 int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   if (!ispow2(alignment)) return EINVAL;
-  ASSERT(alignment % sizeof(void*) == 0);
+  if (alignment % sizeof(void*) != 0) return EINVAL;
   if (size == 0) {
     *result = NULL;
     return 0;

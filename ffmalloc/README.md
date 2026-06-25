@@ -34,16 +34,20 @@ For realloc:
 
 DONE: build the library with only the exported API
 
+DONE: Get the linking with libc done write.  (see for example how hoard does the linking at wrapper.cpp)
+   1) define __libc_malloc which calls our function.
+      (glibc uses a strong alias to make malloc be __libc_malloc)
+   2) define vers.map
+   3) add to the link flags
+     -Wl,--version-script=/home/bradley/github/Hoard/build/vers.map
+
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
 TODO: madvise-dontneed free the interior of freed blocks
 TODO: test calloc overflow
 TODO: the other memalign functions
-TODO: see how hoard does the linking at wrapper.cpp
-   1) define __libc_malloc which calls our function.
-      (glibc uses a strong alias to make malloc be __libc_malloc)
-   2) define vers.map
-   3) add to the link
-     -Wl,--version-script=/home/bradley/github/Hoard/build/vers.map
-   4) maybe also add -fvisibility=hidden -fno-builtin-malloc -fno-builtin-free -fno-fat-lto-objects -Wl,-soname,libhoard.so -o libhoard.so -lpthread -dl
+TODO:
+   4) maybe also add -Wl,-soname,libhoard.so -dl
       (change "libhoard" to "libffmalloc" and Do we need -ldl?)
+
+TODO: Add align functions to scripts.

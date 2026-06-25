@@ -17,26 +17,4 @@ void fftree_sprint(char *str, size_t str_size, FFTREE *tree, void *alloc);
 bool fftree_in(const FFTREE *tree, const FFTREE *node);
 // Effect: Return true iff `node` is a node in `tree`.
 
-#define VASSERT(a) ({         \
-    if (!(a)) {               \
-      ewrites("Failure at "); \
-      ewrites(__FILE__);      \
-      ewritec(':');           \
-      ewriteul(__LINE__);     \
-      ewritenl();             \
-      return false;           \
-    }                         \
-})
-
-#define ASSERT(a) ({          \
-    if (!(a)) {               \
-      ewrites("Failure at "); \
-      ewrites(__FILE__);      \
-      ewritec(':');           \
-      ewriteul(__LINE__);     \
-      ewritenl();             \
-      abort();                \
-    }                         \
-})
-
 #endif

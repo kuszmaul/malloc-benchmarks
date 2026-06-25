@@ -1,14 +1,12 @@
 #include <errno.h>
-#include <malloc.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "ffmalloc.h"
+#include "malloc-api.h"
 #include "max.h"
-#include "tree-test-helpers.h"
 #include "writeio.h"
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -34,21 +32,20 @@ static inline void my_unlock(void) {
 }
 
 __attribute__((visibility("default")))
-void *malloc(size_t size) {
+void *__libc_malloc(size_t size) {
   my_lock();
   void *result;
   int e = ff_malloc_e(&result, size, false);
   my_unlock();
   if (e != 0) {
     errno = e;
-    ewrites("malloc failed on size "); ewriteul(size); ewritenl();
     return NULL;
   }
   return result;
 }
 
 __attribute__((visibility("default")))
-void free(void *p) {
+void __libc_free(void *p) {
   if (p == NULL) return;
 #if 0
   if (!ffmalloc_owns_address(p)) {
@@ -66,7 +63,7 @@ void free(void *p) {
 }
 
 __attribute__((visibility("default")))
-void *calloc(size_t nmemb, size_t size) {
+void *__libc_calloc(size_t nmemb, size_t size) {
   void *result;
   ptrdiff_t n;
   if (__builtin_mul_overflow(nmemb, size, &n)) {
@@ -84,63 +81,57 @@ void *calloc(size_t nmemb, size_t size) {
 }
 
 __attribute__((visibility("default")))
-void *realloc(void *p, size_t size) {
-  // This is the simplest version.
-  void *result = malloc(size);
-  memcpy(result, p, min(size, malloc_usable_size(p)));
+void *__libc_realloc(void *p, size_t size) {
+  // This is the simplest version.  Just allocate new stuff
+  void *result = __libc_malloc(size);
+  memcpy(result, p, min(size, __malloc_usable_size(p)));
   return result;
 }
 
 __attribute__((visibility("default")))
-void *reallocarray(void *p, size_t nmemb, size_t size) {
+void *__libc_reallocarray(void *p, size_t nmemb, size_t size) {
   ptrdiff_t n;
   if (__builtin_mul_overflow(nmemb, size, &n)) {
     errno = ENOMEM;
     return NULL;
   }
-  return realloc(p, n);
+  return __libc_realloc(p, n);
 }
 
 __attribute__((visibility("default")))
-int posix_memalign(void** memptr, size_t alignment, size_t size) {
-  memptr = memptr;
-  alignment = alignment;
-  size = size;
-  ewrites("posix_memalign not ready\n");
-  abort();
+int __posix_memalign(void** memptr, size_t alignment, size_t size) {
+  return ff_posix_memalign(memptr, alignment, size);
+}
+
+// There seems to be a minor issue in libc: aligned_alloc is weak-bound to
+// __libc_memalign.  But aligned_alloc requires that `size` be a multiple of
+// alignment.  Our library could have complained about the misalignment of
+// `size` if we wanted, but with libc's decision it's harder.  We'll just accept
+// libc's implementation, which allows the aligned_alloc to work anyway.
+
+__attribute__((visibility("default")))
+void *__libc_valloc(size_t size) {
+  return __libc_memalign(page_size, size);
 }
 
 __attribute__((visibility("default")))
-void *aligned_alloc(size_t alignment, size_t size) {
-  alignment = alignment;
-  size = size;
-  ewrites("aligned_alloc not ready\n");
-  abort();
+void *__libc_memalign(size_t alignment, size_t size) {
+  size = max(sizeof(void*), size);
+  void *result;
+  int r = ff_posix_memalign(&result, alignment, size);
+  if (r != 0) {
+    errno = r;
+    return NULL;
+  }
+  return result;
 }
 
 __attribute__((visibility("default")))
-void *valloc(size_t size) {
-  size = size;
-  ewrites("valloc not ready\n");
-  abort();
+void *__libc_pvalloc(size_t size) {
+  return __libc_valloc(alignup(size, page_size));
 }
 
 __attribute__((visibility("default")))
-void *memalign(size_t alignment, size_t size) {
-  alignment = alignment;
-  size = size;
-  ewrites("memalign not ready\n");
-  abort();
-}
-
-__attribute__((visibility("default")))
-void *pvalloc(size_t size) {
-  size = size;
-  ewrites("memalign not ready\n");
-  abort();
-}
-
-__attribute__((visibility("default")))
-size_t malloc_usable_size(void *p) {
+size_t __malloc_usable_size(void *p) {
   return ff_malloc_usable_size(p);
 }

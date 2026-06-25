@@ -62,7 +62,7 @@ hoard-threadtest-test: lib/libffmalloc.so
 
 
 # `-Wl,-z,defs` warns if you have undefined references in your library
-BUILD_SHARED_FLAGS = -shared -fPIC -Wl,-z,defs -fvisibility=hidden -lpthread
+BUILD_SHARED_FLAGS = -shared -fPIC -Wl,-z,defs -fvisibility=hidden -lpthread -Wl,--version-script=vers.map -fno-builtin -fno-fat-lto-objects
 
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test
@@ -108,6 +108,7 @@ check-include-guards: check-include-guards.c
 run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 %.iwyu: %.c
 	iwyu $< 2>$@ ; echo ok # ignore the error produced by iwyu
+malloc-api.iwyu: malloc-api.h
 %.runiwyu: %.iwyu
 	! fgrep -A 2 should $<
 	touch $@

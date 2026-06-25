@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "tree.h"
+#include "writeio.h"
 
 enum {
   page_size = 4096,
@@ -38,5 +39,14 @@ BOUNDARY_TAG get_boundary_tag(void*p);
 void* get_memaligned_original(void *p);
 
 bool ffmalloc_owns_address(void *p);
+
+static inline bool ispow2(size_t n) {
+  return n > 0 && (n & (n-1)) == 0;
+}
+
+static inline size_t alignup(size_t n, size_t alignment) {
+  ASSERT(ispow2(alignment));
+  return (n + alignment - 1) & ~(alignment -1);
+}
 
 #endif

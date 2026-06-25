@@ -1,6 +1,7 @@
 #ifndef WRITEIO_H
 #define WRITEIO_H
 #include <stddef.h>
+#include <stdlib.h>
 
 void ewritec(char c);
 // Effect: Write `c` to standard error.
@@ -25,5 +26,27 @@ void ewritep(void*p);
 
 void ewritespaces(size_t n);
 // Effect: Write `n` spaces to stderr.
+
+#define VASSERT(a) ({         \
+    if (!(a)) {               \
+      ewrites("Failure at "); \
+      ewrites(__FILE__);      \
+      ewritec(':');           \
+      ewriteul(__LINE__);     \
+      ewritenl();             \
+      return false;           \
+    }                         \
+})
+
+#define ASSERT(a) ({          \
+    if (!(a)) {               \
+      ewrites("Failure at "); \
+      ewrites(__FILE__);      \
+      ewritec(':');           \
+      ewriteul(__LINE__);     \
+      ewritenl();             \
+      abort();                \
+    }                         \
+})
 
 #endif
