@@ -15,7 +15,7 @@ void ewritenl(void) {
   ewritec('\n');
 }
 
-void ewrites(char *str) {
+void ewrites(const char *str) {
   char c;
   while ((c=*str++)) {
     ewritec(c);

@@ -10,10 +10,10 @@ __attribute__((visibility("default")))
 size_t my_malloc_usable_size(void *p);
 
 __attribute__((visibility("default")))
-void *my_malloc(size_t n);
+void *__libc_malloc(size_t n);
 
 __attribute__((visibility("default")))
-void my_free(void*p __attribute__((__unused__)));
+void __libc_free(void*p __attribute__((__unused__)));
 
 __attribute__((visibility("default")))
 void *my_calloc(size_t nmemb, size_t size);
@@ -27,7 +27,7 @@ int my_posix_memalign(void **memptr, size_t alignment, size_t size);
 __attribute__((visibility("default")))
 void *my_aligned_alloc(size_t alignment, size_t size);
 
-char *data = NULL;
+void *data = NULL;
 size_t free_index = 0;
 size_t data_size = 0;
 size_t last_sbrk_size = 0;
@@ -36,14 +36,17 @@ static void do_sbrk(size_t n) {
   // We generally can sbrk a huge amount of memory, but we cannot do it more
   // than a few gigabytes at a time.
   const size_t max_single_sbrk_size = 1<<24;
+  ewrites("do_sbrk("); ewriteul(n); ewrites(")\n");
   while (n > 0) {
-    size_t m = max(max_single_sbrk_size, n);
+    size_t m = min(max_single_sbrk_size, n);
     void *r = sbrk(m);
+    ewrites(" sbrk("); ewriteul(m); ewrites(")="); ewritep(r); ewritenl();
     if (r == (void*)-1) {
       ewrites("sbrk failed\n");
       abort();
     }
     data_size += m;
+    ewrites(" data_size="); ewriteul(data_size); ewritenl();
     n -= m;
   }
 }
@@ -61,9 +64,9 @@ static void ensure_space(size_t n) {
     free_index = 0;
   }
   last_sbrk_size = max(n, last_sbrk_size) + last_sbrk_size;
+  last_sbrk_size += 4095;
+  last_sbrk_size &= ~4095;
   do_sbrk(last_sbrk_size);
-
-  data_size += last_sbrk_size;
 
   if (n > data_size - free_index) {
     ewrites("data size not good\n");
@@ -71,27 +74,39 @@ static void ensure_space(size_t n) {
   }
 }
 
-__asm__(".symver my_malloc,malloc@GLIBC_2.2.5");
+# define strong_alias(name, aliasname) _strong_alias(name, aliasname)
+# define _strong_alias(name, aliasname) \
+  extern __typeof (name) aliasname __attribute__ ((alias (#name))) \
+    __attribute_copy__ (name);
+
+strong_alias (__libc_malloc, malloc);
+    //__asm__(".symver __libc_malloc,malloc@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
-void *my_malloc(size_t n) {
-  ewrites("my_malloc("); ewriteul(n); ewrites(")\n");
+void *__libc_malloc(size_t n) {
+  ewrites(__FUNCTION__); ewrites("("); ewriteul(n); ewrites(")\n");
   if (n == 0) return NULL;
   // Round up to 8-alignment.
   n = n + 7;
   n &= ~7;
   ensure_space(n + 8);
-  char *result = data+free_index + 8;
+  void *header = ((char*)data)+free_index;
+  void *return_result = ((char*)header) + sizeof(size_t);
   free_index += n + 8;
-  *((size_t*)result) = n + 8;
-  ewrites("my_malloc returns "); ewritep(result+8); ewritenl();
-  return result + 8;
+  ewrites(" free_index="); ewriteul(free_index); ewritenl();
+  ewrites(" data_size ="); ewriteul(data_size); ewritenl();
+  ewrites(" data      ="); ewritep(data); ewritenl();
+  ewrites(__FUNCTION__); ewrites(" returns "); ewritep(return_result); ewritenl();
+  size_t header_content = n + 8;
+  memcpy(header, &header_content, sizeof(size_t));
+  return return_result;
 }
 
-__asm__(".symver my_free,free@GLIBC_2.2.5");
+strong_alias (__libc_free, free);
+//__asm__(".symver my_free,free@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
-void my_free(void*p __attribute__((__unused__))) {
+void __libc_free(void*p __attribute__((__unused__))) {
   ewrites("my_free\n");
   // Do nothing
 }
@@ -101,7 +116,7 @@ __asm__(".symver my_calloc,calloc@GLIBC_2.2.5");
 __attribute__((visibility("default")))
 void *my_calloc(size_t nmemb, size_t size) {
   ewrites("calloc\n");
-  void *p = my_malloc(nmemb * size);
+  void *p = __libc_malloc(nmemb * size);
   memset(p, 0, nmemb * size);
   return p;
 }
@@ -115,7 +130,7 @@ void *my_realloc(void *p __attribute__((unused)), size_t size __attribute__((unu
     ewrites("my_realloc done1\n");
     return p;
   }
-  void *q = my_malloc(size);
+  void *q = __libc_malloc(size);
   if (my_malloc_usable_size(q) < size) {
     ewrites("my_realloc failed\n");
     abort();

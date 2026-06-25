@@ -9,7 +9,7 @@ void ewritec(char c);
 void ewritenl(void);
 // Effect: Write `\n` to standard error.
 
-void ewrites(char *str);
+void ewrites(const char *str);
 // Effect: Write `str` to standard error.
 
 void ewriteul(unsigned long v);
