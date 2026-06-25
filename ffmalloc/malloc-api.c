@@ -31,8 +31,10 @@ static inline void my_unlock(void) {
   }
 }
 
+__asm__(".symver my_malloc,malloc@GLIBC_2.2.5");
+
 __attribute__((visibility("default")))
-void *__libc_malloc(size_t size) {
+void *my_malloc(size_t size) {
   my_lock();
   void *result;
   int e = ff_malloc_e(&result, size, false);
@@ -44,8 +46,10 @@ void *__libc_malloc(size_t size) {
   return result;
 }
 
+__asm__(".symver my_free,free@GLIBC_2.2.5");
+
 __attribute__((visibility("default")))
-void __libc_free(void *p) {
+void my_free(void *p) {
   if (p == NULL) return;
 #if 0
   if (!ffmalloc_owns_address(p)) {
@@ -62,8 +66,10 @@ void __libc_free(void *p) {
   my_unlock();
 }
 
+__asm__(".symver my_calloc,calloc@GLIBC_2.2.5");
+
 __attribute__((visibility("default")))
-void *__libc_calloc(size_t nmemb, size_t size) {
+void *my_calloc(size_t nmemb, size_t size) {
   void *result;
   ptrdiff_t n;
   if (__builtin_mul_overflow(nmemb, size, &n)) {
@@ -80,26 +86,32 @@ void *__libc_calloc(size_t nmemb, size_t size) {
   return result;
 }
 
+__asm__(".symver my_realloc,realloc@GLIBC_2.2.5");
+
 __attribute__((visibility("default")))
-void *__libc_realloc(void *p, size_t size) {
+void *my_realloc(void *p, size_t size) {
   // This is the simplest version.  Just allocate new stuff
-  void *result = __libc_malloc(size);
-  memcpy(result, p, min(size, __malloc_usable_size(p)));
+  void *result = my_malloc(size);
+  memcpy(result, p, min(size, my_malloc_usable_size(p)));
   return result;
 }
 
+__asm__(".symver my_reallocarray,reallocarray@GLIBC_2.2.5");
+
 __attribute__((visibility("default")))
-void *__libc_reallocarray(void *p, size_t nmemb, size_t size) {
+void *my_reallocarray(void *p, size_t nmemb, size_t size) {
   ptrdiff_t n;
   if (__builtin_mul_overflow(nmemb, size, &n)) {
     errno = ENOMEM;
     return NULL;
   }
-  return __libc_realloc(p, n);
+  return my_realloc(p, n);
 }
 
+__asm__(".symver my_posix_memalign,posix_memalign@GLIBC_2.2.5");
+
 __attribute__((visibility("default")))
-int __posix_memalign(void** memptr, size_t alignment, size_t size) {
+int my_posix_memalign(void** memptr, size_t alignment, size_t size) {
   return ff_posix_memalign(memptr, alignment, size);
 }
 
@@ -109,13 +121,17 @@ int __posix_memalign(void** memptr, size_t alignment, size_t size) {
 // `size` if we wanted, but with libc's decision it's harder.  We'll just accept
 // libc's implementation, which allows the aligned_alloc to work anyway.
 
-__attribute__((visibility("default")))
-void *__libc_valloc(size_t size) {
-  return __libc_memalign(page_size, size);
-}
+__asm__(".symver my_valloc,valloc@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
-void *__libc_memalign(size_t alignment, size_t size) {
+void *my_valloc(size_t size) {
+  return my_memalign(page_size, size);
+}
+
+__asm__(".symver my_memalign,memalign@GLIBC_2.2.5");
+
+__attribute__((visibility("default")))
+void *my_memalign(size_t alignment, size_t size) {
   size = max(sizeof(void*), size);
   void *result;
   int r = ff_posix_memalign(&result, alignment, size);
@@ -126,12 +142,16 @@ void *__libc_memalign(size_t alignment, size_t size) {
   return result;
 }
 
-__attribute__((visibility("default")))
-void *__libc_pvalloc(size_t size) {
-  return __libc_valloc(alignup(size, page_size));
-}
+__asm__(".symver my_pvalloc,pvalloc@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
-size_t __malloc_usable_size(void *p) {
+void *my_pvalloc(size_t size) {
+  return my_valloc(alignup(size, page_size));
+}
+
+__asm__(".symver my_malloc_usable_size,malloc_usable_size@GLIBC_2.2.5");
+
+__attribute__((visibility("default")))
+size_t my_malloc_usable_size(void *p) {
   return ff_malloc_usable_size(p);
 }

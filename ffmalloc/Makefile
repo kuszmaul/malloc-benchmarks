@@ -10,6 +10,7 @@ tests: malloc-api-test.run
 tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
 tests: dylib-ffmalloc.run dylib-libc.run dylib-bump.run
+tests: check-vers-map
 tests: $(GCOV_FILES)
 
 hoard-tests: \
@@ -67,8 +68,10 @@ BUILD_SHARED_FLAGS = -shared -fPIC -Wl,-z,defs -fvisibility=hidden -lpthread -Wl
 dylib-bump.run: lib/libbump.so dylib-test
 	LD_PRELOAD=lib/libbump.so ./dylib-test
 	touch $@
-lib/libbump.so: bumpmalloc.c writeio.c max.h writeio.h | lib/
+lib/libbump.so: bumpmalloc.c writeio.c max.h writeio.h vers.map | lib/
 	cc $(BUILD_SHARED_FLAGS) $(CFLAGS) bumpmalloc.c writeio.c -o $@
+
+dylib-test2: LDLIBS = -largtable2
 
 LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c writeio.c
 
@@ -76,7 +79,7 @@ slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 	cc $(CFLAGS) $^ -o $@
 
 lib/%.so: OPTFLAGS=-O3
-lib/libffmalloc.so: tree-test-helpers.h
+lib/libffmalloc.so: $(wildcard *.h) vers.map
 lib/libffmalloc.so: $(LIBFFMALLOC_C_SOURCES) | lib/
 	cc $(BUILD_SHARED_FLAGS) $(CFLAGS) $(LIBFFMALLOC_C_SOURCES) -o $@
 
@@ -155,6 +158,11 @@ test/ffmalloc-sbrk-test: $(patsubst %,test/%,$(FFMALLOC_SBRK_TEST_DEPS))
 test/malloc-api-test: $(patsubst %,test/%,$(MALLOC_API_TEST_DEPS))
 	$(CC) $(LDFLAGS) $^ -coverage -o $@
 
+check-vers-map: lib/libffmalloc.so
+	nm lib/libffmalloc.so|fgrep __libc|(! fgrep " t ")
+	nm lib/libffmalloc.so|fgrep __posix_memalign|(! fgrep " t ")
+	nm lib/libffmalloc.so|fgrep __posix_memalign|(! fgrep " t ")
+
 .PRECIOUS: %.iwyu
 .PRECIOUS: %/
 
@@ -169,4 +177,5 @@ include $(SOURCES:.c=.d)
 clean:
 	rm -f *.o *.gcov *.d.* *.iwyu *.run *.runiwyu
 	rm -fr test/ gcov/ lib/
-	rm -f check-include-guards dylib-test tree-test
+	rm -f check-include-guards dylib-test tree-test dylib-test2
+

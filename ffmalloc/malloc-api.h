@@ -3,32 +3,32 @@
 #include <stddef.h>
 
 __attribute__((visibility("default")))
-void *__libc_malloc(size_t size);
+void *my_malloc(size_t size);
 
 __attribute__((visibility("default")))
-void __libc_free(void *p);
+void my_free(void *p);
 
 __attribute__((visibility("default")))
-void *__libc_calloc(size_t nmemb, size_t size);
+void *my_calloc(size_t nmemb, size_t size);
 
 __attribute__((visibility("default")))
-void *__libc_realloc(void *p, size_t size);
+void *my_realloc(void *p, size_t size);
 
 __attribute__((visibility("default")))
-void *__libc_memalign(size_t alignment, size_t size);
+void *my_memalign(size_t alignment, size_t size);
 
 __attribute__((visibility("default")))
-void *__libc_reallocarray(void *p, size_t nmemb, size_t size);
+void *my_reallocarray(void *p, size_t nmemb, size_t size);
 
 __attribute__((visibility("default")))
-void *__libc_valloc(size_t size);
+void *my_valloc(size_t size);
 
 __attribute__((visibility("default")))
-void *__libc_pvalloc(size_t size);
+void *my_pvalloc(size_t size);
 
 __attribute__((visibility("default")))
-int __posix_memalign(void** memptr, size_t alignment, size_t size);
+int my_posix_memalign(void** memptr, size_t alignment, size_t size);
 
 __attribute__((visibility("default")))
-size_t __malloc_usable_size (void *m);
+size_t my_malloc_usable_size (void *m);
 #endif
