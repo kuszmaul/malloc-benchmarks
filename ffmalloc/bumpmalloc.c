@@ -10,10 +10,10 @@ __attribute__((visibility("default")))
 size_t my_malloc_usable_size(void *p);
 
 __attribute__((visibility("default")))
-void *__libc_malloc(size_t n);
+void *my_malloc(size_t n);
 
 __attribute__((visibility("default")))
-void __libc_free(void*p __attribute__((__unused__)));
+void my_free(void*p __attribute__((__unused__)));
 
 __attribute__((visibility("default")))
 void *my_calloc(size_t nmemb, size_t size);
@@ -36,17 +36,17 @@ static void do_sbrk(size_t n) {
   // We generally can sbrk a huge amount of memory, but we cannot do it more
   // than a few gigabytes at a time.
   const size_t max_single_sbrk_size = 1<<24;
-  ewrites("do_sbrk("); ewriteul(n); ewrites(")\n");
+  if (0) { ewrites("do_sbrk("); ewriteul(n); ewrites(")\n"); }
   while (n > 0) {
     size_t m = min(max_single_sbrk_size, n);
     void *r = sbrk(m);
-    ewrites(" sbrk("); ewriteul(m); ewrites(")="); ewritep(r); ewritenl();
+    if (0) { ewrites(" sbrk("); ewriteul(m); ewrites(")="); ewritep(r); ewritenl(); }
     if (r == (void*)-1) {
-      ewrites("sbrk failed\n");
+      if (0) ewrites("sbrk failed\n");
       abort();
     }
     data_size += m;
-    ewrites(" data_size="); ewriteul(data_size); ewritenl();
+    if (0) { ewrites(" data_size="); ewriteul(data_size); ewritenl(); }
     n -= m;
   }
 }
@@ -79,13 +79,18 @@ static void ensure_space(size_t n) {
   extern __typeof (name) aliasname __attribute__ ((alias (#name))) \
     __attribute_copy__ (name);
 
-strong_alias (__libc_malloc, malloc);
-    //__asm__(".symver __libc_malloc,malloc@GLIBC_2.2.5");
+__asm__(".symver my_malloc,__libc_malloc@GLIBC_2.2.5");
+__asm__(".symver my_malloc,malloc@GLIBC_2.2.5");
+
+static char empty[1];
 
 __attribute__((visibility("default")))
-void *__libc_malloc(size_t n) {
-  ewrites(__FUNCTION__); ewrites("("); ewriteul(n); ewrites(")\n");
-  if (n == 0) return NULL;
+void *my_malloc(size_t n) {
+  if (1) { ewrites(__FUNCTION__); ewrites("("); ewriteul(n); ewrites(")\n"); }
+  if (n == 0) {
+    ewrites(" returns NULL\n");
+    return empty;
+  }
   // Round up to 8-alignment.
   n = n + 7;
   n &= ~7;
@@ -93,50 +98,55 @@ void *__libc_malloc(size_t n) {
   void *header = ((char*)data)+free_index;
   void *return_result = ((char*)header) + sizeof(size_t);
   free_index += n + 8;
-  ewrites(" free_index="); ewriteul(free_index); ewritenl();
-  ewrites(" data_size ="); ewriteul(data_size); ewritenl();
-  ewrites(" data      ="); ewritep(data); ewritenl();
-  ewrites(__FUNCTION__); ewrites(" returns "); ewritep(return_result); ewritenl();
+  if (0) {
+    ewrites(" free_index="); ewriteul(free_index); ewritenl();
+    ewrites(" data_size ="); ewriteul(data_size); ewritenl();
+    ewrites(" data      ="); ewritep(data); ewritenl();
+    ewrites(__FUNCTION__); ewrites(" returns "); ewritep(return_result); ewritenl();
+  }
   size_t header_content = n + 8;
   memcpy(header, &header_content, sizeof(size_t));
+  ewrites(__FUNCTION__); ewrites(" returns "); ewritep(return_result); ewritenl();
   return return_result;
 }
 
-strong_alias (__libc_free, free);
-//__asm__(".symver my_free,free@GLIBC_2.2.5");
+__asm__(".symver my_free,__libc_free@GLIBC_2.2.5");
+__asm__(".symver my_free,free@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
-void __libc_free(void*p __attribute__((__unused__))) {
-  ewrites("my_free\n");
+void my_free(void*p __attribute__((__unused__))) {
+  if (0) ewrites("my_free\n");
   // Do nothing
 }
 
+__asm__(".symver my_calloc,__libc_calloc@GLIBC_2.2.5");
 __asm__(".symver my_calloc,calloc@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
 void *my_calloc(size_t nmemb, size_t size) {
-  ewrites("calloc\n");
-  void *p = __libc_malloc(nmemb * size);
+  if (0) ewrites("calloc\n");
+  void *p = my_malloc(nmemb * size);
   memset(p, 0, nmemb * size);
   return p;
 }
 
+__asm__(".symver my_realloc,__libc_realloc@GLIBC_2.2.5");
 __asm__(".symver my_realloc,realloc@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
 void *my_realloc(void *p __attribute__((unused)), size_t size __attribute__((unused))) {
-  ewrites("my_realloc\n");
+  if (0) ewrites("my_realloc\n");
   if (size <= my_malloc_usable_size(p)) {
-    ewrites("my_realloc done1\n");
+    if (0) ewrites("my_realloc done1\n");
     return p;
   }
-  void *q = __libc_malloc(size);
+  void *q = my_malloc(size);
   if (my_malloc_usable_size(q) < size) {
-    ewrites("my_realloc failed\n");
+    if (0) ewrites("my_realloc failed\n");
     abort();
   }
   memcpy(q, p, my_malloc_usable_size(p));
-  ewrites("my_realloc done2\n");
+  if (0) ewrites("my_realloc done2\n");
   return q;
 }
 
@@ -168,13 +178,14 @@ void *valloc(size_t size __attribute__((unused))) {
   abort();
 }
 
+__asm__(".symver my_malloc_usable_size,__malloc_usable_size@GLIBC_2.2.5");
 __asm__(".symver my_malloc_usable_size,malloc_usable_size@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
 size_t my_malloc_usable_size(void *p) {
-  ewrites("malloc_usable_size\n");
+  if (0) ewrites("malloc_usable_size\n");
   if (p == NULL) return 0;
   size_t r = *((size_t*)(((char*)p)-8)) - 8;
-  ewrites("malloc_usable_size done\n");
+  if (0) ewrites("malloc_usable_size done\n");
   return r;
 }
