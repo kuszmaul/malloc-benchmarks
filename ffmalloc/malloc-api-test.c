@@ -33,8 +33,6 @@ int main(void) {
   p = my_calloc(1ul << 33, 1ul << 33);
   assert(p == NULL);
   assert(errno == ENOMEM);
-  my_free(p);
-
   p = my_calloc(10, 10);
   assert(p != NULL);
   errno = 0;
@@ -43,7 +41,6 @@ int main(void) {
   p = my_reallocarray(p, 1ul << 33, 1ul << 33);
   assert(p == NULL);
   assert(errno == ENOMEM);
-  my_free(p);
 
   p = my_memalign(128, 5);
   assert(p != NULL);
@@ -55,7 +52,6 @@ int main(void) {
   p = my_memalign(129, 5);
   assert(p == NULL);
   assert(errno == EINVAL);
-  my_free(p);
 
   p = my_valloc(100);
   assert(p != NULL);

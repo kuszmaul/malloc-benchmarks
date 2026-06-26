@@ -35,6 +35,9 @@ __asm__(".symver my_malloc,malloc@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
 void *my_malloc(size_t size) {
+  if (size == 0) {
+    return empty;
+  }
   my_lock();
   void *result;
   int e = ff_malloc_e(&result, size, false);
@@ -43,6 +46,10 @@ void *my_malloc(size_t size) {
     errno = e;
     return NULL;
   }
+  if (result == NULL) {
+    ewrites("malloc returned NULL");
+    my_abort();
+  }
   return result;
 }
 
@@ -50,7 +57,12 @@ __asm__(".symver my_free,free@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
 void my_free(void *p) {
+  // The documentation for `free` says that it must accept `NULL`, and it must
+  // also accept whatever `malloc(0)` returns.  Since some libraries (I'm
+  // looking at you argtable-2-13) cannot tolerate `malloc(0)==NULL` we have to
+  // treat these as as separate cases.
   if (p == NULL) return;
+  if (p == empty) return;
 #if 0
   if (!ffmalloc_owns_address(p)) {
     // When using LD_PRELOAD some malloc operations seem to use the old malloc.
@@ -83,6 +95,10 @@ void *my_calloc(size_t nmemb, size_t size) {
     errno = e;
     return NULL;
   }
+  if (result == NULL) {
+    ewrites("calloc returning NULL\n");
+    my_abort();
+  }
   return result;
 }
 
@@ -92,7 +108,11 @@ __attribute__((visibility("default")))
 void *my_realloc(void *p, size_t size) {
   // This is the simplest version.  Just allocate new stuff
   void *result = my_malloc(size);
-  memcpy(result, p, min(size, my_malloc_usable_size(p)));
+  size_t n = min(size, my_malloc_usable_size(p));
+  if (n > 0) {
+    memcpy(result, p, n);
+  }
+  my_free(p);
   return result;
 }
 
@@ -153,5 +173,6 @@ __asm__(".symver my_malloc_usable_size,malloc_usable_size@GLIBC_2.2.5");
 
 __attribute__((visibility("default")))
 size_t my_malloc_usable_size(void *p) {
+  if (p == NULL) return 0;
   return ff_malloc_usable_size(p);
 }

@@ -201,13 +201,15 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
   return 0;
 }
 
+char empty[1];
+
 // `ff_malloc_e` is like malloc except that it uses the calling interface that
 // posix_memalign uses.  It returns 0 on success (and stores the result in
 // *result) or returns an error code.
 int ff_malloc_e(void **result, size_t size, bool zero) {
   size_t original_size = size;
   if (size == 0) {
-    *result = NULL;
+    *result = empty;
     return 0;
   }
   size = alignup(size, 8);
@@ -229,7 +231,7 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   if (!ispow2(alignment)) return EINVAL;
   if (alignment % sizeof(void*) != 0) return EINVAL;
   if (size == 0) {
-    *result = NULL;
+    *result = empty;
     return 0;
   }
   if (alignment <= sizeof(BOUNDARY_TAG)) {
@@ -258,6 +260,7 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
 }
 
 void ff_free(void *p) {
+  if (p == empty) return;
   BOUNDARY_TAG bt = get_boundary_tag(p);
   if (!bt.is_memaligned) {
     if (bt.size >= first_fit_size_limit) {
@@ -280,7 +283,7 @@ void ff_free(void *p) {
 }
 
 size_t ff_malloc_usable_size(void *p) {
-  if (p == NULL) {
+  if (p == empty) {
     return 0;
   }
   BOUNDARY_TAG bt = get_boundary_tag(p);

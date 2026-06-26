@@ -49,4 +49,6 @@ static inline size_t alignup(size_t n, size_t alignment) {
   return (n + alignment - 1) & ~(alignment -1);
 }
 
+extern char empty[1];
+
 #endif

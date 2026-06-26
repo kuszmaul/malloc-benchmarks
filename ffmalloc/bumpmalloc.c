@@ -1,3 +1,4 @@
+#include <features.h>
 #include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,12 @@ int my_posix_memalign(void **memptr, size_t alignment, size_t size);
 
 __attribute__((visibility("default")))
 void *my_aligned_alloc(size_t alignment, size_t size);
+
+# define strong_alias(name, aliasname) _strong_alias(name, aliasname)
+# define _strong_alias(name, aliasname) \
+  extern __typeof (name) aliasname __attribute__ ((alias (#name))) \
+    __attribute_copy__ (name);
+
 
 void *data = NULL;
 size_t free_index = 0;
@@ -75,7 +82,7 @@ static void ensure_space(size_t n) {
 }
 
 __asm__(".symver my_malloc,__libc_malloc@GLIBC_2.2.5");
-__asm__(".symver my_malloc,malloc@GLIBC_2.2.5");
+strong_alias(my_malloc, malloc);
 
 static char empty[1];
 
@@ -105,7 +112,7 @@ void *my_malloc(size_t n) {
 }
 
 __asm__(".symver my_free,__libc_free@GLIBC_2.2.5");
-__asm__(".symver my_free,free@GLIBC_2.2.5");
+strong_alias(my_free, free);
 
 __attribute__((visibility("default")))
 void my_free(void*p __attribute__((__unused__))) {
@@ -114,7 +121,7 @@ void my_free(void*p __attribute__((__unused__))) {
 }
 
 __asm__(".symver my_calloc,__libc_calloc@GLIBC_2.2.5");
-__asm__(".symver my_calloc,calloc@GLIBC_2.2.5");
+strong_alias(my_calloc, calloc);
 
 __attribute__((visibility("default")))
 void *my_calloc(size_t nmemb, size_t size) {
@@ -125,7 +132,7 @@ void *my_calloc(size_t nmemb, size_t size) {
 }
 
 __asm__(".symver my_realloc,__libc_realloc@GLIBC_2.2.5");
-__asm__(".symver my_realloc,realloc@GLIBC_2.2.5");
+strong_alias(my_realloc, realloc);
 
 __attribute__((visibility("default")))
 void *my_realloc(void *p __attribute__((unused)), size_t size __attribute__((unused))) {
@@ -173,7 +180,7 @@ void *valloc(size_t size __attribute__((unused))) {
 }
 
 __asm__(".symver my_malloc_usable_size,__malloc_usable_size@GLIBC_2.2.5");
-__asm__(".symver my_malloc_usable_size,malloc_usable_size@GLIBC_2.2.5");
+strong_alias(my_malloc_usable_size, malloc_usable_size);
 
 __attribute__((visibility("default")))
 size_t my_malloc_usable_size(void *p) {

@@ -74,21 +74,23 @@ static void test_little_malloc0(void) {
     void *p;
     int r = ff_malloc_e(&p, 0, false);
     assert(r == 0);
-    assert(p == NULL);
+    // It might be null or it might be a unique pointer, but it should be freeable
+    assert(ff_malloc_usable_size(p) == 0);
+    ff_free(p);
   }
   {
     void *p;
     int r = ff_posix_memalign(&p, 8, 0);
     assert(r == 0);
-    assert(p == NULL);
+    // It might be null or it might be a unique pointer, but it should be freeable
+    assert(ff_malloc_usable_size(p) == 0);
+    ff_free(p);
   }
 
 }
 
 static void test_little_malloc1(void) {
   if (debug) fprintf(stderr, "\n%s\n", __FUNCTION__);
-
-  assert(ff_malloc_usable_size(NULL) == 0);
 
   void *p;
   int r = ff_malloc_e(&p, 16, false);
