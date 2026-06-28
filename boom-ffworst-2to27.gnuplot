@@ -176,6 +176,7 @@ plot \
  "boom-ffworst-bump-2to27.data" using (log($1)/log(2)):($3) with lines title "bump", \
  "boom-ffworst-bump-unmap-2to27.data" using (log($1)/log(2)):($3) with lines title "bump-unmap", \
  "boom-ffworst-hoard-2to27.data" using (log($1)/log(2)):($3) with lines title "hoard", \
- "boom-ffworst-glibc-2to27.data" using (log($1)/log(2)):($3) with lines title "libc"
+ "boom-ffworst-glibc-2to27.data" using (log($1)/log(2)):($3) with lines title "libc", \
+ "boom-ffworst-ffmalloc-2to27.data" using (log($1)/log(2)):($3) with lines title "ffmalloc"
 
 #    EOF
