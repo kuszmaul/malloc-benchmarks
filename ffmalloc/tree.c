@@ -1,6 +1,5 @@
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 #include "max.h"
 #include "tree.h"
@@ -154,10 +153,7 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
 }
 
 size_t fftree_hash(const FFTREE *node) {
-  __uint128_t mul = ((uintptr_t)(node)) * ((__uint128_t)(phi) );
-  __uint64_t mh = (mul >> 64);
-  __uint64_t ml = (uint64_t)(mul);
-  return mh ^ ml;
+  return ((uintptr_t)(node)) * phi;
 }
 
 size_t fftree_count(FFTREE *tree) {
