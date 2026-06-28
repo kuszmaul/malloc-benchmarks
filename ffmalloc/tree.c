@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #include "max.h"
 #include "tree.h"
@@ -14,7 +15,7 @@ size_t fftree_rand(const FFTREE *t) {
   if (t == NULL) {
     return 0;
   } else {
-    return t->rand;
+    return fftree_hash(t);
   }
 }
 size_t fftree_max_size_in_subtree(const FFTREE *t) {
@@ -49,12 +50,12 @@ bool __attribute__((warn_unused_result)) fftree_validate_local(FFTREE *tree) {
   size_t expect_max_size = fftree_node_size(tree);
   if (tree->left != NULL) {
     VASSERT((char*)(tree->left) + fftree_node_size(tree->left) < (char*)tree);
-    VASSERT(tree->rand >= tree->left->rand);
+    VASSERT(fftree_hash(tree) >= fftree_hash(tree->left));
     maxf(&expect_max_size, tree->left->max_size_in_subtree);
   }
   if (tree -> right != NULL) {
     VASSERT((char*)(tree) + fftree_node_size(tree) < (char*)(tree->right));
-    VASSERT(tree->rand >= tree->right->rand);
+    VASSERT(fftree_hash(tree) >= fftree_hash(tree->right));
     maxf(&expect_max_size, tree->right->max_size_in_subtree);
   }
   // Verify the augmentation is correct.
@@ -152,8 +153,11 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
   }
 }
 
-size_t fftree_hash(FFTREE *node) {
-  return (((uintptr_t)(node) * (__uint128_t)(phi)) >> 64) % hash_mod;
+size_t fftree_hash(const FFTREE *node) {
+  __uint128_t mul = ((uintptr_t)(node)) * ((__uint128_t)(phi) );
+  __uint64_t mh = (mul >> 64);
+  __uint64_t ml = (uint64_t)(mul);
+  return mh ^ ml;
 }
 
 size_t fftree_count(FFTREE *tree) {
@@ -183,19 +187,19 @@ TPAIR fftree_split(FFTREE *tree, FFTREE *pivot) {
   }
 }
 
-FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node) {
+FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash) {
   if (tree == NULL) {
     node->left = NULL;
     node->right = NULL;
     fftree_update_augmentation(node);
     return node;
   }
-  if (tree->rand >= node->rand) {
+  if (fftree_hash(tree) >= node_hash) {
     ASSERT(tree != node);
     if (tree < node) {
-      tree->right = fftree_insert2(tree->right, node);
+      tree->right = fftree_insert2(tree->right, node, node_hash);
     } else {
-      tree->left = fftree_insert2(tree->left, node);
+      tree->left = fftree_insert2(tree->left, node, node_hash);
     }
     fftree_update_augmentation(tree);
     return tree;
@@ -211,16 +215,16 @@ FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node) {
 void fftree_insert(FFTREE **tree_p, FFTREE *node) {
   // Effect: see header
   ASSERT(tree_p != NULL);
-  node->rand = fftree_hash(node);
+  ASSERT(node != NULL);
   node->max_size_in_subtree = fftree_node_size(node);
-  *tree_p = fftree_insert2(*tree_p, node);
+  *tree_p = fftree_insert2(*tree_p, node, fftree_hash(node));
 }
 
 FFTREE* fftree_merge(FFTREE *a, FFTREE *b) {
   // Effect: see header
   if (a == NULL) return b;
   if (b == NULL) return a;
-  if (a->rand >= b->rand) {
+  if (fftree_hash(a) >= fftree_hash(b)) {
     // `a` is the new root.
     a->right = fftree_merge(a->right, b);
     fftree_update_augmentation(a);

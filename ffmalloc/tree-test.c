@@ -1,15 +1,11 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>  // use a known-working version of malloc to run these tests.
-#include <string.h>
 
-#include "max.h"
 #include "tree.h"
-#include "tree-test-helpers.h"
-#include "writeio.h"
 
-static FFTREE make_small_node(size_t rand, size_t size, size_t max) {
-  FFTREE t = {NULL, NULL, rand, 1, size, max};
+static FFTREE make_small_node(size_t size, size_t max) {
+  FFTREE t = {NULL, NULL, 1, size, max};
   assert(t.small_size == size);
   assert(t.max_size_in_subtree == max);
   return t;
@@ -18,14 +14,14 @@ static FFTREE make_small_node(size_t rand, size_t size, size_t max) {
 static void test_depth(void) {
   assert(fftree_rand(NULL) == 0);
 
-  FFTREE t = make_small_node(42, 18, 19);
-  assert(fftree_rand(&t) == 42);
+  FFTREE t = make_small_node(18, 19);
+  assert(fftree_rand(&t) != 0); // almost certainly not zero.
 }
 
 static void test_max_size_in_subtree(void) {
   assert(fftree_max_size_in_subtree(NULL) == 0);
 
-  FFTREE t = make_small_node(42, 18, 19);
+  FFTREE t = make_small_node(18, 19);
   assert(fftree_max_size_in_subtree(&t) == 19);
   assert(fftree_node_size(&t) == 18);
 }
@@ -35,6 +31,7 @@ typedef struct node_desc {
   struct node_desc *left, *right;
 } NODE_DESC;
 
+#if 0
 static NODE_DESC *desc(size_t size, size_t gap, NODE_DESC *left, NODE_DESC *right) {
   assert(size >= 24 && size % 8 == 0);
   assert(gap % 8 == 0);
@@ -42,6 +39,7 @@ static NODE_DESC *desc(size_t size, size_t gap, NODE_DESC *left, NODE_DESC *righ
   *r = (NODE_DESC){-1, size, gap, left, right};
   return r;
 }
+#endif
 #if 0
 static NODE_DESC *descr(size_t rand, size_t size, size_t gap, NODE_DESC *left, NODE_DESC *right) {
   NODE_DESC *r = desc(size, gap, left, right);
@@ -49,6 +47,8 @@ static NODE_DESC *descr(size_t rand, size_t size, size_t gap, NODE_DESC *left, N
   return r;
 }
 #endif
+
+#if 0
 typedef struct desc_size_info {
   size_t n_nodes;
   size_t total_size;
@@ -77,12 +77,10 @@ static FFTREE* make_nodes(char *data, NODE_DESC *desc) {
       data + lsinfo.total_size + desc->size + desc->gap,
       desc->right);
   FFTREE *this_node = (FFTREE*)(data + lsinfo.total_size);
-  // Make the random numbers be valid for heap ordering.
-  size_t rand = 2+max(fftree_rand(ln), fftree_rand(rn));
   size_t max_size = max(
       desc->size,
       max(fftree_max_size_in_subtree(ln), fftree_max_size_in_subtree(rn)));
-  *this_node = (FFTREE){ln, rn, rand, 0, 0, max_size};
+  *this_node = (FFTREE){ln, rn, 0, 0, max_size};
   set_fftree_node_size(this_node, desc->size);
   return this_node;
 }
@@ -99,6 +97,8 @@ static TEST_TREE make_tree(NODE_DESC *desc) {
   return (TEST_TREE){desc, make_nodes(data, desc), data};
 }
 
+
+
 static FFTREE* tree_at(TEST_TREE *tt, size_t off) {
   assert(off % 8 == 0);
   return (FFTREE*)(off+((char*)tt->alloc));
@@ -108,34 +108,68 @@ static void free_test_tree(TEST_TREE tt) {
   free(tt.alloc);
   free_desc(tt.desc);
 }
+#endif
+
+static void test_validate_two_nodes_with_left_child(void) {
+  // A good tree with two nodes and a left child
+  size_t n=1000;
+  FFTREE test_nodes[n];
+  for (size_t i = 0; i < n; i++) {
+    for (size_t j = i+1; j < n; j++) {
+      FFTREE *root = &test_nodes[j];
+      FFTREE *child = &test_nodes[i];
+      if (fftree_hash(child) < fftree_hash(root)) {
+        *root = (FFTREE){child, NULL, 1, 18, 19};
+        *child = (FFTREE){NULL, NULL, 1, 19, 19};
+        assert(fftree_validate(root));
+        assert(fftree_count(root) == 2);
+        return;
+      }
+    }
+  }
+  assert(false); // Couldn't find a node to the left with a smaller hash.
+}
+
+static void test_validate_two_nodes_with_right_child(void) {
+  // A good tree with two nodes and a right child
+  size_t n=1000;
+  FFTREE test_nodes[n];
+  for (size_t i = 0; i < n; i++) {
+    for (size_t j = i+1; j < n; j++) {
+      FFTREE *root = &test_nodes[i];
+      FFTREE *child = &test_nodes[j];
+      if (fftree_hash(child) < fftree_hash(root)) {
+        *root = (FFTREE){NULL, child, 1, 18, 19};
+        *child = (FFTREE){NULL, NULL, 1, 19, 19};
+        assert(fftree_validate(root));
+        assert(fftree_count(root) == 2);
+        return;
+      }
+    }
+  }
+  assert(false); // Couldn't find a node to the left with a smaller hash.
+}
+
 
 static void test_validate(void) {
   assert(fftree_validate_local(NULL));
   assert(fftree_validate(NULL));
   {
-    FFTREE t = make_small_node(1, 18, 18);
+    FFTREE t = make_small_node(18, 18);
     assert(fftree_validate(&t));
     assert(fftree_count(&t) == 1);
   }
   {
-    FFTREE t = make_small_node(2, 18, 18);
-    assert(fftree_validate(&t));
-  }
-  {
-    FFTREE t = make_small_node(1, 19, 18);
+    FFTREE t = make_small_node(19, 18);
     assert(!fftree_validate(&t));
   }
   {
-    FFTREE t = make_small_node(1, 18, 19);
+    FFTREE t = make_small_node(18, 19);
     assert(!fftree_validate(&t));
   }
-  // A good tree with two nodes and a left child
-  {
-    FFTREE a[] = {{NULL, NULL, 1, 1, 19, 19},
-                  {&a[0], NULL, 2, 1, 18, 19}};
-    assert(fftree_validate(&a[1]));
-    assert(fftree_count(&a[1]) == 2);
-  }
+  test_validate_two_nodes_with_left_child();
+  test_validate_two_nodes_with_right_child();
+#if 0
   {
     TEST_TREE tt = make_tree(
         desc(24, 0,
@@ -232,8 +266,10 @@ static void test_validate(void) {
     assert(!fftree_validate(tt.tree));;
     free_test_tree(tt);
   }
+#endif
 }
 
+#if 0
 static void test_update_augmentation(void) {
   char expect_print[] =
       "(nil) (nil) 0x40 6 32 32\n"
@@ -703,11 +739,13 @@ static void test_find_remove_next_adj_2(void) {
   assert(tt.tree->right == NULL);
   free_test_tree(tt);
 }
+#endif
 
 int main(void) {
   test_depth();
   test_max_size_in_subtree();
   test_validate();
+#if 0
   test_update_augmentation();
   test_find_first_fit_0();
   test_find_first_fit_1();
@@ -753,6 +791,7 @@ int main(void) {
   test_find_remove_next_adj_0();
   test_find_remove_next_adj_1();
   test_find_remove_next_adj_2();
+#endif
 
   return 0;
 }

@@ -79,7 +79,7 @@ LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c write
 slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 	cc $(CFLAGS) $^ -o $@
 
-lib/%.so: OPTFLAGS=-O3
+# lib/%.so: OPTFLAGS=-O3
 lib/libffmalloc.so: $(wildcard *.h) vers.map
 lib/libffmalloc.so: $(LIBFFMALLOC_C_SOURCES) | lib/
 	cc $(BUILD_SHARED_FLAGS) $(CFLAGS) $(LIBFFMALLOC_C_SOURCES) -o $@

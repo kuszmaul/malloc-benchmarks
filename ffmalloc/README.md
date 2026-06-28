@@ -54,5 +54,7 @@ TODO:
 
 TODO: Add align functions to scripts.
 
-There's a bug in argtable2: If malloc(0) returns NULL, the code fails.  So a fix
+Fixed? There's a bug in argtable2: If malloc(0) returns NULL, the code fails.  So a fix
 is to return a pointer that can be freed.
+
+My rand is 255 too often

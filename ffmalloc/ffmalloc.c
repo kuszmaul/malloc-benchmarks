@@ -128,7 +128,7 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
 static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size) {
   ASSERT(node_size >= sizeof(FFTREE));
   FFTREE *here = (FFTREE*)node;
-  *here = (FFTREE){NULL, NULL, 0, 0, 0, node_size};
+  *here = (FFTREE){NULL, NULL, 0, 0, node_size};
   set_fftree_node_size(here, node_size);
   {
     FFTREE *prev = fftree_find_and_remove_prev_adjacent(tree_p, here);

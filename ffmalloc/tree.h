@@ -35,16 +35,12 @@ enum {
   log_small_size_limit = 7,
   small_size_limit = (1ul<<log_small_size_limit),
 
-  log_hash_mod = 8,
-  hash_mod = 1ul<<log_hash_mod,
-
   // The fractional part of `phi` (the golden ratio) multiplied by 2**64.
   phi = 0x9e3779b97f4a7c16ul,
 };
 
 typedef struct fftree {
   struct fftree *left, *right;
-  size_t rand : log_hash_mod; // rand used for depth
   size_t is_small : 1;        // if size can be stored in small_size then small_size contains the size
   size_t small_size : log_small_size_limit;  // else the size is in the next word.
   // The maximum over the subtree of the size.  That is, the size of the biggest
@@ -112,7 +108,7 @@ FFTREE* fftree_find_next(FFTREE *tree, const FFTREE *node);
 // Effect: Find and return the minimal `n in tree` such that `n > node`.  Return
 // NULL if there is no such node.
 
-size_t fftree_hash(FFTREE *tree);
+size_t fftree_hash(const FFTREE *tree);
 // Effect: Return a hash of `tree`. The hash depends only on the address of
 // `tree` and is in the range 0 (inclusive) to `hash_mod` (exclusive).
 
@@ -122,10 +118,11 @@ typedef struct tpair {
 
 TPAIR fftree_split(FFTREE *tree, FFTREE *pivot);
 
-FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node);
-// Effect: Insert `node` into `*tree` returning the new root.  The `rand` and
-// `size` fields must have been initialized, but `left`, `right` and
-// `max_size_in_subtree` need not have been initialized.
+FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash);
+// Effect: Insert `node` into `*tree` returning the new root.  The `size` field
+// must have been initialized, but `left`, `right` and `max_size_in_subtree`
+// need not have been initialized.  `node_hash` must be equal to
+// `fftree_hash(node)`.
 
 void fftree_insert(FFTREE **tree_p, FFTREE *node);
 // Effect: Insert `node` into `*tree_p`.  After running `ff_insert` the new root
