@@ -1,4 +1,4 @@
-OPTFLAGS = -O0
+OPTFLAGS = -O3
 CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS = $(CFLAGS)
 LDLIBS = -largtable2
@@ -15,15 +15,15 @@ boom-ffworst-2to27-b17.pdf: boom-ffworst-2to27-b17.gnuplot boom-ffworst-glibc-2t
 
 # Don't make a rule for boom-ffworst-glibc-1e9.data since it will crash my laptop -Bradley
 boom-ffworst-glibc-2to27.data: boom
-	./boom --malloclib=DEFAULT > $@
+	time ./boom --malloclib=DEFAULT > $@
 boom-ffworst-bump-2to27.data: boom
-	./boom --malloclib=BUMP > $@
+	time ./boom --malloclib=BUMP > $@
 boom-ffworst-bump-unmap-2to27.data: boom
-	./boom --malloclib=BUMP_UNMAP > $@
+	time ./boom --malloclib=BUMP_UNMAP > $@
 boom-ffworst-hoard-2to27.data: boom
-	LD_PRELOAD=../Hoard/build/libhoard.so ./boom --malloclib=DEFAULT > $@
+	LD_PRELOAD=../Hoard/build/libhoard.so time ./boom --malloclib=DEFAULT > $@
 boom-ffworst-ffmalloc-2to27.data: boom
-	LD_PRELOAD=ffmalloc/lib/libffmalloc.so ./boom --malloclib=DEFAULT > $@
+	LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > $@
 
 
 boom-ffworst-glibc-2to27-b17.data: boom

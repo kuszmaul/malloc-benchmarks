@@ -34,7 +34,7 @@ static void* bump_malloc(size_t size __attribute__((unused))) {
     // Align the mapped size.
     mapped_size += page_size - 1;
     mapped_size &= ~(page_size - 1);
-    fprintf(stderr, "mmap %lu\n", mapped_size);
+    // fprintf(stderr, "mmap %lu\n", mapped_size);
     mapped = mmap(0, mapped_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (mapped == MAP_FAILED) {
       perror("mmap failed");

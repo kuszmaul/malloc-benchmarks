@@ -72,9 +72,9 @@ static void my_malloc(size_t size, const struct malloc_interface *mi) {
   b->next = class->blocks;
   class->blocks = b;
 
-  if (count_of_last_size < 10) {
-    fprintf(stderr, " malloc(%lu)=%p (dist=%ld)\n", size, b, (char*)b-(char*)last_alloc);
-  }
+  //  if (count_of_last_size < 10) {
+  //    fprintf(stderr, " malloc(%lu)=%p (dist=%ld)\n", size, b, (char*)b-(char*)last_alloc);
+  //  }
   last_alloc = b;
 }
 
@@ -88,14 +88,14 @@ static void my_free(struct block** blockp, size_t size, const struct malloc_inte
   *blockp = b.next;
 }
 
-static size_t length(struct block *p) {
-  size_t result = 0;
-  while (p != NULL) {
-    result += 1;
-    p = p->next;
-  }
-  return result;
-}
+/* static size_t length(struct block *p) { */
+/*   size_t result = 0; */
+/*   while (p != NULL) { */
+/*     result += 1; */
+/*     p = p->next; */
+/*   } */
+/*   return result; */
+/* } */
 
 // Free every other block in the class. If there are n blocks in the class, free
 // floor(n/2) of them.
@@ -110,7 +110,7 @@ static void free_every_other_in_class(struct block_class *class, const struct ma
     // Don't need to bump `p` since `my_free` already updated it.
   }
   assert(class->blocks != NULL); // The class should always be nonempty.
-  fprintf(stderr, "size %lu has %lu blocks\n", class->size, length(class->blocks));
+  // fprintf(stderr, "size %lu has %lu blocks\n", class->size, length(class->blocks));
 }
 
 static void free_every_other(const struct malloc_interface *mi) {
@@ -124,12 +124,12 @@ static void free_every_other(const struct malloc_interface *mi) {
 static void first_fit_boom_class(size_t block_size, size_t space, const struct malloc_interface *mi) {
   size_t n_to_allocate = (space + block_size - 1)/ block_size;
 
-  fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
+  // fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
   for (size_t i = 0; i < n_to_allocate; i++) {
     my_malloc(block_size, mi);
   }
-  size_t rss_before_free = get_adjusted_rss();
-  fprintf(stderr, "before free: %lu %4.2f\n", rss_before_free, (1.0*rss_before_free)/live_data_size);
+  // size_t rss_before_free = get_adjusted_rss();
+  // fprintf(stderr, "before free: %lu %4.2f\n", rss_before_free, (1.0*rss_before_free)/live_data_size);
   printf("%lu ", block_size);
   print_rss();
   free_every_other(mi);
@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
   }
 
   init_rss();
-  fprintf(stderr, "base_rss=%lu\n", get_base_rss());
+  // fprintf(stderr, "base_rss=%lu\n", get_base_rss());
   printf("# BlockSize maxrss blowup maxlivedatasize\n");
   switch (workload) {
     case FIRST_FIT:

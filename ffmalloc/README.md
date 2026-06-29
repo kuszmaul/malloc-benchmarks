@@ -59,3 +59,11 @@ TODO: maybe -ldl
 
 TODO: Add align functions to scripts.
 
+TODO: ffmalloc boom is very slow (26x slower than libc)
+
+ time ./boom --malloclib=DEFAULT > boom-ffworst-glibc-2to27.data
+ 1.36user 0.36system 0:01.72elapsed 99%CPU (0avgtext+0avgdata 1126912maxresident)k
+
+ LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > boom-ffworst-ffmalloc-2to27.data
+ 35.64user 0.94system 0:36.60elapsed 99%CPU (0avgtext+0avgdata 716928maxresident)k
+
