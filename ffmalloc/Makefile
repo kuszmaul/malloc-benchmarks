@@ -82,7 +82,7 @@ slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 # lib/%.so: OPTFLAGS=-O3
 lib/libffmalloc.so: $(wildcard *.h) vers.map
 lib/libffmalloc.so: $(LIBFFMALLOC_C_SOURCES) | lib/
-	cc $(BUILD_SHARED_FLAGS) $(CFLAGS) $(LIBFFMALLOC_C_SOURCES) -o $@
+	cc $(BUILD_SHARED_FLAGS) $(CFLAGS) -Wl,-soname,libffmalloc.so $(LIBFFMALLOC_C_SOURCES) -o $@
 
 dylib-libc.run: dylib-test
 	./dylib-test

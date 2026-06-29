@@ -43,19 +43,19 @@ DONE: Get the linking with libc done right.  (see for example how hoard does the
 
 DONE: madvise-dontneed free the interior of freed blocks.  The resulting curve for worst-case first fit beats everything, including libc.
 
-TODO: malloc(0) cannot return null.   It breaks libraries such argtable2-13.
+DONE: malloc(0) cannot return null.   It breaks libraries such argtable2-13.
+ (There's a bug in argtable2: If malloc(0) returns NULL, the code fails.  So a fix
+  is to return a pointer that can be freed.)
+
+Fixed: My rand is 255 too often
+
+Done: Add -Wl,-soname,libffmalloc.so
 
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
 TODO: test calloc overflow
 TODO: the other memalign functions
-TODO:
-   4) maybe also add -Wl,-soname,libhoard.so -dl
-      (change "libhoard" to "libffmalloc" and Do we need -ldl?)
+TODO: maybe -ldl
 
 TODO: Add align functions to scripts.
 
-Fixed? There's a bug in argtable2: If malloc(0) returns NULL, the code fails.  So a fix
-is to return a pointer that can be freed.
-
-My rand is 255 too often
