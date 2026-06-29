@@ -125,8 +125,11 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
   return 0;
 }
 
-static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size) {
+static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size, bool zero) {
   ASSERT(node_size >= sizeof(FFTREE));
+  if (zero) {
+    memset(node, 0, node_size);
+  }
   FFTREE *here = (FFTREE*)node;
   *here = (FFTREE){NULL, NULL, 0, 0, node_size};
   set_fftree_node_size(here, node_size);
@@ -173,7 +176,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
       sbrk_start = p;
     }
     sbrk_end = ((char*)p)+n_to_sbrk;
-    fftree_insert_and_merge(&arena, p, n_to_sbrk);
+    fftree_insert_and_merge(&arena, p, n_to_sbrk, false);
     if (true) ASSERT(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
     if (node == NULL) {
@@ -270,7 +273,7 @@ void ff_free(void *p) {
       ASSERT(r == 0);
     } else {
       size_t size = bt.size;
-      fftree_insert_and_merge(&arena, get_boundary_tag_pointer(p), size);
+      fftree_insert_and_merge(&arena, get_boundary_tag_pointer(p), size, true);
     }
   } else {
     // Reconstruct the boundary tag as it was originally before we did the
