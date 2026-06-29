@@ -34,18 +34,19 @@ For realloc:
 
 DONE: build the library with only the exported API
 
-DONE: Get the linking with libc done write.  (see for example how hoard does the linking at wrapper.cpp)
+DONE: Get the linking with libc done right.  (see for example how hoard does the linking at wrapper.cpp, which isn't how we did it.)  My solution:
    1) define __libc_malloc which calls our function.
       (glibc uses a strong alias to make malloc be __libc_malloc)
    2) define vers.map
    3) add to the link flags
      -Wl,--version-script=/home/bradley/github/Hoard/build/vers.map
 
+DONE: madvise-dontneed free the interior of freed blocks.  The resulting curve for worst-case first fit beats everything, including libc.
+
 TODO: malloc(0) cannot return null.   It breaks libraries such argtable2-13.
 
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
-TODO: madvise-dontneed free the interior of freed blocks
 TODO: test calloc overflow
 TODO: the other memalign functions
 TODO:

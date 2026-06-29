@@ -127,6 +127,7 @@ static void test_little_malloc1(void) {
 }
 
 static void test_little_malloc2(void) {
+  assert(fftree_validate(arena));
   if (debug) fprintf(stderr, "\n%s\n", __FUNCTION__);
   void *p1, *p2;
   {

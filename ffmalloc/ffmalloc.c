@@ -125,27 +125,53 @@ static int ff_malloc_mmap_e(void** result, size_t size) {
   return 0;
 }
 
+static size_t align_up_pow2(size_t v, size_t alignment) {
+  ASSERT((alignment & (alignment -1)) == 0); // alignment is a power of 2.
+  return (v + alignment - 1) & ~(alignment-1);
+}
+
+static size_t align_down_pow2(size_t v, size_t alignment) {
+  ASSERT((alignment & (alignment -1)) == 0); // alignment is a power of 2.
+  return v & ~(alignment-1);
+}
+
+static void madvise_interior(void *p, size_t size) {
+  size_t p_i = (uintptr_t)(p);
+  size_t start = align_up_pow2(p_i, page_size);
+  size_t end   = align_down_pow2(p_i + size, page_size);
+  ASSERT(p_i <= start && end <= p_i + size);
+  ASSERT(start % page_size == 0);
+  ASSERT(end % page_size == 0);
+  if (start < end) {
+    madvise((void*)start, end-start, MADV_DONTNEED);
+  }
+}
+
 static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size, bool zero) {
   ASSERT(node_size >= sizeof(FFTREE));
-  if (zero) {
-    memset(node, 0, node_size);
-  }
   FFTREE *here = (FFTREE*)node;
-  *here = (FFTREE){NULL, NULL, 0, 0, node_size};
+  *here = (FFTREE){NULL, NULL, 0, 0, 0};
   set_fftree_node_size(here, node_size);
-  {
-    FFTREE *prev = fftree_find_and_remove_prev_adjacent(tree_p, here);
-    if (prev != NULL) {
-      set_fftree_node_size(prev, fftree_node_size(prev) + node_size);
-      here = prev;
-    }
-  }
   {
     FFTREE *next = fftree_find_and_remove_next_adjacent(tree_p, here);
     if (next != NULL) {
-      set_fftree_node_size(here, fftree_node_size(here) + fftree_node_size(next));
+      node_size += fftree_node_size(next);
     }
   }
+  {
+    FFTREE *prev = fftree_find_and_remove_prev_adjacent(tree_p, here);
+    if (prev != NULL) {
+      ASSERT(((char*)prev) + fftree_node_size(prev) == (char*)here);
+      node_size += fftree_node_size(prev);
+      here = prev;
+    }
+  }
+  if (zero) {
+    madvise_interior(here, node_size);
+    //memset(here, 0, node_size);
+  }
+  here->left = here->right = NULL;
+  set_fftree_node_size(here, node_size);
   fftree_insert(tree_p, here);
 }
 
