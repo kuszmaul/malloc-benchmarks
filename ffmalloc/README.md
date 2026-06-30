@@ -69,3 +69,5 @@ TODO: ffmalloc boom is very slow (26x slower than libc)
 
  got rid of an gratuitous validate:
  30.67user 0.84system 0:31.58elapsed 99%CPU (0avgtext+0avgdata 716928maxresident)k
+
+ Removing the madvise makes no difference.
