@@ -194,8 +194,7 @@ TPAIR fftree_split(FFTREE *tree, FFTREE *pivot) {
   }
 }
 
-FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash, size_t depth) {
-  ASSERT(depth < 60);
+FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash) {
   if (tree == NULL) {
     node->left = NULL;
     node->right = NULL;
@@ -205,9 +204,9 @@ FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash, size_t dept
   if (fftree_hash(tree) >= node_hash) {
     ASSERT(tree != node);
     if (tree < node) {
-      tree->right = fftree_insert2(tree->right, node, node_hash, depth+1);
+      tree->right = fftree_insert2(tree->right, node, node_hash);
     } else {
-      tree->left = fftree_insert2(tree->left, node, node_hash, depth+1);
+      tree->left = fftree_insert2(tree->left, node, node_hash);
     }
     fftree_update_augmentation(tree);
     return tree;
@@ -225,7 +224,7 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node) {
   ASSERT(tree_p != NULL);
   ASSERT(node != NULL);
   node->max_size_in_subtree = fftree_node_size(node);
-  *tree_p = fftree_insert2(*tree_p, node, fftree_hash(node), 0);
+  *tree_p = fftree_insert2(*tree_p, node, fftree_hash(node));
 }
 
 FFTREE* fftree_merge(FFTREE *a, FFTREE *b) {
