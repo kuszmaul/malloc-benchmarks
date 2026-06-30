@@ -74,11 +74,13 @@ TODO: ffmalloc boom is very slow (26x slower than libc)
  LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > boom-ffworst-ffmalloc-2to27.data
  35.64user 0.94system 0:36.60elapsed 99%CPU (0avgtext+0avgdata 716928maxresident)k
 
- got rid of an gratuitous validate:
+ got rid of an gratuitous validate: (now 18x slower)
  30.67user 0.84system 0:31.58elapsed 99%CPU (0avgtext+0avgdata 716928maxresident)k
 
  Removing the madvise makes no difference.
 
+ Better hash (so the tree is probably better balanced) (now 4.1x slower than libc)
+ 6.24user 0.83system 0:07.08elapsed 99%CPU (0avgtext+0avgdata 717056maxresident)k
 
 TODO: Do worst-case for TCMALLOC (various web pages claim tcmalloc is best fit)
 

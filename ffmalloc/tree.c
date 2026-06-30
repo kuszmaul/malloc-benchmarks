@@ -153,7 +153,18 @@ FFTREE* fftree_find_first_fit(FFTREE *root, size_t size) {
 }
 
 size_t fftree_hash(const FFTREE *node) {
-  return ((uintptr_t)(node)) * phi;
+  uint64_t h = (uint64_t)(node);
+  h ^= h >> 33;
+  h *= 0xff51afd7ed558ccdL;
+  h ^= h >> 33;
+  h *= 0xc4ceb9fe1a85ec53L;
+  h ^= h >> 33;
+  return h;
+
+  //  __uint128_t m = ((uintptr_t)(node)) * (__uint128_t)phi;
+  //  uint64_t h = (uint64_t)(m>>64);
+  //  uint64_t l = (uint64_t)(m);
+  //  return h ^ l;
 }
 
 size_t fftree_count(FFTREE *tree) {
@@ -183,7 +194,8 @@ TPAIR fftree_split(FFTREE *tree, FFTREE *pivot) {
   }
 }
 
-FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash) {
+FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash, size_t depth) {
+  ASSERT(depth < 60);
   if (tree == NULL) {
     node->left = NULL;
     node->right = NULL;
@@ -193,9 +205,9 @@ FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash) {
   if (fftree_hash(tree) >= node_hash) {
     ASSERT(tree != node);
     if (tree < node) {
-      tree->right = fftree_insert2(tree->right, node, node_hash);
+      tree->right = fftree_insert2(tree->right, node, node_hash, depth+1);
     } else {
-      tree->left = fftree_insert2(tree->left, node, node_hash);
+      tree->left = fftree_insert2(tree->left, node, node_hash, depth+1);
     }
     fftree_update_augmentation(tree);
     return tree;
@@ -213,7 +225,7 @@ void fftree_insert(FFTREE **tree_p, FFTREE *node) {
   ASSERT(tree_p != NULL);
   ASSERT(node != NULL);
   node->max_size_in_subtree = fftree_node_size(node);
-  *tree_p = fftree_insert2(*tree_p, node, fftree_hash(node));
+  *tree_p = fftree_insert2(*tree_p, node, fftree_hash(node), 0);
 }
 
 FFTREE* fftree_merge(FFTREE *a, FFTREE *b) {

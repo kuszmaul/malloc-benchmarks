@@ -118,7 +118,7 @@ typedef struct tpair {
 
 TPAIR fftree_split(FFTREE *tree, FFTREE *pivot);
 
-FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash);
+FFTREE* fftree_insert2(FFTREE *tree, FFTREE *node, size_t node_hash, size_t depth);
 // Effect: Insert `node` into `*tree` returning the new root.  The `size` field
 // must have been initialized, but `left`, `right` and `max_size_in_subtree`
 // need not have been initialized.  `node_hash` must be equal to
