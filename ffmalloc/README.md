@@ -51,6 +51,13 @@ Fixed: My rand is 255 too often
 
 Done: Add -Wl,-soname,libffmalloc.so
 
+Done: How does the kernel allocate virtual addresses for mmap?
+ mmap() uses a first-fit scheme, goint top-down in the address space, starting at a randomized initial position.
+ It appears to use a linear-time search, which would be bad if you had lots of mappings.
+ But the kernel only accounts memory for O(100,000) mappings, and searches are always fast in that range.
+ It turns out that the if you mmap a bunch of 1-page objects and then start calling free of every other object, the kernel runs out of memory on the free call.  So it must be merging mmaps as it goes.
+ Moral: Don't mmap in a way that requires the kernel to maintain too many mappings.
+
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
 TODO: test calloc overflow
@@ -71,3 +78,9 @@ TODO: ffmalloc boom is very slow (26x slower than libc)
  30.67user 0.84system 0:31.58elapsed 99%CPU (0avgtext+0avgdata 716928maxresident)k
 
  Removing the madvise makes no difference.
+
+
+TODO: Do worst-case for TCMALLOC (various web pages claim tcmalloc is best fit)
+
+
+

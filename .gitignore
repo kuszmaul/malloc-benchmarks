@@ -3,5 +3,6 @@ bestfitworst
 boom
 hoardworst
 sbrk-test
+vm-allocation
 *.o
 malloc
