@@ -82,6 +82,11 @@ TODO: ffmalloc boom is very slow (26x slower than libc)
  Better hash (so the tree is probably better balanced) (now 4.1x slower than libc)
  6.24user 0.83system 0:07.08elapsed 99%CPU (0avgtext+0avgdata 717056maxresident)k
 
+ If we turn off block consolitation (on branch no-consolidate-blocks) we get to
+ 3.2x slower than libc on boom.
+  4.58user 0.88system 0:05.47elapsed 99%CPU (0avgtext+0avgdata 1505504maxresident)k
+ That suggests that we should try to optimize block consolidation.
+
 TODO: Do worst-case for TCMALLOC (various web pages claim tcmalloc is best fit)
 
 
