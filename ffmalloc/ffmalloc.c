@@ -203,7 +203,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     }
     sbrk_end = ((char*)p)+n_to_sbrk;
     fftree_insert_and_merge(&arena, p, n_to_sbrk, false);
-    if (true) ASSERT(fftree_validate(arena));
+    if (slow_run_validation) ASSERT(fftree_validate(arena));
     node = fftree_find_and_remove_first_fit(&arena, size);
     if (node == NULL) {
       ewrites("Still null\n");
