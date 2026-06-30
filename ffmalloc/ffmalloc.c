@@ -296,6 +296,7 @@ void ff_free(void *p) {
       BOUNDARY_TAG* btp = get_boundary_tag_pointer(p);
       ASSERT(((uintptr_t)(btp)) % page_size == 0);
       int r = munmap(btp, bt.size);
+      IGNORE(r);
       ASSERT(r == 0);
     } else {
       size_t size = bt.size;

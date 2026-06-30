@@ -43,6 +43,11 @@ void my_abort(void);
 // Rationale: Since the abort is called in a macro, iwyu gets confused.  So
 // instead we'll call my_abort and define it in writeio.c.
 
+#define IGNORE(x) ((x)=(x))
+
+#ifdef NOASSERT
+#define ASSERT(a) ((void)(0))
+#else
 #define ASSERT(a) ({          \
     if (!(a)) {               \
       ewrites("Failure at "); \
@@ -53,5 +58,6 @@ void my_abort(void);
       my_abort();             \
     }                         \
 })
+#endif
 
 #endif

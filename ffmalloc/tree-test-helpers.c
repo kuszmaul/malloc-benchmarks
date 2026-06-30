@@ -29,6 +29,7 @@ typedef struct strbuf {
 } STRBUF;
 
 static void ensure_space(STRBUF *buf, size_t size) {
+  IGNORE(buf); IGNORE(size);
   ASSERT(buf->capacity - buf->size >= size);
 }
 

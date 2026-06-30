@@ -21,12 +21,14 @@ const bool do_lock = true;
 static inline void my_lock(void) {
   if (do_lock) {
     int r = pthread_mutex_lock(&mutex);
+    IGNORE(r);
     ASSERT(r == 0);
   }
 }
 static inline void my_unlock(void) {
   if (do_lock) {
     int r = pthread_mutex_unlock(&mutex);
+    IGNORE(r);
     ASSERT(r == 0);
   }
 }
