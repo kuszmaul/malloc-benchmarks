@@ -16,8 +16,14 @@ enum {
 };
 
 typedef struct boundary_tag {
+  // We use the low order bit of the first word to distinguish between a free
+  // node (which starts with an FFTREE) and an in-use node (which starts woith a
+  // BOUNDARY_TAG).  We relyu on the fact that the first bitfield in a size_t is
+  // in the same place in both.  We must take some care to avoid false strict
+  // aliasing problems when accessing the header of the next or previous block.
+  size_t is_free : 1; // false for boundary tag.  See fftree where it is true.
   size_t is_memaligned : 1;
-  size_t size : 63; // including the boundary tag and any unused space at the end
+  size_t size : 62; // including the boundary tag and any unused space at the end
 
   // For munaligned mmapped blocks, the pointer we give the user points at a
   // page + 8, and the boundary tag is page aligned.
@@ -26,6 +32,12 @@ typedef struct boundary_tag {
   // is in the last word of the previous page.
 
 } BOUNDARY_TAG;
+
+static inline BOUNDARY_TAG boundary_tag_node(size_t is_memaligned, size_t size) {
+  ASSERT(size < (1ul << 62));
+  ASSERT(is_memaligned < 2);
+  return (BOUNDARY_TAG){0, is_memaligned, size};
+}
 
 int ff_malloc_e(void **result, size_t size, bool zero);
 void ff_free(void *p);

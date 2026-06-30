@@ -150,11 +150,14 @@ static void madvise_interior(void *p, size_t size) {
 static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size, bool zero) {
   ASSERT(node_size >= sizeof(FFTREE));
   FFTREE *here = (FFTREE*)node;
-  *here = (FFTREE){NULL, NULL, 0, 0, 0};
+  *here = fftree_node(NULL, NULL, 0, 0);
   set_fftree_node_size(here, node_size);
   {
     FFTREE *next = fftree_find_and_remove_next_adjacent(tree_p, here);
     if (next != NULL) {
+      FFTREE *p = (FFTREE*)((char*)(node) + node_size);
+      ASSERT(next->is_free);
+      ASSERT(p == next);
       node_size += fftree_node_size(next);
     }
   }
@@ -281,7 +284,7 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
   BOUNDARY_TAG original_boundary_tag = get_boundary_tag(p);
   void *p_to_return = alignup_pointer((char*)p + sizeof(BOUNDARY_TAG), alignment);
   BOUNDARY_TAG *new_tag_p = get_boundary_tag_pointer(p_to_return);
-  *new_tag_p = (BOUNDARY_TAG){1, original_boundary_tag.size};
+  *new_tag_p = boundary_tag_node(1, original_boundary_tag.size);
   void ** store_start_at = get_memaligned_original_stored_at_pointer(p_to_return);
   *store_start_at = get_boundary_tag_pointer(p);
   *result = p_to_return;
@@ -307,7 +310,7 @@ void ff_free(void *p) {
     // memalignment hacking.  (We could have overwritten the boundary tag with
     // the original_stored_at information.)
     BOUNDARY_TAG *original_tag_p = (BOUNDARY_TAG*)(*(get_memaligned_original_stored_at_pointer(p)));
-    *original_tag_p = (BOUNDARY_TAG){0, bt.size};
+    *original_tag_p = boundary_tag_node(0, bt.size);
     ff_free(original_tag_p + 1);
   }
 }

@@ -32,6 +32,7 @@ size_t fftree_node_size(const FFTREE *t) {
 }
 
 void set_fftree_node_size(FFTREE *t, size_t size) {
+  t->is_free = 1;
   if (size < small_size_limit) {
     t->is_small = 1;
     t->small_size = size;
@@ -46,6 +47,7 @@ bool __attribute__((warn_unused_result)) fftree_validate_local(FFTREE *tree) {
   if (tree == NULL) {
     return true;
   }
+  ASSERT(tree->is_free);
   size_t expect_max_size = fftree_node_size(tree);
   if (tree->left != NULL) {
     VASSERT((char*)(tree->left) + fftree_node_size(tree->left) < (char*)tree);

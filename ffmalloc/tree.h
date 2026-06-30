@@ -1,6 +1,8 @@
 #ifndef TREE_H
 #define TREE_H
 
+#include "writeio.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -40,13 +42,21 @@ enum {
 };
 
 typedef struct fftree {
-  struct fftree *left, *right;
+  size_t is_free : 1;         // true for an FFTREE.  See boundary_tag where it is false.
   size_t is_small : 1;        // if size can be stored in small_size then small_size contains the size
   size_t small_size : log_small_size_limit;  // else the size is in the next word.
   // The maximum over the subtree of the size.  That is, the size of the biggest
   // node in the subtree.
   size_t max_size_in_subtree : 48; // this is a limitation to how much data we can keep in the heap.
+  struct fftree *left, *right;
 } FFTREE;
+
+static inline FFTREE fftree_node(FFTREE *left, FFTREE *right, size_t size, size_t max_size) {
+  // Effect: Make an fftree node containing left, right, size, and max_size.
+  // Requires: size is a small size.
+  ASSERT(size < small_size_limit);
+  return (FFTREE){1, 1, size, max_size, left, right};
+}
 
 size_t fftree_rand(const FFTREE *t);
 // Effect: Returns the random number used for determining the depth of the tree (0 for t==NULL).

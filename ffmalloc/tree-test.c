@@ -5,9 +5,10 @@
 #include "tree.h"
 
 static FFTREE make_small_node(size_t size, size_t max) {
-  FFTREE t = {NULL, NULL, 1, size, max};
+  FFTREE t = fftree_node(NULL, NULL, size, max);
   assert(t.small_size == size);
   assert(t.max_size_in_subtree == max);
+  assert(t.is_free);
   return t;
 }
 
@@ -119,8 +120,8 @@ static void test_validate_two_nodes_with_left_child(void) {
       FFTREE *root = &test_nodes[j];
       FFTREE *child = &test_nodes[i];
       if (fftree_hash(child) < fftree_hash(root)) {
-        *root = (FFTREE){child, NULL, 1, 18, 19};
-        *child = (FFTREE){NULL, NULL, 1, 19, 19};
+        *root = fftree_node(child, NULL, 18, 19);
+        *child = fftree_node(NULL, NULL, 19, 19);
         assert(fftree_validate(root));
         assert(fftree_count(root) == 2);
         return;
@@ -139,8 +140,8 @@ static void test_validate_two_nodes_with_right_child(void) {
       FFTREE *root = &test_nodes[i];
       FFTREE *child = &test_nodes[j];
       if (fftree_hash(child) < fftree_hash(root)) {
-        *root = (FFTREE){NULL, child, 1, 18, 19};
-        *child = (FFTREE){NULL, NULL, 1, 19, 19};
+        *root = fftree_node(NULL, child, 18, 19);
+        *child = fftree_node(NULL, NULL, 19, 19);
         assert(fftree_validate(root));
         assert(fftree_count(root) == 2);
         return;
