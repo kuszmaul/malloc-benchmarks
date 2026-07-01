@@ -227,8 +227,7 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     if (slow_run_validation) ASSERT(fftree_validate(arena));
   }
   BOUNDARY_TAG* tag = (BOUNDARY_TAG*)(node);
-  tag->is_memaligned = false;
-  tag->size = size;
+  *tag = boundary_tag_node(false, size);
   *result = (void*)((char*)node + sizeof(BOUNDARY_TAG));
   return 0;
 }
