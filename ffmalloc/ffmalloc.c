@@ -293,6 +293,7 @@ int ff_posix_memalign(void **result, size_t alignment, size_t size) {
 void ff_free(void *p) {
   if (p == empty) return;
   BOUNDARY_TAG bt = get_boundary_tag(p);
+  ASSERT(!bt.is_free);
   if (!bt.is_memaligned) {
     if (bt.size >= first_fit_size_limit) {
       BOUNDARY_TAG* btp = get_boundary_tag_pointer(p);
@@ -319,6 +320,7 @@ size_t ff_malloc_usable_size(void *p) {
     return 0;
   }
   BOUNDARY_TAG bt = get_boundary_tag(p);
+  ASSERT(!bt.is_free);
   if (!bt.is_memaligned) {
     return bt.size - sizeof(BOUNDARY_TAG);
   } else {
