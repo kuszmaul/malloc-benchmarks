@@ -5,7 +5,7 @@ A malloc library that that employs first fit.
 For small blocks (less than mmap_lower_bound, 256K as of this writing) we use
 first fit.
 
-For large blocks (>=256K) we just use the operating system's mmap to allocate
+For large blocks (>=256KiB) we just use the operating system's mmap to allocate
 space.
 
 The first-fit part of the code uses sbrk to grow the memory being managed, and
@@ -31,6 +31,59 @@ For realloc:
    right of where we expect to find one.)
    
    Maybe that's a bad idea and we should shave it.
+
+## Data Layout
+
+An allocated block at address `p` has an 8-byte header, called a `BOUNDARY_TAG`
+at `p-8`.  `p` is always 8-byte aligned.  A block can either be a tree-allocated
+block (used for small blocks < 256KiB), or a map-allocated block (for blocks >=
+256KiB).  Orthogonally to that, a block can be unaligned or aligned.  There are
+thus four cases
+
+1. A tree-allocated unaligned block.  This is the kind of block returned by
+   `malloc(16)`, for example.  The boundary tag contains
+     - low-order-bit:  is_free:1 = 0
+	 - next-bit:       is_memaligned:1 = 0
+	 - next_bits       size:62 = n, where `n` is the size of the block including the boundary tag and `n < 1<<18`.
+2. A map-allocated unaligned block.  This is the kind of of block returned by
+   `malloc(1<<20)`, for example.  The boundary tag contains
+     - low-order-bit:  is_free:1 = 0
+	 - next-bit:       is_memaligned:1 = 0
+	 - next_bits:      size:62 = n, where `n` is the size of the block including the boundary tag and `n >= 1<<18`.
+
+	Note that if you allocate `1<<20`, which with 4096-byte pages is 256 pages, the allocator will actually memory map 257 pages because we need the first 8 byte for the boundary tag.
+	
+	Thus, the only difference in the data layout between a map-allocated unaligned block and a tree-aallocated unaligned block is the size.
+
+3. A tree-allocated aligned block.  This is the kind of returned by
+   `posix_memalign(&p, 32, 64)`, for example.  Whereas for aligned blocks, `p`
+   always points at the second 8-byte word in the underlying allocation, for
+   aligned blocks, `p` may point into to the middle of the block.  We need a
+   representation that can allow us to figure out how bit the underlyuing
+   allocation is, and where it starts.
+
+	The boundary tag contains
+     - low-order-bit: is_free:1 = 0
+	 - next-bit:      is_memaligned:1 = 1
+	 - next-bits:     size:62 = n, where `n` is the size of the underlying allocation (including headers).
+     - The word before the boundary tag: contains a pointer to the the start of the underlying allocation, except that we steal the low-order two bits of the pointer to store `is_free=0` and `is_memaligned=1` again.
+	 - Also if `p` doesn't point at the second word in the allocation (it might point at the third word or the fourth word or something), then we repeat the boundary tag again in the second word.
+	 
+	So given `p` we can figure out the size by looking at the `size` field at
+    `p-8`, and if the memaligned bit is true, we can find the start of the
+    underlying block in the pointer stored at `p-16` (zero out the two low order
+    bits of the pointer before using it.)
+
+    Given a pointer `q` to the beginning of the underlying block, we can
+    determine what's going on by looking at the `is_free` and `is_memaligned` in
+    the low-order bits of `*(uint64_t*)q`. Those bits line up the same way for
+    all the cases, so if we see `!is_free` and `is_memaligned` then the rest of
+    the pointer will turn out to be equal to `q` itself, and if we look at `q+8`
+    we'll find a boundary tag that tells us the size of block.
+
+4. A map-allocated aligned block is the same as a tree-allocated aligned block, except the size is larger.
+
+## TODO
 
 DONE: build the library with only the exported API
 

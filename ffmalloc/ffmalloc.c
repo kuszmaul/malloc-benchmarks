@@ -154,11 +154,15 @@ static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_siz
   set_fftree_node_size(here, node_size);
   {
     FFTREE *next = fftree_find_and_remove_next_adjacent(tree_p, here);
+    FFTREE *next_calculated = (FFTREE*)((char*)(node) + node_size);
     if (next != NULL) {
-      FFTREE *p = (FFTREE*)((char*)(node) + node_size);
       ASSERT(next->is_free);
-      ASSERT(p == next);
+      ASSERT(next_calculated == next);
       node_size += fftree_node_size(next);
+    } else {
+      // The next free block, if there is one, isn't free.
+      // TODO: This assertion fails inexplicably.
+      //      ASSERT(next_calculated == sbrk_end || !next_calculated->is_free);
     }
   }
   {
@@ -259,6 +263,7 @@ int ff_malloc_e(void **result, size_t size, bool zero) {
 ///////////////////////////////// tests ///////////////////////////////////////
 
 int ff_posix_memalign(void **result, size_t alignment, size_t size) {
+  ewrites("memalign\n");
   if (!ispow2(alignment)) return EINVAL;
   if (alignment % sizeof(void*) != 0) return EINVAL;
   if (size == 0) {
