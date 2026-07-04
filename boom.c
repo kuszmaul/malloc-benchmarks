@@ -56,7 +56,7 @@ size_t last_size = 0;
 size_t count_of_last_size = 0;
 void  *last_alloc = 0;
 
-static void my_malloc(size_t size, const struct malloc_interface *mi) {
+static void do_malloc(size_t size, const struct malloc_interface *mi) {
   if (size == last_size) {
     count_of_last_size += 1;
   } else {
@@ -126,7 +126,7 @@ static void first_fit_boom_class(size_t block_size, size_t space, const struct m
 
   // fprintf(stderr, "Allocating %lu blocks of size %lu\n", n_to_allocate, block_size);
   for (size_t i = 0; i < n_to_allocate; i++) {
-    my_malloc(block_size, mi);
+    do_malloc(block_size, mi);
   }
   // size_t rss_before_free = get_adjusted_rss();
   // fprintf(stderr, "before free: %lu %4.2f\n", rss_before_free, (1.0*rss_before_free)/live_data_size);
