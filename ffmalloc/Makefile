@@ -4,6 +4,7 @@ CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrou
 GCOV_FILES = tree.c.gcov ffmalloc.c.gcov malloc-api.c.gcov
 
 tests: run-iwyu
+tests: header-test.run
 tests: tree-test.run
 tests: ffmalloc-test.run
 tests: malloc-api-test.run
@@ -74,7 +75,7 @@ lib/libbump.so: bumpmalloc.c writeio.c max.h writeio.h vers.map | lib/
 
 dylib-test2: LDLIBS = -largtable2
 
-LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c writeio.c
+LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c writeio.c headers.c
 
 slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 	cc $(CFLAGS) $^ -o $@
@@ -127,9 +128,9 @@ malloc-api.iwyu: malloc-api.h
 	! fgrep -A 2 should $<
 	touch $@
 
-FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o
-FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o
-MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o malloc-api.o writeio.o
+FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o headers.o
+FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o headers.o
+MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o malloc-api.o writeio.o headers.o
 
 #gcov/tree.o: $(patsubst %,gcov/%,$(TREE_O_DEPS))
 
@@ -167,6 +168,8 @@ test/ffmalloc-test: $(patsubst %,test/%,$(FFMALLOC_TEST_DEPS))
 test/ffmalloc-sbrk-test: $(patsubst %,test/%,$(FFMALLOC_SBRK_TEST_DEPS))
 	$(CC) $(LDFLAGS) $^ -coverage -o $@
 test/malloc-api-test: $(patsubst %,test/%,$(MALLOC_API_TEST_DEPS))
+	$(CC) $(LDFLAGS) $^ -coverage -o $@
+test/header-test: test/header-test.o
 	$(CC) $(LDFLAGS) $^ -coverage -o $@
 
 check-vers-map: lib/libffmalloc.so

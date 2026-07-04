@@ -18,7 +18,7 @@ static void test_depth(void) {
   assert(fftree_rand(NULL) == 0);
 
   char c[80];
-  FFTREE_P t = make_small_node(c, 18, 19);
+  FFTREE_P t = make_small_node(c+BOUNDARY_TAG_SIZE, 18, 19);
   assert(fftree_rand(t) != 0); // almost certainly not zero.
 }
 
@@ -26,7 +26,7 @@ static void test_max_size_in_subtree(void) {
   assert(fftree_max_size_in_subtree(NULL) == 0);
 
   char c[80];
-  FFTREE_P t = make_small_node(c, 18, 19);
+  FFTREE_P t = make_small_node(c+BOUNDARY_TAG_SIZE, 18, 19);
   assert(fftree_max_size_in_subtree(t) == 19);
   assert(fftree_node_size(t) == 18);
 }
@@ -122,8 +122,8 @@ static void test_validate_two_nodes_with_left_child(void) {
   char data[n*m];
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i+1; j < n; j++) {
-      FFTREE_P child = make_fftree_node(data+m*i, 19, 19, NULL, NULL);
-      FFTREE_P root = make_fftree_node(data+m*j, 18, 19, child, NULL);
+      FFTREE_P child = make_fftree_node(data+m*i+BOUNDARY_TAG_SIZE, 19, 19, NULL, NULL);
+      FFTREE_P root = make_fftree_node(data+m*j+BOUNDARY_TAG_SIZE, 18, 19, child, NULL);
       if (fftree_hash(child) < fftree_hash(root)) {
         assert(fftree_validate(root));
         assert(fftree_count(root) == 2);
@@ -142,8 +142,8 @@ static void test_validate_two_nodes_with_right_child(void) {
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i+1; j < n; j++) {
       // i < j, so i must be the root.
-      FFTREE_P child = make_fftree_node(data+m*j, 19, 19, NULL, NULL);
-      FFTREE_P root = make_fftree_node(data+m*i, 18, 19, NULL, child);
+      FFTREE_P child = make_fftree_node(data+m*j+BOUNDARY_TAG_SIZE, 19, 19, NULL, NULL);
+      FFTREE_P root = make_fftree_node(data+m*i+BOUNDARY_TAG_SIZE, 18, 19, NULL, child);
       if (fftree_hash(child) < fftree_hash(root)) {
         assert(fftree_validate(root));
         assert(fftree_count(root) == 2);
@@ -160,16 +160,16 @@ static void test_validate(void) {
   assert(fftree_validate(NULL));
   char data[100];
   {
-    FFTREE_P t = make_small_node(data, 18, 18);
+    FFTREE_P t = make_small_node(data+BOUNDARY_TAG_SIZE, 18, 18);
     assert(fftree_validate(t));
     assert(fftree_count(t) == 1);
   }
   {
-    FFTREE_P t = make_small_node(data, 19, 18);
+    FFTREE_P t = make_small_node(data+BOUNDARY_TAG_SIZE, 19, 18);
     assert(!fftree_validate(t));
   }
   {
-    FFTREE_P t = make_small_node(data, 18, 19);
+    FFTREE_P t = make_small_node(data+BOUNDARY_TAG_SIZE, 18, 19);
     assert(!fftree_validate(t));
   }
   test_validate_two_nodes_with_left_child();

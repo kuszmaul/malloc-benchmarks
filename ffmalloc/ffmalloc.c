@@ -65,12 +65,13 @@
 #include <unistd.h>
 
 #include "ffmalloc.h"
+#include "headers.h"
 #include "tree.h"
 #include "writeio.h"
 
 const bool slow_run_validation = false;
 
-FFTREE *arena = NULL;
+FFTREE_P arena = NULL;
 static size_t last_sbrk_size = 1;
 static void *sbrk_start = NULL;
 static void *sbrk_end = NULL;
@@ -79,20 +80,16 @@ bool ffmalloc_owns_address(void *p) {
   return (sbrk_start <= p ) && (p < sbrk_end);
 }
 
-BOUNDARY_TAG* get_boundary_tag_pointer(void *p) {
-  return ((BOUNDARY_TAG*)(p)) - 1;
-}
-
-static void** get_memaligned_original_stored_at_pointer(void *p) {
-  return ((void**)(get_boundary_tag_pointer(p))) - 1;
-}
-
-BOUNDARY_TAG get_boundary_tag(void *p) {
-  return *(get_boundary_tag_pointer(p));
-}
-void* get_memaligned_original(void *p) {
-  return *get_memaligned_original_stored_at_pointer(p);
-}
+//static void** get_memaligned_original_stored_at_pointer(void *p) {
+//  return ((void**)(get_boundary_tag_pointer(p))) - 1;
+//}
+//
+//BOUNDARY_TAG get_boundary_tag(void *p) {
+//  return *(get_boundary_tag_pointer(p));
+//}
+//void* get_memaligned_original(void *p) {
+//  return *get_memaligned_original_stored_at_pointer(p);
+//}
 
 static void* alignup_pointer(void* p, size_t alignment) {
   return (void*)(alignup((uintptr_t)(p), alignment));
@@ -111,17 +108,19 @@ static size_t compute_next_sbrk_size(size_t size) {
 // Handle the case for mallocing a large (mmapped) block.
 // Returns 0 on success (and sets *result) or an error code.
 static int ff_malloc_mmap_e(void** result, size_t size) {
-  size = alignup(size + sizeof(BOUNDARY_TAG), page_size);
+  size = alignup(size + BOUNDARY_TAG_SIZE, page_size);
   ASSERT(size >= first_fit_size_limit);
   void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (p == (void*)-1) {
     ASSERT(errno == ENOMEM);
     return ENOMEM;
   }
-  BOUNDARY_TAG *bt = p;
-  bt->is_memaligned = false;
-  bt->size = size;
-  *result = (void*)((char*)p + sizeof(BOUNDARY_TAG));
+  void *return_to_user = (void*)((char*)p + BOUNDARY_TAG_SIZE);
+  ASSERT((void*)(get_boundary_tag_p(return_to_user)) == p);
+  boundary_tag_init(get_boundary_tag_p(return_to_user), size);
+
+  *result = return_to_user;
+
   return 0;
 }
 
@@ -147,16 +146,14 @@ static void madvise_interior(void *p, size_t size) {
   }
 }
 
-static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_size, bool zero) {
-  ASSERT(node_size >= sizeof(FFTREE));
-  FFTREE *here = (FFTREE*)node;
-  *here = fftree_node(NULL, NULL, 0, 0);
-  set_fftree_node_size(here, node_size);
+static void fftree_insert_and_merge(FFTREE_P *tree_p, FFTREE_P node, size_t node_size, bool zero) {
+  ASSERT(node_size >= FFTREE_SIZE);
+  init_fftree_node(node, node_size, node_size, NULL, NULL);
   {
-    FFTREE *next = fftree_find_and_remove_next_adjacent(tree_p, here);
-    FFTREE *next_calculated = (FFTREE*)((char*)(node) + node_size);
+    FFTREE_P next = fftree_find_and_remove_next_adjacent(tree_p, node);
+    FFTREE_P next_calculated = (FFTREE_P)((char*)(node) + node_size);
     if (next != NULL) {
-      ASSERT(next->is_free);
+      ASSERT(is_fftree(next));
       ASSERT(next_calculated == next);
       node_size += fftree_node_size(next);
     } else {
@@ -166,36 +163,35 @@ static void fftree_insert_and_merge(FFTREE **tree_p, void* node, size_t node_siz
     }
   }
   {
-    FFTREE *prev = fftree_find_and_remove_prev_adjacent(tree_p, here);
+    FFTREE_P prev = fftree_find_and_remove_prev_adjacent(tree_p, node);
     if (prev != NULL) {
-      ASSERT(((char*)prev) + fftree_node_size(prev) == (char*)here);
+      ASSERT(((char*)prev) + fftree_node_size(prev) == (char*)node);
       node_size += fftree_node_size(prev);
-      here = prev;
+      node = prev;
     }
   }
   if (zero) {
-    madvise_interior(here, node_size);
-    //memset(here, 0, node_size);
+    madvise_interior(node, node_size);
+    //memset(node, 0, node_size);
   }
-  here->left = here->right = NULL;
-  set_fftree_node_size(here, node_size);
-  fftree_insert(tree_p, here);
+  init_fftree_node(node, node_size, node_size, NULL, NULL);
+  fftree_insert(tree_p, node);
 }
 
 static int ff_malloc_firstfit_e(void **result, size_t size) {
   // We need a block that's big enough for an FFTREE and also big enough to hold
   // size + boundary tag.
-  if (size <= sizeof(FFTREE) - sizeof(BOUNDARY_TAG)) {
-    size = sizeof(FFTREE);
+  if (size <= FFTREE_SIZE - BOUNDARY_TAG_SIZE) {
+    size = FFTREE_SIZE;
   } else {
-    size += sizeof(BOUNDARY_TAG);
+    size += BOUNDARY_TAG_SIZE;
   }
   ASSERT(size < first_fit_size_limit);
-  FFTREE *node = fftree_find_and_remove_first_fit(&arena, size);
+  FFTREE_P node = fftree_find_and_remove_first_fit(&arena, size);
   if (node == NULL) {
     const size_t overhead_at_beginning = 8;
     // So we'll need a few extra bytes at the end to have a free block at the end.
-    const size_t overhead_at_end = sizeof(FFTREE);
+    const size_t overhead_at_end = FFTREE_SIZE;
     // We'll also need a size_t in the overhead for the boundary tag.
     const size_t overhead = overhead_at_beginning + overhead_at_end;
     const size_t n_to_sbrk = compute_next_sbrk_size(size + overhead);
@@ -221,18 +217,18 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
 
   size_t nsize = fftree_node_size(node);
 
-  if (nsize >= size + sizeof(FFTREE)) {
+  if (nsize >= size + FFTREE_SIZE) {
     // We can break the node in two.  There's enough space for the boundary tag
     // and for the cut off piece to hold an FFTREE.
-    FFTREE *here = (FFTREE*)((char*)node + size);
-    set_fftree_node_size(here, nsize - size);
+    FFTREE_P here = (FFTREE_P)((char*)node + size);
+    init_fftree_node(here, nsize - size, nsize - size, NULL, NULL);
     // Don't need to merge here, since there won't be any adjacent nodes.
     fftree_insert(&arena, here);
     if (slow_run_validation) ASSERT(fftree_validate(arena));
   }
-  BOUNDARY_TAG* tag = (BOUNDARY_TAG*)(node);
-  *tag = boundary_tag_node(false, size);
-  *result = (void*)((char*)node + sizeof(BOUNDARY_TAG));
+  BOUNDARY_TAG_P tag = (BOUNDARY_TAG_P)(node);
+  boundary_tag_init(tag, size);
+  *result = (void*)((char*)node + BOUNDARY_TAG_SIZE);
   return 0;
 }
 
@@ -248,7 +244,7 @@ int ff_malloc_e(void **result, size_t size, bool zero) {
     return 0;
   }
   size = alignup(size, 8);
-  if (size + sizeof(BOUNDARY_TAG) >= first_fit_size_limit) {
+  if (size + BOUNDARY_TAG_SIZE >= first_fit_size_limit) {
     // mmap doesn't need the zero argument, since it always zeros.
     return ff_malloc_mmap_e(result, size);
   } else {
@@ -263,60 +259,48 @@ int ff_malloc_e(void **result, size_t size, bool zero) {
 ///////////////////////////////// tests ///////////////////////////////////////
 
 int ff_posix_memalign(void **result, size_t alignment, size_t size) {
-  ewrites("memalign\n");
   if (!ispow2(alignment)) return EINVAL;
   if (alignment % sizeof(void*) != 0) return EINVAL;
   if (size == 0) {
     *result = empty;
     return 0;
   }
-  if (alignment <= sizeof(BOUNDARY_TAG)) {
+  if (alignment <= BOUNDARY_TAG_SIZE) {
     // Very small alignments don't need anything.
     int r = ff_malloc_e(result, size, false);
     return r;
   }
-  size_t amount_to_malloc = sizeof(BOUNDARY_TAG) + size + alignment - 1;
+  // Ask for a block that's big enough to hold another boundary tag and a void*,
+  // and do alignment.
+  size_t amount_to_malloc = BOUNDARY_TAG_SIZE + sizeof(void*) + size + alignment - 1;
   void *p;
   int r = ff_malloc_e(&p, amount_to_malloc, false);
   if (r != 0) {
     return r;
   }
-  // We now have
-  //   p[-8] the original boundary tag (which we won't use)
-  //   p[0] space for the new boundary tag
-  //   p[8 .. 8 + size + alignment -1]    space for an aligned block.
-  BOUNDARY_TAG original_boundary_tag = get_boundary_tag(p);
-  void *p_to_return = alignup_pointer((char*)p + sizeof(BOUNDARY_TAG), alignment);
-  BOUNDARY_TAG *new_tag_p = get_boundary_tag_pointer(p_to_return);
-  *new_tag_p = boundary_tag_node(1, original_boundary_tag.size);
-  void ** store_start_at = get_memaligned_original_stored_at_pointer(p_to_return);
-  *store_start_at = get_boundary_tag_pointer(p);
+  void *p_to_return = alignup_pointer(
+      (char*)p + BOUNDARY_TAG_SIZE + sizeof(void*),
+      alignment);
+  BOUNDARY_TAG_P original_boundary_tag = get_boundary_tag_p(p);
+  BOUNDARY_TAG_P internal_boundary_tag = get_boundary_tag_p(p_to_return);
+  boundary_tag_init_memaligned(internal_boundary_tag, original_boundary_tag);
   *result = p_to_return;
   return 0;
 }
 
 void ff_free(void *p) {
   if (p == empty) return;
-  BOUNDARY_TAG bt = get_boundary_tag(p);
-  ASSERT(!bt.is_free);
-  if (!bt.is_memaligned) {
-    if (bt.size >= first_fit_size_limit) {
-      BOUNDARY_TAG* btp = get_boundary_tag_pointer(p);
-      ASSERT(((uintptr_t)(btp)) % page_size == 0);
-      int r = munmap(btp, bt.size);
-      IGNORE(r);
-      ASSERT(r == 0);
-    } else {
-      size_t size = bt.size;
-      fftree_insert_and_merge(&arena, get_boundary_tag_pointer(p), size, true);
-    }
+  if (p == NULL) return;
+  BOUNDARY_TAG_P bt = original_boundary_tag(p);
+  ASSERT(is_boundary_tag(bt));
+  size_t size = boundary_tag_size(bt);
+  if (size >= first_fit_size_limit) {
+    ASSERT(((uintptr_t)(bt)) % page_size == 0);
+    int r = munmap((void*)(bt), size);
+    IGNORE(r);
+    ASSERT(r == 0);
   } else {
-    // Reconstruct the boundary tag as it was originally before we did the
-    // memalignment hacking.  (We could have overwritten the boundary tag with
-    // the original_stored_at information.)
-    BOUNDARY_TAG *original_tag_p = (BOUNDARY_TAG*)(*(get_memaligned_original_stored_at_pointer(p)));
-    *original_tag_p = boundary_tag_node(0, bt.size);
-    ff_free(original_tag_p + 1);
+    fftree_insert_and_merge(&arena, (FFTREE_P)(bt), size, true);
   }
 }
 
@@ -324,12 +308,7 @@ size_t ff_malloc_usable_size(void *p) {
   if (p == empty) {
     return 0;
   }
-  BOUNDARY_TAG bt = get_boundary_tag(p);
-  ASSERT(!bt.is_free);
-  if (!bt.is_memaligned) {
-    return bt.size - sizeof(BOUNDARY_TAG);
-  } else {
-    ptrdiff_t unusable = ((char*)p - (char*)(get_memaligned_original(p)));
-    return bt.size - unusable;
-  }
+  BOUNDARY_TAG_P bt = get_boundary_tag_p(p);
+  ASSERT(is_boundary_tag(bt));
+  return boundary_tag_size(bt) - BOUNDARY_TAG_SIZE;
 }
