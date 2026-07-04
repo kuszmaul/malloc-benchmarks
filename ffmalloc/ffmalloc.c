@@ -159,7 +159,7 @@ static void fftree_insert_and_merge(FFTREE_P *tree_p, FFTREE_P node, size_t node
     } else {
       // The next free block, if there is one, isn't free.
       // TODO: This assertion fails inexplicably.
-      //      ASSERT(next_calculated == sbrk_end || !next_calculated->is_free);
+      // ASSERT(next_calculated == sbrk_end || !is_fftree(next_calculated));
     }
   }
   {
