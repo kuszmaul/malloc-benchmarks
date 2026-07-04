@@ -73,14 +73,55 @@
 
 3) Discusson of \cite{WilsonJoNe95}.
 
-   Page 6: It has been proven that for any possible allocation algorithm, there
-    will always be the possibility that some application program will allocate and
-    deallocate blocks in some fashion that defeats the allocator’s strategy, and
-    forces it into severe fragmentation [Rob71, GGU72, Rob74, Rob77].
+   Page 4: (last sentence): "We wonder whether some part of the pereption [what
+   is the perception? it's not clear what they are trying to say] is due to
+   occasional programs that interact pathologically with common allocator
+   designs, in ways that have never been observed by researchers".
 
-   This is misleading.  It's been proven that there is a logn overhead, but some
-   allocators do much worse.  Furthermore, the logn blowup is easy to induce.
-   We should accept that logn isn't "severe".
+       - The ffmalloc paper needs to find a way to argue that bad worst-case
+         shouldn't be part of a library.  For example glibc's quadratic memory
+         blowup.  This citation in Wilson supports the idea.
+
+   Page 6: "Most experiments to date have studied programs that execute for a
+   few minutes (at most) on common workstations.  Little is known about what
+   happens when programs run for hours, days, weeks or months"
+
+       - This still seems to be true (e.g., the hoard benchmarks)
+
+   Page 6: "It has been proven that for any possible allocation algorithm, there
+   will always be the possibility that some application program will allocate
+   and deallocate blocks in some fashion that defeats the allocator’s strategy,
+   and forces it into severe fragmentation [Rob71, GGU72, Rob74, Rob77]."
+
+       - This is misleading.  It's been proven that there is a logn overhead,
+         but some allocators do much worse.  Furthermore, the logn blowup is
+         easy to induce.  We should accept that logn isn't "severe".
+
+       - On 64-bit machines, we probably don't care about a factor of (log n)
+         blowup in the virtual address space.  We still care about a factor of
+         (log n) blowup in physical memory.  But for physical memory, we can
+         generally limit our analysis to the case where the largest block is a
+         page size (for unused regions that are larger than a page, we can
+         arrange that little or no physical memory is wasted.  And since the
+         smallest block we can allocate is something like 16 bytes, we have the
+         ratio of largest to smallest is about 256, so the log factor is on the
+         order of 8.  (The worst known workload for our allocator gives a memory
+         blowup of about (log_2 n)/2, sothe blow up is limited to about 4)
+
+   Page 6: "One thing is clear - most programs are "well behaved" in some sense.
+   Most programs combined with most common allocators do not squander huge
+   amounts of memory, even if they may waste a quarter of it, or a half, or
+   occasionally even more".
+
+       - It's not clear what this assertion means.  We don't really care about
+         most programs, we care about the one program we are trying to run right
+         now.
+
+   Page 6: "There are regularities in program behavior that allocators
+   explait....  These regularities are exploited by allocators to preent
+   excessive fragmentation."
+
+       - What regularities?  I don't buy it.
 
    Wilson on page 30 (top of col 2) mentions that section 3.6 talks about trees.
 
@@ -105,3 +146,7 @@ Wilson's "solved" paper is claimed to be able to use lifetime prediction.   Need
 Discussion: When doing realloc that shrinks a block, there's a temptation to
 shave the end of the block and add the unused bytes to the free tree.  I suspect
 this is a bad idea.  But maybe it would be OK.
+
+Note Linux mmap uses first fit (allocating from top down).  It randomizes the
+starting position in an attempt to improve security by making addresses less
+predictable.
