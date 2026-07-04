@@ -1,30 +1,34 @@
+#include "headers.h"
+#include "headers-internal.h"
+#include "tree.h"
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>  // use a known-working version of malloc to run these tests.
 
-#include "tree.h"
-
-static FFTREE make_small_node(size_t size, size_t max) {
-  FFTREE t = fftree_node(NULL, NULL, size, max);
-  assert(t.small_size == size);
-  assert(t.max_size_in_subtree == max);
-  assert(t.is_free);
+static FFTREE_P make_small_node(char *p, size_t size, size_t max) {
+  FFTREE_P t = make_fftree_node(p, size, max, NULL, NULL);
+  assert(t->small_size == size);
+  assert(t->max_size_in_subtree == max);
+  assert(!t->is_in_use);
   return t;
 }
 
 static void test_depth(void) {
   assert(fftree_rand(NULL) == 0);
 
-  FFTREE t = make_small_node(18, 19);
-  assert(fftree_rand(&t) != 0); // almost certainly not zero.
+  char c[80];
+  FFTREE_P t = make_small_node(c, 18, 19);
+  assert(fftree_rand(t) != 0); // almost certainly not zero.
 }
 
 static void test_max_size_in_subtree(void) {
   assert(fftree_max_size_in_subtree(NULL) == 0);
 
-  FFTREE t = make_small_node(18, 19);
-  assert(fftree_max_size_in_subtree(&t) == 19);
-  assert(fftree_node_size(&t) == 18);
+  char c[80];
+  FFTREE_P t = make_small_node(c, 18, 19);
+  assert(fftree_max_size_in_subtree(t) == 19);
+  assert(fftree_node_size(t) == 18);
 }
 
 typedef struct node_desc {
@@ -114,14 +118,13 @@ static void free_test_tree(TEST_TREE tt) {
 static void test_validate_two_nodes_with_left_child(void) {
   // A good tree with two nodes and a left child
   size_t n=1000;
-  FFTREE test_nodes[n];
+  const size_t m = 24;
+  char data[n*m];
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i+1; j < n; j++) {
-      FFTREE *root = &test_nodes[j];
-      FFTREE *child = &test_nodes[i];
+      FFTREE_P child = make_fftree_node(data+m*i, 19, 19, NULL, NULL);
+      FFTREE_P root = make_fftree_node(data+m*j, 18, 19, child, NULL);
       if (fftree_hash(child) < fftree_hash(root)) {
-        *root = fftree_node(child, NULL, 18, 19);
-        *child = fftree_node(NULL, NULL, 19, 19);
         assert(fftree_validate(root));
         assert(fftree_count(root) == 2);
         return;
@@ -134,14 +137,14 @@ static void test_validate_two_nodes_with_left_child(void) {
 static void test_validate_two_nodes_with_right_child(void) {
   // A good tree with two nodes and a right child
   size_t n=1000;
-  FFTREE test_nodes[n];
+  const size_t m = 24;
+  char data[n*m];
   for (size_t i = 0; i < n; i++) {
     for (size_t j = i+1; j < n; j++) {
-      FFTREE *root = &test_nodes[i];
-      FFTREE *child = &test_nodes[j];
+      // i < j, so i must be the root.
+      FFTREE_P child = make_fftree_node(data+m*j, 19, 19, NULL, NULL);
+      FFTREE_P root = make_fftree_node(data+m*i, 18, 19, NULL, child);
       if (fftree_hash(child) < fftree_hash(root)) {
-        *root = fftree_node(NULL, child, 18, 19);
-        *child = fftree_node(NULL, NULL, 19, 19);
         assert(fftree_validate(root));
         assert(fftree_count(root) == 2);
         return;
@@ -155,18 +158,19 @@ static void test_validate_two_nodes_with_right_child(void) {
 static void test_validate(void) {
   assert(fftree_validate_local(NULL));
   assert(fftree_validate(NULL));
+  char data[100];
   {
-    FFTREE t = make_small_node(18, 18);
-    assert(fftree_validate(&t));
-    assert(fftree_count(&t) == 1);
+    FFTREE_P t = make_small_node(data, 18, 18);
+    assert(fftree_validate(t));
+    assert(fftree_count(t) == 1);
   }
   {
-    FFTREE t = make_small_node(19, 18);
-    assert(!fftree_validate(&t));
+    FFTREE_P t = make_small_node(data, 19, 18);
+    assert(!fftree_validate(t));
   }
   {
-    FFTREE t = make_small_node(18, 19);
-    assert(!fftree_validate(&t));
+    FFTREE_P t = make_small_node(data, 18, 19);
+    assert(!fftree_validate(t));
   }
   test_validate_two_nodes_with_left_child();
   test_validate_two_nodes_with_right_child();

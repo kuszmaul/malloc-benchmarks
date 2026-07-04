@@ -5,21 +5,21 @@
 #include "tree-test-helpers.h"
 #include "writeio.h"
 
-void fftree_print(FFTREE *tree, int indent) {
+void fftree_print(FFTREE_P tree, int indent) {
   if (tree == NULL) {
     ewritespaces(indent); ewrites("Empty tree\n");
     return;
   }
   ewritespaces(indent); ewritep(tree);
-  ewritec(' '); ewritep(tree->left);
-  ewritec(' '); ewritep(tree->right);
+  ewritec(' '); ewritep(fftree_left(tree));
+  ewritec(' '); ewritep(fftree_right(tree));
   ewritec(' '); ewriteul(fftree_hash(tree));
   ewritec(' '); ewriteul(fftree_node_size(tree));
-  ewritec(' '); ewriteul(tree->max_size_in_subtree);
+  ewritec(' '); ewriteul(fftree_max_size_in_subtree(tree));
   ewritenl();
   // fprintf(stderr, "%*s%p %p %p %u %u %u\n", indent, "", tree, tree->left, tree->right, tree->depth, tree->size, tree->max_size_in_subtree);
-  fftree_print(tree->left, indent+1);
-  fftree_print(tree->right, indent+1);
+  fftree_print(fftree_left(tree), indent+1);
+  fftree_print(fftree_right(tree), indent+1);
 }
 
 typedef struct strbuf {
@@ -90,39 +90,39 @@ static void writep_strbuf(STRBUF *buf, void *p) {
   }
 }
 
-static void* offset_from(FFTREE *tree, void *alloc) {
+static void* offset_from(FFTREE_P tree, void *alloc) {
   if (tree == NULL) return 0;
   return (void*)((char*)tree - (char*)alloc);
 }
 
-static void fftree_sprint2(FFTREE *tree, int indent, STRBUF *buf, void *alloc) {
+static void fftree_sprint2(FFTREE_P tree, int indent, STRBUF *buf, void *alloc) {
   if (tree == NULL) {
     writespaces_strbuf(buf, indent);
     writes_strbuf(buf, "Empty tree\n");
   } else {
     writespaces_strbuf(buf, indent);
     writep_strbuf(buf, offset_from(tree, alloc));
-    writec_strbuf(buf, ' '); writep_strbuf(buf, offset_from(tree->left, alloc));
-    writec_strbuf(buf, ' '); writep_strbuf(buf, offset_from(tree->right, alloc));
+    writec_strbuf(buf, ' '); writep_strbuf(buf, offset_from(fftree_left(tree), alloc));
+    writec_strbuf(buf, ' '); writep_strbuf(buf, offset_from(fftree_right(tree), alloc));
     writec_strbuf(buf, ' '); writeul_strbuf(buf, fftree_hash(tree));
     writec_strbuf(buf, ' '); writeul_strbuf(buf, fftree_node_size(tree));
-    writec_strbuf(buf, ' '); writeul_strbuf(buf, tree->max_size_in_subtree);
+    writec_strbuf(buf, ' '); writeul_strbuf(buf, fftree_max_size_in_subtree(tree));
     writec_strbuf(buf, '\n');
-    fftree_sprint2(tree->left, indent+1, buf, alloc);
-    fftree_sprint2(tree->right, indent+1, buf, alloc);
+    fftree_sprint2(fftree_left(tree), indent+1, buf, alloc);
+    fftree_sprint2(fftree_right(tree), indent+1, buf, alloc);
   }
 }
 
-void fftree_sprint(char *str, size_t str_size, FFTREE *tree, void *alloc) {
+void fftree_sprint(char *str, size_t str_size, FFTREE_P tree, void *alloc) {
   STRBUF buf = {str, 0, str_size};
   fftree_sprint2(tree, 0, &buf, alloc);
 }
 
-bool fftree_in(const FFTREE *root, const FFTREE *node) {
+bool fftree_in(const FFTREE_P root, const FFTREE_P node) {
   // Specification: See header file
   ASSERT(node != NULL);
   if (root == NULL) return false;
   if (root == node) return true;
-  if (node < root) return fftree_in(root->left, node);
-  return fftree_in(root->right, node);
+  if (node < root) return fftree_in(fftree_left(root), node);
+  return fftree_in(fftree_right(root), node);
 }

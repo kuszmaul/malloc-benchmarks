@@ -6,5 +6,6 @@ lib/
 *.runiwyu
 *.run
 *.gcov
+bitfield
 check-include-guards
 dylib-test

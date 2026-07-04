@@ -135,7 +135,7 @@ MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o m
 
 #gcov/tree-test.o: $(patsubst %,gcov/%,$(TREE_TEST_O_DEPS))
 
-TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o writeio.o
+TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o writeio.o headers.o
 
 $(GCOV_FILES) &: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test gcov/tree-test gcov/malloc-api-test
 	gcov/ffmalloc-test

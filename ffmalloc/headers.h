@@ -1,39 +1,57 @@
 #ifndef HEADERS_H
 #define HEADERS_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
-enum {
-  log_small_size_limit = 7,
-  small_size_limit = (1ul<<log_small_size_limit),
-};
+typedef struct fftree *FFTREE_P;
 
-typedef struct fftree {
-  size_t is_free : 1;         // true for an FFTREE.  See boundary_tag where it is false.
-  size_t is_small : 1;        // if size can be stored in small_size then small_size contains the size
-  size_t small_size : log_small_size_limit;  // else the size is in the next word.
-  // The maximum over the subtree of the size.  That is, the size of the biggest
-  // node in the subtree.
-  size_t max_size_in_subtree : 48; // this is a limitation to how much data we can keep in the heap.
-  struct fftree *left, *right;
-} FFTREE;
+bool is_fftree(FFTREE_P tree);
+// Effect: Returns true if the internal bits indicate that `tree` actually is an
+// FFTREE.
+//
+// Rationale: This is a kind of strange function, since if the code is correct,
+// we never construct a FFTREE_P that is doesn't have the right bits.  But it's
+// useful for debugging and assertions.
 
-typedef struct boundary_tag {
-  // We use the low order bit of the first word to distinguish between a free
-  // node (which starts with an FFTREE) and an in-use node (which starts woith a
-  // BOUNDARY_TAG).  We relyu on the fact that the first bitfield in a size_t is
-  // in the same place in both.  We must take some care to avoid false strict
-  // aliasing problems when accessing the header of the next or previous block.
-  size_t is_free : 1; // false for boundary tag.  See fftree where it is true.
-  size_t is_memaligned : 1;
-  size_t size : 62; // including the boundary tag and any unused space at the end
+FFTREE_P make_fftree_node(void *p, size_t size, size_t max_size_in_subtree, FFTREE_P left, FFTREE_P right);
+// Effect: Given `p`, a pointer to a block (the head of the block) of size
+// `size`, construct a tree node at `p` with `size`, `max_size_in_subtree`,
+// `left`, and `right` initialized.  Return the pointer to the tree node (which
+// is just a cast of `p` to `FFTREE_P`.  No validation of the tree invariants is
+// performed (e.g., it's ok for the size to be bigger than max_size_in_subtree
+// or for left child not to be to the right of the right child, or for the
+// hashes of the parent to be smaller than that of the children.)
 
-  // For munaligned mmapped blocks, the pointer we give the user points at a
-  // page + 8, and the boundary tag is page aligned.
+size_t fftree_node_size(const FFTREE_P t);
+// Effect: Returns the size of the node (including the FFTREE header
+// overhead). Works even if `t==NULL` (in which case it returns 0).
 
-  // For aligned mmapped blocks, the pointer is page aligned and we boundary tag
-  // is in the last word of the previous page.
+void set_fftree_node_size(FFTREE_P t, size_t size);
+// Effect: Given a tree, update the node size (but don't update the
+// max_node_size augmentation).
 
-} BOUNDARY_TAG;
+size_t fftree_max_size_in_subtree(const FFTREE_P t);
+// Effect: Returns the size of the biggest node in the subtree.  Works even if
+// `t==NULL` (in which case it returns 0).
+
+void set_fftree_max_size_in_subtree(FFTREE_P t, size_t size);
+
+FFTREE_P fftree_left(FFTREE_P t);
+// Effect: Return the left child of `t`.  Requires `t!=NULL`.
+
+FFTREE_P fftree_right(FFTREE_P t);
+// Effect: Return the right child of `t`.  Requires `t!=NULL`.
+
+void set_fftree_left(FFTREE_P t, FFTREE_P l);
+// Effect: Set the left thild of `t` to be `l`.  Requires `t!=NULL`.
+
+void set_fftree_right(FFTREE_P t, FFTREE_P r);
+// Effect: Set the right thild of `t` to be `r`.  Requires `t!=NULL`.
+
+void fftree_update_augmentation(FFTREE_P tree);
+// Effect: Updates the augmentation field (max_size_in_subtree).
+//
+// Usage note: Useful if you change tree->left or tree->right.
 
 #endif
