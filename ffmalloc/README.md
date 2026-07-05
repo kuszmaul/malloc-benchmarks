@@ -111,6 +111,10 @@ Done: How does the kernel allocate virtual addresses for mmap?
  It turns out that the if you mmap a bunch of 1-page objects and then start calling free of every other object, the kernel runs out of memory on the free call.  So it must be merging mmaps as it goes.
  Moral: Don't mmap in a way that requires the kernel to maintain too many mappings.
 
+Done: Fixed a bug in which when a block of size n is found to satisfy a block of
+size m where m + 24 > n, so we don't break the block, but the usable size was
+set wrong.
+
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
 TODO: test calloc overflow
