@@ -159,7 +159,7 @@ static void fftree_insert_and_merge(FFTREE_P *tree_p, FFTREE_P node, size_t node
     } else {
       // The next free block, if there is one, isn't free.
       // TODO: This assertion fails inexplicably.
-      // ASSERT(next_calculated == sbrk_end || !is_fftree(next_calculated));
+      ASSERT(next_calculated == sbrk_end || !is_fftree(next_calculated));
     }
   }
   {
@@ -225,6 +225,8 @@ static int ff_malloc_firstfit_e(void **result, size_t size) {
     // Don't need to merge here, since there won't be any adjacent nodes.
     fftree_insert(&arena, here);
     if (slow_run_validation) ASSERT(fftree_validate(arena));
+  } else {
+    size = nsize; // We cannot break node, so the size is nsize.
   }
   BOUNDARY_TAG_P tag = (BOUNDARY_TAG_P)(node);
   boundary_tag_init(tag, size);

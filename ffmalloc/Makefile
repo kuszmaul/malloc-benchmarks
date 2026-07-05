@@ -10,6 +10,7 @@ tests: ffmalloc-test.run
 tests: malloc-api-test.run
 tests: ffmalloc-sbrk-test.run
 tests: check-include-guards.run
+tests: fragment-test.run
 tests: dylib-ffmalloc.run dylib-libc.run dylib-bump.run
 tests: check-vers-map
 tests: empty-malloc-test.run empty-malloc-test-bump.run empty-malloc-test-ffmalloc.run empty-malloc-test-hoard.run 
@@ -102,6 +103,10 @@ tree-test.run: test/tree-test
 	$< 2> /dev/null
 	touch $@
 
+fragment-test.run: fragment-test lib/libffmalloc.so
+	LD_PRELOAD=lib/libffmalloc.so ./fragment-test
+	touch $@
+
 check-include-guards.run: $(patsubst %.h, check-include-guards.%.run, $(wildcard *.h))
 #check-include-guards.ffmalloc.run: ffmalloc.h check-include-guards
 #	./check-include-guards $<
@@ -192,4 +197,4 @@ clean:
 	rm -f *.o *.gcov *.d.* *.iwyu *.run *.runiwyu
 	rm -fr test/ gcov/ lib/
 	rm -f check-include-guards dylib-test tree-test dylib-test2
-
+	rm -f fragment-test

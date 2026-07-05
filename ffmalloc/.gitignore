@@ -9,3 +9,4 @@ lib/
 bitfield
 check-include-guards
 dylib-test
+fragment-test
