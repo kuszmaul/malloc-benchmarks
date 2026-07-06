@@ -132,6 +132,18 @@ the offset to the original tag in the aligned tag.  That means that
 malloc_usable_size is a little more complicated in the aligned case since we
 need to go to original tag and get the size and then subtract the offset.
 
+DONE: optimize the consolidation with the next node.  Previously we did a find
+and a delete.  Now just a delete.  Probabl 5% faster
+  optimized: ab8454ab8a9369288ffad808ea358543c66315da
+   LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > /dev/null
+   5.85user 0.89system 0:06.75elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+   5.74user 0.92system 0:06.66elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+   6.69user 0.92system 0:07.61elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+  main c7037ba379a9c8561bf07f784b4174e4be396594
+   6.36user 0.90system 0:07.26elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+   6.17user 0.90system 0:07.08elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+   6.57user 0.90system 0:07.49elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+   
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
 TODO: test calloc overflow
