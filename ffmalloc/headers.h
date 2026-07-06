@@ -152,6 +152,18 @@ static inline bool is_boundary_tag(BOUNDARY_TAG_P tree) {
   return tree->internal.is_in_use;
 }
 
+static inline void update_fftree_size(FFTREE_P p, size_t size) {
+  bool is_small = (size < small_size_limit);
+  p->internal.is_small = is_small;
+  if (is_small) {
+    p->internal.small_size = size;
+  } else {
+    p->internal.small_size = 0;
+    *((size_t*)(p+1)) = size;
+  }
+  p->internal.max_size_in_subtree = max(size, p->internal.max_size_in_subtree);
+}
+
 static inline void init_fftree_node(FFTREE_P p, size_t size, size_t max_size_in_subtree, FFTREE_P left, FFTREE_P right) {
   p->internal.is_in_use = 0;
   bool is_small = (size < small_size_limit);

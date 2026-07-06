@@ -66,6 +66,7 @@
 
 #include "ffmalloc.h"
 #include "headers.h"
+#include "max.h"
 #include "tree.h"
 #include "writeio.h"
 
@@ -146,6 +147,20 @@ static void madvise_interior(void *p, size_t size) {
   }
 }
 
+static size_t update_fftree_max_sizes(FFTREE_P tree, FFTREE_P node)
+// Effect: Update the max_size_in_subtree for every ancestor of `node` in `tree`.
+// Returns: the new max_size_in_subtree for tree.
+// Requires: `node` is in `tree`.
+{
+  if (node == tree) return fftree_max_size_in_subtree(tree);
+  size_t child_max =  update_fftree_max_sizes(
+      (node < tree) ? fftree_left(tree) : fftree_right(tree),
+      node);
+  size_t new_max = max(fftree_max_size_in_subtree(tree), child_max);
+  set_fftree_max_size_in_subtree(tree, new_max);
+  return new_max;
+}
+
 static void fftree_insert_and_merge(FFTREE_P *tree_p, FFTREE_P node, size_t node_size, bool zero) {
   ASSERT(node_size >= FFTREE_SIZE);
   init_fftree_node(node, node_size, node_size, NULL, NULL);
@@ -157,19 +172,25 @@ static void fftree_insert_and_merge(FFTREE_P *tree_p, FFTREE_P node, size_t node
     }
   }
   {
-    FFTREE_P prev = fftree_find_and_remove_prev_adjacent(tree_p, node);
-    if (prev != NULL) {
-      ASSERT(((char*)prev) + fftree_node_size(prev) == (char*)node);
+    FFTREE_P prev = fftree_find_prev(*tree_p, node);
+    if (prev == NULL || ((char*)prev) + fftree_node_size(prev) != (char*)node) {
+      if (zero) {
+        madvise_interior(node, node_size);
+        //memset(node, 0, node_size);
+      }
+      init_fftree_node(node, node_size, node_size, NULL, NULL);
+      fftree_insert(tree_p, node);
+    } else {
+      // We can just update the prev node's size (and max size).
+      //ewrites("Reusing prev="); ewritep(prev); ewritenl();
       node_size += fftree_node_size(prev);
-      node = prev;
+      update_fftree_size(prev, node_size);
+      update_fftree_max_sizes(arena, prev);
+      if (zero) {
+        //madvise_interior((char*)node + FFTREE_SIZE + sizeof(size_t), node_size - FFTREE_SIZE - sizeof(size_t));
+      }
     }
   }
-  if (zero) {
-    madvise_interior(node, node_size);
-    //memset(node, 0, node_size);
-  }
-  init_fftree_node(node, node_size, node_size, NULL, NULL);
-  fftree_insert(tree_p, node);
 }
 
 static int ff_malloc_firstfit_e(void **result, size_t size) {
