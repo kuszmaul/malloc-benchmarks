@@ -180,6 +180,20 @@ DONE: (marking this as done since we are now only 2.43 times slower): ffmalloc b
   4.58user 0.88system 0:05.47elapsed 99%CPU (0avgtext+0avgdata 1505504maxresident)k
  That suggests that we should try to optimize block consolidation.
 
+TODO: Add some sort of allocation cache and per-thread caching.
+
+  One goal is to make boom run faster, but no cache will help with that.  It
+  seems like libc can quickly decide that it must use the never-touched memory,
+  whereas we keep our never-touched memory in the tree, so we have to do a tree
+  traversal to get at it.  Perhaps we should special-case the situation where
+  new memory must be used.
+
+  For the single-threaded hoard tests:
+     threadtest is still 13x slower than libc and 30x slower than hoard.
+      So a per-thread cache won't do much I don't think.  But a cache may help.
+     larson: is 2.65 times slower than libc, and some kind of cache may help.
+  cache-scratch and cache-thrash looks competetive (even multithreaded)
+
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
 TODO: test calloc overflow
