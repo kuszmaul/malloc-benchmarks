@@ -146,11 +146,12 @@ and a delete.  Now just a delete.  Probably 5% faster
    
 Done: optimize the consolidation with the prev node.  Previously we removed it
 and then added it.  Now we reuse the prev node and update the size (and the
-max_sizes of the ancestors).  Probably 20% to 25% faster compared to c7037ba3
-  optimized:   LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > /dev/null
+max_sizes of the ancestors).  Probably 20% to 25% faster compared to c7037ba3.
+  optimized f35c0186:  LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > /dev/null
     4.54user 0.67system 0:05.22elapsed 99%CPU (0avgtext+0avgdata 767644maxresident)k
     5.07user 0.66system 0:05.74elapsed 100%CPU (0avgtext+0avgdata 767628maxresident)k
     5.02user 0.70system 0:05.73elapsed 99%CPU (0avgtext+0avgdata 767512maxresident)k
+We are now 2.6 times slower than libc.
 
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
