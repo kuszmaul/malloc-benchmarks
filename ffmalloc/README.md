@@ -115,6 +115,18 @@ Done: Fixed a bug in which when a block of size n is found to satisfy a block of
 size m where m + 24 > n, so we don't break the block, but the usable size was
 set wrong.
 
+DONE: having abstracted the headers, we had a slowdown.  Inline the haaders
+ inline everything in headers.c: (ff7aeb2d590e909b62b1eac4d375bf5273a15944
+  LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > /dev/null
+  6.18user 0.91system 0:07.10elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+  6.37user 0.87system 0:07.25elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+  6.97user 0.93system 0:07.90elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+ main: 75821f9530474c1e1c0d166ec66bfa309334c5a4
+  8.24user 0.90system 0:09.15elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+  8.30user 0.88system 0:09.19elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+  8.39user 0.90system 0:09.31elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+
+
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
 TODO: test calloc overflow
@@ -146,10 +158,3 @@ TODO: ffmalloc boom is very slow (26x slower than libc)
 
 TODO: Do worst-case for TCMALLOC (various web pages claim tcmalloc is best fit)
 
-TODO: having abstracted the headers, I think we had a slowdown.
- inline everything in headers.c:
-  LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > /dev/null
-  6.18user 0.91system 0:07.10elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
-  6.37user 0.87system 0:07.25elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
-  6.97user 0.93system 0:07.90elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
- main
