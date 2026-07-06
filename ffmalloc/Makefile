@@ -82,7 +82,7 @@ slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 	cc $(CFLAGS) $^ -o $@
 
 lib/%.so: OPTFLAGS=-O3
-# lib/%.so: CPPFLAGS=-DNOASSERT
+lib/%.so: CPPFLAGS=-DNOASSERT
 lib/libffmalloc.so: $(wildcard *.h) vers.map
 lib/libffmalloc.so: $(LIBFFMALLOC_C_SOURCES) | lib/
 	cc $(BUILD_SHARED_FLAGS) $(CFLAGS) -Wl,-soname,libffmalloc.so $(LIBFFMALLOC_C_SOURCES) -o $@
