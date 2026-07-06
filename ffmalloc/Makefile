@@ -76,7 +76,7 @@ lib/libbump.so: bumpmalloc.c writeio.c max.h writeio.h vers.map | lib/
 
 dylib-test2: LDLIBS = -largtable2
 
-LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c writeio.c headers.c
+LIBFFMALLOC_C_SOURCES = malloc-api.c ffmalloc.c tree.c tree-test-helpers.c writeio.c
 
 slib/libffmalloc.a: $(LIBFFMALLOC_C_SOURCES) | slib/
 	cc $(CFLAGS) $^ -o $@
@@ -133,15 +133,15 @@ malloc-api.iwyu: malloc-api.h
 	! fgrep -A 2 should $<
 	touch $@
 
-FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o headers.o
-FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o headers.o
-MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o malloc-api.o writeio.o headers.o
+FFMALLOC_TEST_DEPS = ffmalloc-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o
+FFMALLOC_SBRK_TEST_DEPS = ffmalloc-sbrk-test.o ffmalloc.o tree.o tree-test-helpers.o writeio.o
+MALLOC_API_TEST_DEPS = malloc-api-test.o ffmalloc.o tree.o tree-test-helpers.o malloc-api.o writeio.o
 
 #gcov/tree.o: $(patsubst %,gcov/%,$(TREE_O_DEPS))
 
 #gcov/tree-test.o: $(patsubst %,gcov/%,$(TREE_TEST_O_DEPS))
 
-TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o writeio.o headers.o
+TREE_TEST_DEPS = tree-test.o tree.o tree-test-helpers.o writeio.o
 
 $(GCOV_FILES) &: gcov/ffmalloc-test gcov/ffmalloc-sbrk-test gcov/tree-test gcov/malloc-api-test
 	gcov/ffmalloc-test

@@ -1,5 +1,4 @@
 #include "headers.h"
-#include "headers-internal.h"
 #include "tree.h"
 
 #include <assert.h>
@@ -8,9 +7,9 @@
 
 static FFTREE_P make_small_node(char *p, size_t size, size_t max) {
   FFTREE_P t = make_fftree_node(p, size, max, NULL, NULL);
-  assert(t->small_size == size);
-  assert(t->max_size_in_subtree == max);
-  assert(!t->is_in_use);
+  assert(t->internal.small_size == size);
+  assert(t->internal.max_size_in_subtree == max);
+  assert(!t->internal.is_in_use);
   return t;
 }
 

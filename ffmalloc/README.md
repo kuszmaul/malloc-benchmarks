@@ -146,5 +146,10 @@ TODO: ffmalloc boom is very slow (26x slower than libc)
 
 TODO: Do worst-case for TCMALLOC (various web pages claim tcmalloc is best fit)
 
-
-
+TODO: having abstracted the headers, I think we had a slowdown.
+ inline everything in headers.c:
+  LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > /dev/null
+  6.18user 0.91system 0:07.10elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+  6.37user 0.87system 0:07.25elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+  6.97user 0.93system 0:07.90elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+ main
