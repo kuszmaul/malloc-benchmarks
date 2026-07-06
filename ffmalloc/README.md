@@ -159,15 +159,7 @@ DONE: Make madvise_interior works for that optimization.  The perf looks like (p
 DONE: Turn asserts off (now 2.43 times slower than libc)
   4.11user 0.91system 0:05.03elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
 
-TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
-
-TODO: test calloc overflow
-TODO: the other memalign functions
-TODO: maybe -ldl
-
-TODO: Add align functions to scripts.
-
-TODO: ffmalloc boom is very slow (26x slower than libc)
+DONE: (marking this as done since we are now only 2.43 times slower): ffmalloc boom is very slow (26x slower than libc)
 
  time ./boom --malloclib=DEFAULT > boom-ffworst-glibc-2to27.data
  1.36user 0.36system 0:01.72elapsed 99%CPU (0avgtext+0avgdata 1126912maxresident)k
@@ -187,6 +179,14 @@ TODO: ffmalloc boom is very slow (26x slower than libc)
  3.2x slower than libc on boom.
   4.58user 0.88system 0:05.47elapsed 99%CPU (0avgtext+0avgdata 1505504maxresident)k
  That suggests that we should try to optimize block consolidation.
+
+TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
+
+TODO: test calloc overflow
+TODO: the other memalign functions
+TODO: maybe -ldl
+
+TODO: Add align functions to scripts.
 
 TODO: Do worst-case for TCMALLOC (various web pages claim tcmalloc is best fit)
 
