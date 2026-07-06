@@ -150,16 +150,10 @@ static void fftree_insert_and_merge(FFTREE_P *tree_p, FFTREE_P node, size_t node
   ASSERT(node_size >= FFTREE_SIZE);
   init_fftree_node(node, node_size, node_size, NULL, NULL);
   {
-    FFTREE_P next = fftree_find_and_remove_next_adjacent(tree_p, node);
-    FFTREE_P next_calculated = (FFTREE_P)((char*)(node) + node_size);
-    if (next != NULL) {
-      ASSERT(is_fftree(next));
-      ASSERT(next_calculated == next);
+    FFTREE_P next = (FFTREE_P)((char*)(node) + node_size);
+    if (next != sbrk_end && is_fftree(next)) {
       node_size += fftree_node_size(next);
-    } else {
-      // The next free block, if there is one, isn't free.
-      // TODO: This assertion fails inexplicably.
-      ASSERT(next_calculated == sbrk_end || !is_fftree(next_calculated));
+      fftree_delete(tree_p, next);
     }
   }
   {

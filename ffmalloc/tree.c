@@ -263,16 +263,3 @@ FFTREE_P fftree_find_and_remove_prev_adjacent(FFTREE_P *rootp, const FFTREE_P no
   fftree_delete(rootp, result);
   return result;
 }
-
-/* Should this go into the ffmalloc code? */
-FFTREE_P fftree_find_and_remove_next_adjacent(FFTREE_P *rootp, const FFTREE_P node) {
-  FFTREE_P result = fftree_find_next(*rootp, node);
-  if (result == NULL) {
-    return NULL;
-  }
-  if (((char*)(node)) + fftree_node_size(node) != (char*)(result)) {
-    return NULL;
-  }
-  fftree_delete(rootp, result);
-  return result;
-}
