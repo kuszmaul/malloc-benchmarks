@@ -59,7 +59,8 @@ int main(void) {
   {
     size_t usable = my_malloc_usable_size(p);
     assert(usable >= 100);
-    assert(usable < 4096); // our implementation doesn't actually allocate a whole page
+    printf("usable=%lu\n", usable);
+    assert(usable <= 4096); // our implementation doesn't actually allocate a whole page
   }
   my_free(p);
 

@@ -231,12 +231,14 @@ static inline void boundary_tag_init_memaligned(BOUNDARY_TAG_P internal_tag, con
   internal_tag->internal.is_in_use = 1;
   internal_tag->internal.is_memaligned = 1;
   // The size for aligned is the size to the end
-  internal_tag->internal.size = original_tag->internal.size - ((char*)internal_tag - (char*)original_tag);
+  internal_tag->internal.size = (char*)internal_tag - (char*)original_tag;
   ((void**)(internal_tag))[-1] = (void*)original_tag;
 }
 
 static inline size_t boundary_tag_size(BOUNDARY_TAG_P p) {
-  return p->internal.size;
+  if (!p->internal.is_memaligned) return p->internal.size;
+  BOUNDARY_TAG_P original_tag = (BOUNDARY_TAG_P)((char*)p - p->internal.size);
+  return original_tag->internal.size;
 }
 
 static inline bool boundary_tag_is_memaligned(BOUNDARY_TAG_P p) {
@@ -246,7 +248,7 @@ static inline bool boundary_tag_is_memaligned(BOUNDARY_TAG_P p) {
 static inline BOUNDARY_TAG_P original_boundary_tag(void *p) {
   BOUNDARY_TAG_P internal_tag = get_boundary_tag_p(p);
   if (!internal_tag->internal.is_memaligned) return internal_tag;
-  BOUNDARY_TAG_P original_tag = ((BOUNDARY_TAG_P*)internal_tag)[-1];
+  BOUNDARY_TAG_P original_tag = (BOUNDARY_TAG_P)((char*)internal_tag - internal_tag->internal.size);
   return original_tag;
 }
 

@@ -312,5 +312,10 @@ size_t ff_malloc_usable_size(void *p) {
   }
   BOUNDARY_TAG_P bt = get_boundary_tag_p(p);
   ASSERT(is_boundary_tag(bt));
-  return boundary_tag_size(bt) - BOUNDARY_TAG_SIZE;
+  if (boundary_tag_is_memaligned(bt)) {
+    BOUNDARY_TAG_P obt = original_boundary_tag(p);
+    return boundary_tag_size(obt) - BOUNDARY_TAG_SIZE - ((char*)bt - (char*)obt);
+  } else {
+    return boundary_tag_size(bt) - BOUNDARY_TAG_SIZE;
+  }
 }

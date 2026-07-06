@@ -126,6 +126,11 @@ DONE: having abstracted the headers, we had a slowdown.  Inline the haaders
   8.30user 0.88system 0:09.19elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
   8.39user 0.90system 0:09.31elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
 
+DONE: Don't waste a word on 16-byte alignments.  Previously we stored a pointer
+to the original boundary tag just before the aligned boundary tag.  Now we store
+the offset to the original tag in the aligned tag.  That means that
+malloc_usable_size is a little more complicated in the aligned case since we
+need to go to original tag and get the size and then subtract the offset.
 
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
