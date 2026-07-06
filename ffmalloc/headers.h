@@ -84,24 +84,17 @@ static inline void boundary_tag_init_memaligned(BOUNDARY_TAG_P internal_tag, con
 //
 // Implementation note: That means that we need to set up the internal tag to be
 // is_memaligned with size that refers to the size of the block starting at that
-// point.  The previous word must contain a pointer that points to the origina
-// tag, and the original tag must already be set up with a boundary tag for the
-// actual allocation.
+// point.  The `size` field is an offset that says how far back to look for the
+// original tag. and the original tag must already be set up with a boundary tag
+// for the actual allocation.
 //
-// Since this scheme uses 3 words, We are wasting a word for 16-byte alignments.
-// We could store the is_memaligned bits in with the pointer.
+// This scheme uses 2 words, so that when we have 16-byte alignments we are
+// wasting only one extra word.
 
 static inline BOUNDARY_TAG_P original_boundary_tag(void *p);
 // Effect: Return the original boundary tag for `p`.  For non-memaligned
 // allocations this is just get_boundary_tag_p, but for memaligned allocations,
 // we need to compute the beginning of the actual block.
-
-// A small DRY problem, since I should be able to get the boundary tag size out
-// of the headers-internal.h, but I don't want to include that here.
-enum {
-  BOUNDARY_TAG_SIZE = 8,
-  FFTREE_SIZE = 24,
-};
 
 enum {
   log_small_size_limit = 7,
@@ -135,10 +128,10 @@ struct boundary_tag_internal {
   uint64_t is_memaligned : 1;
   uint64_t size : 62; // including the boundary tag and any unused space at the end
 
-  // For munaligned mmapped blocks, the pointer we give the user points at a
+  // For unaligned mmapped blocks, the pointer we give the user points at a
   // page + 8, and the boundary tag is page aligned.
 
-  // For aligned mmapped blocks, the pointer is page aligned and we boundary tag
+  // For aligned mmapped blocks, the pointer is page aligned and the boundary tag
   // is in the last word of the previous page.
 
 };
@@ -146,6 +139,11 @@ struct boundary_tag_internal {
 typedef struct boundary_tag {
   struct boundary_tag_internal internal;
 } BOUNDARY_TAG;
+
+enum {
+  BOUNDARY_TAG_SIZE = sizeof(struct boundary_tag),
+  FFTREE_SIZE = sizeof(struct fftree),
+};
 
 static inline bool is_fftree(FFTREE_P tree) {
   return !tree->internal.is_in_use;
