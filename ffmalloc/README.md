@@ -153,6 +153,9 @@ max_sizes of the ancestors).  Probably 20% to 25% faster compared to c7037ba3.
     5.02user 0.70system 0:05.73elapsed 99%CPU (0avgtext+0avgdata 767512maxresident)k
 We are now 2.6 times slower than libc.
 
+DONE: Make madvise_interior works for that optimization.  The perf looks like (probably no real difference, just that 3 runs isn't enough)
+    4.39user 0.93system 0:05.34elapsed 99%CPU (0avgtext+0avgdata 716544maxresident)k
+
 TODO: Make sure that we don't sbrk too much (there's some bug in sbrk that doesn't let you allocate 8GB at a time, but if you do 1GB at a time it seems ok).
 
 TODO: test calloc overflow

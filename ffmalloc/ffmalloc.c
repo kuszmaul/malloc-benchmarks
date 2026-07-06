@@ -187,7 +187,7 @@ static void fftree_insert_and_merge(FFTREE_P *tree_p, FFTREE_P node, size_t node
       update_fftree_size(prev, node_size);
       update_fftree_max_sizes(arena, prev);
       if (zero) {
-        //madvise_interior((char*)node + FFTREE_SIZE + sizeof(size_t), node_size - FFTREE_SIZE - sizeof(size_t));
+        madvise_interior((char*)prev + FFTREE_SIZE + sizeof(size_t), node_size - FFTREE_SIZE - sizeof(size_t));
       }
     }
   }
