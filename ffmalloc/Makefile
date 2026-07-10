@@ -21,48 +21,65 @@ hoard-tests: \
  hoard-cache-thrash-test \
  hoard-larson-test \
  hoard-threadtest-test
+
+LD_HOARD = LD_PRELOAD=../../Hoard/build/libhoard.so
+LD_SNMALLOC = LD_PRELOAD=../../snmalloc/build/libsnmallocshim.so
+LD_FFMALLOC = LD_PRELOAD=lib/libffmalloc.so
+
 HOARD_CACHE_BENCHMARK_PARMS = 100 8 1000000
+HCST_SINGLE = ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+HCST_MULTI = ../../Hoard/benchmarks/cache-scratch/cache-scratch 4 $(HOARD_CACHE_BENCHMARK_PARMS)
 hoard-cache-scratch-test: lib/libffmalloc.so
 	echo singlethreaded
-	../../Hoard/benchmarks/cache-scratch/cache-scratch 1 $(HOARD_CACHE_BENCHMARK_PARMS)
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 $(HOARD_CACHE_BENCHMARK_PARMS)
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+	$(HCST_SINGLE)
+	$(LD_HOARD) $(HCST_SINGLE)
+	$(LD_SNMALLOC) $(HCST_SINGLE)
+	$(LD_FFMALLOC) $(HCST_SINGLE)
 	echo multithreaded
-	../../Hoard/benchmarks/cache-scratch/cache-scratch 4 $(HOARD_CACHE_BENCHMARK_PARMS)
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 4 $(HOARD_CACHE_BENCHMARK_PARMS)
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-scratch/cache-scratch 4 $(HOARD_CACHE_BENCHMARK_PARMS)
+	$(HCST_MULTI)
+	$(LD_HOARD) $(HCST_MULTI)
+	$(LD_SNMALLOC) $(HCST_MULTI)
+	$(LD_FFMALLOC) $(HCST_MULTI)
 
+HCTT_SINGLE = ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+HCTT_MULTI = ../../Hoard/benchmarks/cache-thrash/cache-thrash 4 $(HOARD_CACHE_BENCHMARK_PARMS)
 hoard-cache-thrash-test: lib/libffmalloc.so
 	echo singlethreaded
-	../../Hoard/benchmarks/cache-thrash/cache-thrash 1 $(HOARD_CACHE_BENCHMARK_PARMS)
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 $(HOARD_CACHE_BENCHMARK_PARMS)
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 1 $(HOARD_CACHE_BENCHMARK_PARMS)
+	$(HCTT_SINGLE)
+	$(LD_HOARD) $(HCTT_SINGLE)
+	$(LD_SNMALLOC) $(HCTT_SINGLE)
+	$(LD_FFMALLOC) $(HCTT_SINGLE)
 	echo multithreaded
-	../../Hoard/benchmarks/cache-thrash/cache-thrash 4 $(HOARD_CACHE_BENCHMARK_PARMS)
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 4 $(HOARD_CACHE_BENCHMARK_PARMS)
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/cache-thrash/cache-thrash 4 $(HOARD_CACHE_BENCHMARK_PARMS)
+	$(HCTT_MULTI)
+	$(LD_HOARD) $(HCTT_MULTI)
+	$(LD_SNMALLOC) $(HCTT_MULTI)
+	$(LD_FFMALLOC) $(HCTT_MULTI)
 
 LARSON_PARMS = 10 7 8 1000 10000 1
 hoard-larson-test: lib/libffmalloc.so
 	echo singlethreaded
 	../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 1
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 1
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 1
+	$(LD_HOARD) ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 1
+	$(LD_SNMALLOC) ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 1
+	$(LD_FFMALLOC) ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 1
 	echo multithreaded
 	../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 4
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 4
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 4
+	$(LD_HOARD) ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 4
+	$(LD_SNMALLOC) ../../Hoard/benchmarks/larson/larson  $(LARSON_PARMS) 4
+	$(LD_FFMALLOC) ../../Hoard/benchmarks/larson/larson $(LARSON_PARMS) 4
 
 THREADTEST_PARMS = 1000 10000 0 8
 hoard-threadtest-test: lib/libffmalloc.so
 	echo singlethreaded
 	../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
+	$(LD_HOARD) ../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
+	$(LD_SNMALLOC) ../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
+	$(LD_FFMALLOC) ../../Hoard/benchmarks/threadtest/threadtest 1 $(THREADTEST_PARMS)
 	echo multithreaded
 	../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
-	LD_PRELOAD=../../Hoard/build/libhoard.so ../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
-	LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
+	$(LD_HOARD) ../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
+	$(LD_SNMALLOC) ../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
+	$(LD_FFMALLOC) ../../Hoard/benchmarks/threadtest/threadtest 4 $(THREADTEST_PARMS)
 
 
 # `-Wl,-z,defs` warns if you have undefined references in your library
@@ -92,7 +109,7 @@ dylib-libc.run: dylib-test
 	touch $@
 
 dylib-ffmalloc.run: dylib-test lib/libffmalloc.so
-	LD_PRELOAD=lib/libffmalloc.so ./dylib-test
+	$(LD_FFMALLOC) ./dylib-test
 	touch $@
 
 %.run: test/%
@@ -104,7 +121,7 @@ tree-test.run: test/tree-test
 	touch $@
 
 fragment-test.run: fragment-test lib/libffmalloc.so
-	LD_PRELOAD=lib/libffmalloc.so ./fragment-test
+	$(LD_FFMALLOC) ./fragment-test
 	touch $@
 
 check-include-guards.run: $(patsubst %.h, check-include-guards.%.run, $(wildcard *.h))
@@ -121,9 +138,9 @@ empty-malloc-test.run: empty-malloc-test
 empty-malloc-test-bump.run: empty-malloc-test lib/libbump.so
 	LD_PRELOAD=lib/libbump.so ./$<
 empty-malloc-test-ffmalloc.run: empty-malloc-test lib/libffmalloc.so
-	LD_PRELOAD=lib/libffmalloc.so ./$<
+	$(LD_FFMALLOC) ./$<
 empty-malloc-test-hoard.run: empty-malloc-test
-	LD_PRELOAD=../../Hoard/build/libhoard.so ./$<
+	$(LD_HOARD) ./$<
 
 run-iwyu: $(patsubst %.c,%.runiwyu, $(wildcard *.c))
 %.iwyu: %.c

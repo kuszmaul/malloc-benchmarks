@@ -6,7 +6,7 @@ graphs: boom-ffworst-2to27.pdf boom-ffworst-2to27-b17.pdf
 
 %.pdf: %.gnuplot %.data
 	gnuplot $<
-boom-ffworst-2to27.pdf: boom-ffworst-2to27.gnuplot boom-ffworst-glibc-2to27.data boom-ffworst-bump-2to27.data boom-ffworst-bump-unmap-2to27.data boom-ffworst-hoard-2to27.data boom-ffworst-ffmalloc-2to27.data
+boom-ffworst-2to27.pdf: boom-ffworst-2to27.gnuplot boom-ffworst-glibc-2to27.data boom-ffworst-bump-2to27.data boom-ffworst-bump-unmap-2to27.data boom-ffworst-hoard-2to27.data boom-ffworst-ffmalloc-2to27.data boom-ffworst-snmalloc-2to27.data
 	gnuplot $<
 
 
@@ -24,6 +24,8 @@ boom-ffworst-hoard-2to27.data: boom
 	LD_PRELOAD=../Hoard/build/libhoard.so time ./boom --malloclib=DEFAULT > $@
 boom-ffworst-ffmalloc-2to27.data: boom
 	LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > $@
+boom-ffworst-snmalloc-2to27.data: boom
+	LD_PRELOAD=../snmalloc/build/libsnmallocshim.so  time ./boom --malloclib=DEFAULT > $@
 
 
 boom-ffworst-glibc-2to27-b17.data: boom
