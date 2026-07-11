@@ -204,3 +204,7 @@ TODO: Add align functions to scripts.
 
 TODO: Do worst-case for TCMALLOC (various web pages claim tcmalloc is best fit)
 
+TODO: The pthread locks cost 23% for the case where there are multiple threads but no contention
+ LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson 10 7 8 1000 10000 1 1
+ no locks: Throughput = 12978055 operations per second.
+ locks:    Throughput = 16874032 operations per second.
