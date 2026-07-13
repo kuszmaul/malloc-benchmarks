@@ -2,7 +2,7 @@ OPTFLAGS = -O3
 CFLAGS = -g $(OPTFLAGS) -Werror -Wall -Wextra -Wswitch-enum -Wimplicit-fallthrough -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS = $(CFLAGS)
 LDLIBS = -largtable2
-graphs: boom-ffworst-2to27.pdf boom-ffworst-2to27-b17.pdf
+graphs: boom-ffworst-2to27.pdf boom-ffworst-2to27-b17.pdf hoardworst.pdf
 
 %.pdf: %.gnuplot %.data
 	gnuplot $<
