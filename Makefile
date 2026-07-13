@@ -48,13 +48,12 @@ boom-ffworst-ffmalloc-2to27-b17.data: boom
 #	./boomhoard > $@
 
 
-OFILES = boom.o libcmalloc.o rss.o
+OFILES = boom.o rss.o
 # boom-superblock-4k-libc-1e3.data: boom
 # 	./boom --superblock 4096 > $@
 boom: $(OFILES)
 # boomhoard: $(OFILES)
 # 	$(CC) $(OFILES) $(LDLIBS) -L../Hoard/src -lhoard -o $@
-libcmalloc.o boom.o: malloc-interface.h
 rss.o boom.o: rss.h
 
 test_do_set_tcache_count: does-libc-coalesce
