@@ -23,7 +23,7 @@ boom-ffworst-bump-unmap-2to27.data: boom
 boom-ffworst-hoard-2to27.data: boom
 	LD_PRELOAD=../Hoard/build/libhoard.so time ./boom --malloclib=DEFAULT > $@
 boom-ffworst-ffmalloc-2to27.data: boom
-	LD_PRELOAD=ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > $@
+	LD_PRELOAD=../ffmalloc/lib/libffmalloc.so time ./boom --malloclib=DEFAULT > $@
 boom-ffworst-snmalloc-2to27.data: boom
 	LD_PRELOAD=../snmalloc/build/libsnmallocshim.so  time ./boom --malloclib=DEFAULT > $@
 
@@ -37,7 +37,7 @@ boom-ffworst-bump-unmap-2to27-b17.data: boom
 boom-ffworst-hoard-2to27-b17.data: boom
 	LD_PRELOAD=../Hoard/build/libhoard.so ./boom --malloclib=DEFAULT --smallest-block-size=17 > $@
 boom-ffworst-ffmalloc-2to27-b17.data: boom
-	LD_PRELOAD=ffmalloc/lib/libffmalloc.so ./boom --malloclib=DEFAULT --smallest-block-size=17 > $@
+	LD_PRELOAD=../ffmalloc/lib/libffmalloc.so ./boom --malloclib=DEFAULT --smallest-block-size=17 > $@
 
 
 #boom-ffworst-hoard-1e8.data: boomhoard
@@ -66,3 +66,6 @@ hoardworst.data: hoardworst
 	LD_PRELOAD=../Hoard/build/libhoard.so ./hoardworst > hoardworst.data
 hoardworst.pdf: hoardworst.gnuplot hoardworst.data 
 	gnuplot $<
+
+clean:
+	rm -f *.pdf *.data
