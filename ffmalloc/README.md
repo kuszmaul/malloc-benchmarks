@@ -208,3 +208,9 @@ TODO: The pthread locks cost 23% for the case where there are multiple threads b
  LD_PRELOAD=lib/libffmalloc.so ../../Hoard/benchmarks/larson/larson 10 7 8 1000 10000 1 1
  no locks: Throughput = 12978055 operations per second.
  locks:    Throughput = 16874032 operations per second.
+
+IDEAS:
+ 1) snmalloc has this clever idea where the allocate on the thread's shar and free by message passing.  So no lock overhead.
+    But are there problems with that?  Can that increase the memory blowup by having one thread allocatine n things and then free them and then having another do it and so forth so that if there are `p` threads we get a p-fold increase in blowup?
+
+TODO: Separate the benchmarks into a malloc-benchmarks repo.  It seems like one of the enduring values from supermalloc was the benchmarks I wrote.
