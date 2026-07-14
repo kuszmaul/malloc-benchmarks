@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rss.h"
+#include "../common/rss.h"
 
 // These sizes gotten out of hoard by instrumenting hoard and printing what it
 // does.  From reading the code and examining these numbers, it looks like it
@@ -73,6 +73,6 @@ int main(int argc __attribute__((unused)), const char **argv __attribute__((unus
     fprintf(stderr, "baserss=%lu\nrss    =%lu\n", get_base_rss(), get_adjusted_rss());
     double blowup = get_adjusted_rss()/(double)high_water_mark;
     fprintf(stderr, "blowup=%f\n\n", blowup);
-    printf("%lu %f\n", i, blowup);
+    printf("%lu %f\n", eltsize, blowup);
   }
 }

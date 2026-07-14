@@ -1,6 +1,6 @@
 *~
 bestfitworst
-hoardworst
+*.d
 sbrk-test
 vm-allocation
 *.o

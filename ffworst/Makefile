@@ -1,14 +1,8 @@
+default: ffworst-2to27.pdf
+
 include ../defaults.Make
 
 LDLIBS = -largtable2
-
-MALLOCATORS = \
-bump \
-bunmap \
-ffmalloc \
-glibc \
-hoard \
-snmalloc
 
 ffworst-2to27.pdf: ffworst-2to27.gnuplot $(patsubst %, ffworst-%-2to27.data, $(MALLOCATORS))
 	gnuplot $<
@@ -17,19 +11,8 @@ ffworst-%-2to27.data: ffworst
 
 ffworst: ffworst.o ../common/rss.o
 
-%.d: %.c
-	@set -e; rm -f $@; \
-         $(CC) -M $(CPPFLAGS) $< > $@.$$$$; \
-         sed 's,\($*\)\.o[ :]*,test/\1.o gcov/\1.o $@ : ,g' < $@.$$$$ > $@; \
-         rm -f $@.$$$$
 SOURCES = $(wildcard *.c) ../common/rss.c
-
-LD_bump     = LD_PRELOAD=../../ffmalloc/lib/libbump.so
-LD_bunmap   = LD_PRELOAD=../../ffmalloc/lib/libbunmap.so 
-LD_ffmalloc = LD_PRELOAD=../../ffmalloc/lib/libffmalloc.so
-LD_glibc    =
-LD_hoard    = LD_PRELOAD=../../Hoard/build/libhoard.so 
-LD_snmalloc = LD_PRELOAD=../../snmalloc/build/libsnmallocshim.so
+include $(SOURCES:.c=.d)
 
 # Don't make a rule for ffworst-glibc-1e9.data since it will crash my laptop -Bradley
 ffworst-glibc-2to27.data: ffworst

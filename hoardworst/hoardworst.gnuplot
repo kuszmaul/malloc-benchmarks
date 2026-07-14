@@ -17,7 +17,7 @@ set clip one
 unset clip two
 unset clip radial
 set errorbars front 1.000000 
-set border 31 front lt black linewidth 1.000 dashtype solid
+set border 0 front lt black linewidth 1.000 dashtype solid
 set zdata 
 set ydata 
 set xdata 
@@ -107,7 +107,7 @@ set mcbtics default
 set mrtics default
 set nomttics
 set xtics border in scale 1,0.5 mirror norotate  autojustify
-set xtics  norangelimit autofreq 
+set xtics  (16,256,"4KiB" 4096,"64KiB" 65536,"1MiB" 1048576)
 set ytics border in scale 1,0.5 mirror norotate  autojustify
 set ytics  norangelimit autofreq 
 set ztics border in scale 1,0.5 nomirror norotate  autojustify
@@ -127,7 +127,7 @@ set timestamp  font "" textcolor lt -1 norotate
 set trange [ * : * ] noreverse nowriteback
 set urange [ * : * ] noreverse nowriteback
 set vrange [ * : * ] noreverse nowriteback
-set xlabel "size class number (approximately log_{1.2}(n))" 
+set xlabel "largest block size" 
 set xlabel  font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  font "" textcolor lt -1 norotate
@@ -149,6 +149,7 @@ set rlabel ""
 set rlabel  font "" textcolor lt -1 norotate
 set rrange [ * : * ] noreverse writeback
 unset logscale
+set log x
 unset jitter
 set zero 1e-08
 set lmargin  -1

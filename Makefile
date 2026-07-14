@@ -15,11 +15,5 @@ bestfitworst.o: rss.h
 bestfitworst: LDLIBS=
 bestfitworst: rss.o
 
-hoardworst: rss.h rss.o
-hoardworst.data: hoardworst
-	$(LDHOARD) ./hoardworst > hoardworst.data
-hoardworst.pdf: hoardworst.gnuplot hoardworst.data 
-	gnuplot $<
-
 clean:
 
