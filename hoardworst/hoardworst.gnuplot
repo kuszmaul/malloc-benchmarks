@@ -119,7 +119,7 @@ set cbtics  norangelimit autofreq
 set rtics axis in scale 1,0.5 nomirror norotate  autojustify
 set rtics  norangelimit autofreq 
 unset ttics
-set title "worst-known blowup for Hoard" 
+set title "Blowup for the worst-known Hoard workload" 
 set title  font "" textcolor lt -1 norotate
 set timestamp bottom 
 set timestamp "" 
@@ -175,5 +175,5 @@ GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
 ## Last datafile plotted: "hoardworst.data"
-plot "hoardworst.data" with linespoints
+plot "hoardworst-hoard.data" with linespoints
 #    EOF
