@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "rss.h"
+#include "../common/rss.h"
 
 size_t live_data_size = 0;
 size_t max_live_data_size = 0;

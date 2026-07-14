@@ -11,7 +11,7 @@
 #    	faq, bugs, etc:   type "help FAQ"
 #    	immediate help:   type "help"  (plot window: hit 'h')
 set terminal pdfcairo  transparent enhanced fontscale 0.5 size 5.00in, 3.00in 
-set output 'boom-ffworst-2to27.pdf'
+set output 'ffworst-2to27.pdf'
 unset clip points
 set clip one
 unset clip two
@@ -173,11 +173,11 @@ GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
 plot \
- "boom-ffworst-bump-2to27.data" using (log($1)/log(2)):($3) with lines title "bump", \
- "boom-ffworst-bump-unmap-2to27.data" using (log($1)/log(2)):($3) with lines title "bump-unmap", \
- "boom-ffworst-hoard-2to27.data" using (log($1)/log(2)):($3) with lines title "hoard", \
- "boom-ffworst-snmalloc-2to27.data" using (log($1)/log(2)):($3) with lines title "snmalloc", \
- "boom-ffworst-glibc-2to27.data" using (log($1)/log(2)):($3) with lines title "libc", \
- "boom-ffworst-ffmalloc-2to27.data" using (log($1)/log(2)):($3) with lines title "ffmalloc"
+ "ffworst-bump-2to27.data" using (log($1)/log(2)):($3) with lines title "bump", \
+ "ffworst-bunmap-2to27.data" using (log($1)/log(2)):($3) with lines title "bump-unmap", \
+ "ffworst-hoard-2to27.data" using (log($1)/log(2)):($3) with lines title "hoard", \
+ "ffworst-snmalloc-2to27.data" using (log($1)/log(2)):($3) with lines title "snmalloc", \
+ "ffworst-glibc-2to27.data" using (log($1)/log(2)):($3) with lines title "libc", \
+ "ffworst-ffmalloc-2to27.data" using (log($1)/log(2)):($3) with lines title "ffmalloc"
 
 #    EOF
