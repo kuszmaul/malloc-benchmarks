@@ -126,7 +126,7 @@ set timestamp  font "" textcolor lt -1 norotate
 set trange [ * : * ] noreverse nowriteback
 set urange [ * : * ] noreverse nowriteback
 set vrange [ * : * ] noreverse nowriteback
-set xlabel "largest block size" 
+set xlabel "block size" 
 set xlabel  font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  font "" textcolor lt -1 norotate
@@ -174,9 +174,7 @@ GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
 ## Last datafile plotted: "hoardworst.data"
-plot "hoardworst-bump.data" with lines title "Bump", \
-     "hoardworst-bunmap.data" with lines title "Bump with unmap", \
-     "hoardworst-ffmalloc.data" with lines title "ffmalloc", \
+plot "hoardworst-ffmalloc.data" with lines title "ffmalloc", \
      "hoardworst-glibc.data" with lines title "Glibc", \
      "hoardworst-hoard.data" with lines title "Hoard", \
      "hoardworst-snmalloc.data" with lines title "snmalloc", \
