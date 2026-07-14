@@ -175,9 +175,9 @@ VoxelDistance = 0.0
 plot \
  "ffworst-bump-2to27.data" using (log($1)/log(2)):($3) with lines title "bump", \
  "ffworst-bunmap-2to27.data" using (log($1)/log(2)):($3) with lines title "bump-unmap", \
+ "ffworst-glibc-2to27.data" using (log($1)/log(2)):($3) with lines title "glibc", \
  "ffworst-hoard-2to27.data" using (log($1)/log(2)):($3) with lines title "hoard", \
  "ffworst-snmalloc-2to27.data" using (log($1)/log(2)):($3) with lines title "snmalloc", \
- "ffworst-glibc-2to27.data" using (log($1)/log(2)):($3) with lines title "libc", \
  "ffworst-ffmalloc-2to27.data" using (log($1)/log(2)):($3) with lines title "ffmalloc"
 
 #    EOF

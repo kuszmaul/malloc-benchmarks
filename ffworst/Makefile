@@ -15,12 +15,12 @@ SOURCES = $(wildcard *.c) ../common/rss.c
 include $(SOURCES:.c=.d)
 
 # Don't make a rule for ffworst-glibc-1e9.data since it will crash my laptop -Bradley
-ffworst-glibc-2to27.data: ffworst
-	$(LD_glibc) time ./ffworst > $@
 ffworst-bump-2to27.data: ffworst
 	$(LD_bump) time ./ffworst > $@
 ffworst-bunmap-2to27.data: ffworst
 	$(LD_bunmap) time ./ffworst > $@
+ffworst-glibc-2to27.data: ffworst
+	$(LD_glibc) time ./ffworst > $@
 ffworst-hoard-2to27.data: ffworst
 	$(LD_hoard) time ./ffworst > $@
 ffworst-ffmalloc-2to27.data: ffworst

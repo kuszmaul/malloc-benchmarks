@@ -45,12 +45,11 @@ unset grid
 unset raxis
 set theta counterclockwise right
 set style parallel front  lt black linewidth 2.000 dashtype solid
-set key notitle
-set key fixed right top vertical Right noreverse enhanced autotitle nobox
+set key on
+set key fixed left top vertical Right noreverse enhanced autotitle nobox
 set key noinvert samplen 4 spacing 1 width 0 height 0 
 set key maxcolumns 0 maxrows 0
 set key noopaque
-unset key
 unset label
 unset arrow
 unset style line
@@ -175,5 +174,11 @@ GNUTERM = "wxt"
 I = {0.0, 1.0}
 VoxelDistance = 0.0
 ## Last datafile plotted: "hoardworst.data"
-plot "hoardworst-hoard.data" with linespoints
+plot "hoardworst-bump.data" with lines title "Bump", \
+     "hoardworst-bunmap.data" with lines title "Bump with unmap", \
+     "hoardworst-ffmalloc.data" with lines title "ffmalloc", \
+     "hoardworst-glibc.data" with lines title "Glibc", \
+     "hoardworst-hoard.data" with lines title "Hoard", \
+     "hoardworst-snmalloc.data" with lines title "snmalloc", \
+
 #    EOF
