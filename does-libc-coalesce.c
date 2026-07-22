@@ -7,7 +7,6 @@ int do_set_tcache_max(size_t);
 
 int main(int argc __attribute__((unused)), char **argv __attribute((unused))) {
   mallopt(M_MXFAST, 0);
-  do_set_tcache_max(0);
   const int N = 2;
   void *p1s[2*N+1];
   size_t p1count = 0;
